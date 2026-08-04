@@ -1,0 +1,2777 @@
+// =============================================================================
+// CreatorHub360 Operations Platform — Database Schema
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum SystemRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  PROJECT_LEADER
+  MEMBER
+  GUEST
+}
+
+enum MemberRole {
+  BRAND
+  AGENCY
+  BROKER
+  BUSINESS_DEVELOPMENT
+  CREATOR
+  PROJECT_LEADER
+  VENDOR
+  STAFF
+  ENTERTAINMENT
+  INVESTOR
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+  REJECTED
+}
+
+enum CommissionTierCode {
+  A
+  B
+  C
+  D
+  E
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  COMPLETED
+  REMOVED
+}
+
+enum CheckInStatus {
+  CHECKED_IN
+  CHECKED_OUT
+}
+
+enum QRAssetType {
+  MEMBER
+  PROJECT
+  BRAND
+  SPACE
+  EVENT
+  VISITOR
+  LOCATION
+}
+
+enum VisitorType {
+  BRAND
+  CREATOR
+  AGENCY
+  VENDOR
+  BROKER
+  MEDIA
+  INTERVIEW
+  GUEST
+  OTHER
+}
+
+enum VisitorStatus {
+  WAITING
+  APPROVED
+  CHECKED_OUT
+}
+
+enum SpaceType {
+  PODCAST_BOOTH
+  EDITING_SUITE
+  PHOTOGRAPHY_STUDIO
+  CONFERENCE_ROOM
+  MEETING_ROOM
+  CREATOR_LOUNGE
+  BEAUTY_STATION
+  RECORDING_STUDIO
+  LIVESTREAM_STUDIO
+  CONTENT_LAB
+  EVENT_SPACE
+  CONTENT_BOOTH
+}
+
+enum SpaceSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum NotificationType {
+  CHECK_IN
+  CHECK_OUT
+  PROJECT_ASSIGNED
+  GMV_ENTERED
+  COMMISSION_GENERATED
+  SPACE_STARTED
+  SPACE_FINISHED
+  MENTION
+  COMMENT
+  DEADLINE
+  FEEDBACK_SUBMITTED
+  SYSTEM
+  COLLAB_MESSAGE_RECEIVED
+  DIRECT_MESSAGE_RECEIVED
+  COLLAB_APPLICATION_RECEIVED
+  COLLAB_APPLICATION_ACCEPTED
+  COLLAB_POST_CLOSED
+  MEMBERSHIP_APPLICATION_RECEIVED
+  LIKE
+  NEW_FOLLOWER
+  LEGAL_DOCUMENT_UPDATED
+  AGENCY_REQUEST_RECEIVED
+  AGENCY_REQUEST_APPROVED
+  AGENCY_REQUEST_REJECTED
+  AGENCY_ACCESS_REQUESTED
+  AGENCY_ACCESS_APPROVED
+  AGENCY_ACCESS_REJECTED
+  TEAM_INVITATION_SENT
+  TEAM_INVITATION_ACCEPTED
+  TEAM_INVITATION_DECLINED
+  TEAM_INVITATION_REVOKED
+  TEAM_ROLE_CHANGED
+  TEAM_OWNERSHIP_TRANSFERRED
+  TEAM_MEMBER_REMOVED
+  EVENT_PROPOSAL_SUBMITTED
+  EVENT_APPROVED
+  EVENT_REJECTED
+  EVENT_CHANGES_REQUESTED
+  EVENT_CAPACITY_REACHED
+  EVENT_CANCELLED
+  EVENT_WAITLIST_PROMOTED
+}
+
+enum FeedbackCategory {
+  PLATFORM
+  FACILITY
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+}
+
+enum CollabPostCategory {
+  CREATOR
+  BRAND
+  AGENCY
+  PHOTOGRAPHER
+  VIDEOGRAPHER
+  EDITOR
+  MODEL
+  PODCAST
+  UGC
+}
+
+enum CollabBudgetType {
+  PAID
+  TRADE
+  FREE
+}
+
+enum CollabLocation {
+  ON_SITE
+  REMOTE
+}
+
+enum CollabPostStatus {
+  OPEN
+  CLOSED
+  FILLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  PROJECT_REF
+  RESERVATION_REF
+  VOICE
+}
+
+enum DirectMessageType {
+  TEXT
+  IMAGE
+  FILE
+  VOICE
+}
+
+// =============================================================================
+// CORE / ORGANIZATION
+// =============================================================================
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members                   Member[]
+  companies                 Company[]
+  brands                    Brand[]
+  projects                  Project[]
+  spaces                    Space[]
+  reservations              Reservation[]
+  commissionTiers           CommissionTier[]
+  invitations               Invitation[]
+  activityLogs              ActivityLog[]
+  auditLogs                 AuditLog[]
+  files                     File[]
+  feedback                  Feedback[]
+  collabPosts               CollabPost[]
+  conversations             Conversation[]
+  directConversations       DirectConversation[]
+  visitors                  Visitor[]
+  locations                 Location[]
+  emailLogs                 EmailLog[]
+  membershipApplications    MembershipApplication[]
+  events                    Event[]
+  membershipPlans           MembershipPlan[]
+  projectInvitations        ProjectInvitation[]
+  legalDocumentVersions     LegalDocumentVersion[]
+  referralLinks             ReferralLink[]
+  agencyAccessRequests      AgencyAccessRequest[]
+  agencyInvitations         AgencyInvitation[]
+  agencyActivities          AgencyActivity[]
+  kioskThemes               KioskTheme[]
+  kioskSectionConfigs       KioskSectionConfig[]
+  kioskAnnouncements        KioskAnnouncement[]
+  kioskInteractionEvents    KioskInteractionEvent[]
+  membershipFeatures        MembershipFeature[]
+  membershipLifecycleEvents MembershipLifecycleEvent[]
+
+  @@map("organizations")
+}
+
+// =============================================================================
+// MEMBERS
+// =============================================================================
+
+model Member {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  memberNumber   String  @unique // CH360-000001
+  authUserId     String? @unique @db.Uuid // Supabase auth.users.id
+
+  fullName        String
+  email           String  @unique
+  phone           String?
+  profilePhotoUrl String?
+  website         String?
+
+  // "Agency Uniqueness" — an optional business registration/EIN number,
+  // checked alongside fullName (business name) and website (domain) to
+  // detect duplicate agency records before they're created. Only ever
+  // populated for referral-eligible roles in practice; nullable everywhere
+  // else since most member types have no such identifier.
+  businessRegistrationNumber String?
+  // "Agency Settings" — free-text categories the agency operates in (e.g.
+  // "Beauty", "Gaming"), shown on the creator-facing preview. Same
+  // referral-eligible-role-only convention as the fields above.
+  agencyCategories           String[] @default([])
+
+  companyId      String?    @db.Uuid
+  role           MemberRole
+  systemRole     SystemRole @default(MEMBER)
+  referralSource String?
+
+  // Affiliate/referral tracking — permanent, auto-generated, globally unique
+  // per referring member (e.g. "AGY-001284" for an AGENCY). Nullable because
+  // only referral-eligible roles get one (see REFERRAL_ELIGIBLE_ROLES); never
+  // reassigned once minted, so it's always safe to bake into a printed QR
+  // code. referredByMemberId/referredByCode capture the *other* side — which
+  // referrer (if any) this member arrived through. referredByCode is a
+  // permanent snapshot of the code at connection time, kept even if
+  // referredByMemberId is later nulled out (referrer deleted), so GMV
+  // attribution history survives independent of the live relation.
+  referralCode       String? @unique
+  referredByMemberId String? @db.Uuid
+  referredByCode     String?
+
+  // "Existing Agency Claim Workflow" — null on a canonical/root agency
+  // (they ARE the agency identity holding referralCode). Set on a team
+  // member who was granted access to an *existing* agency instead of
+  // creating a duplicate one: they "inherit the agency's existing Agency ID
+  // and creator network" by pointing here rather than ever minting their
+  // own referralCode. agencyRole is only meaningful when agencyId is set.
+  agencyId   String?           @db.Uuid
+  agencyRole AgencyMemberRole?
+
+  commissionTierId String? @db.Uuid
+
+  currentGMV         Decimal @default(0) @db.Decimal(14, 2)
+  lifetimeGMV        Decimal @default(0) @db.Decimal(14, 2)
+  currentCommission  Decimal @default(0) @db.Decimal(14, 2)
+  lifetimeCommission Decimal @default(0) @db.Decimal(14, 2)
+  hoursWorked        Decimal @default(0) @db.Decimal(10, 2)
+
+  status      MemberStatus @default(ACTIVE)
+  memberSince DateTime     @default(now())
+  deletedAt   DateTime?
+
+  // Approval workflow — set when a PENDING application is approved/rejected.
+  approvedById    String?   @db.Uuid
+  approvedAt      DateTime?
+  rejectedById    String?   @db.Uuid
+  rejectedAt      DateTime?
+  rejectionReason String?
+
+  // Creator application info, collected at signup, shown only "if applicable"
+  // (Applied Member Type == CREATOR) on the application detail view.
+  followerCount Int?
+  platforms     String[] @default([])
+
+  // Creator Dashboard identity — username/displayName are optional, distinct
+  // from fullName (which stays the formal/legal name shown in admin tables).
+  username           String?            @unique
+  displayName        String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  bannerImageUrl     String?
+  location           String?
+
+  // Collab Hub profile — self-service, shown in the creator matchmaking directory
+  bio                String?
+  skills             String[]          @default([])
+  contentCategories  ContentCategory[] @default([])
+  availableForCollab Boolean           @default(true)
+  visibleInDirectory Boolean           @default(true)
+  lookingFor         String?
+  instagramUrl       String?
+  tiktokUrl          String?
+  youtubeUrl         String?
+  linkedinUrl        String?
+
+  // Notification preferences — self-service, read/written only from Settings.
+  // Each gates both an in-app Notification and the matching outbound email
+  // for its category; notifyWeeklySummary/notifyProductUpdates still have no
+  // producer (no weekly-digest/product-update feature exists yet).
+  notifyEmail           Boolean @default(true)
+  notifyCollabRequests  Boolean @default(true)
+  notifyProjectInvites  Boolean @default(true)
+  notifySpaceBookings   Boolean @default(true)
+  notifyVisitorArrivals Boolean @default(true)
+  notifyWeeklySummary   Boolean @default(true)
+  notifyProductUpdates  Boolean @default(false)
+  notifyLikes           Boolean @default(true)
+  notifyFollows         Boolean @default(true)
+  notifyComments        Boolean @default(true)
+  notifyMentions        Boolean @default(true)
+
+  // Super Admin only — Settings > Developer Tools toggle. Swaps the UI's
+  // data source to a purely in-memory demo dataset; never affects any row
+  // other than this one.
+  demoModeEnabled Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company        Company?        @relation(fields: [companyId], references: [id])
+  commissionTier CommissionTier? @relation(fields: [commissionTierId], references: [id])
+  approvedBy     Member?         @relation("MemberApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedBy     Member?         @relation("MemberRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  referredBy     Member?         @relation("MemberReferrals", fields: [referredByMemberId], references: [id], onDelete: SetNull)
+  agency         Member?         @relation("AgencyTeam", fields: [agencyId], references: [id], onDelete: SetNull)
+
+  approvedMembers                   Member[]                        @relation("MemberApprovedBy")
+  rejectedMembers                   Member[]                        @relation("MemberRejectedBy")
+  notesAuthored                     MemberNote[]                    @relation("MemberNoteAuthor")
+  notesReceived                     MemberNote[]                    @relation("MemberNoteSubject")
+  projectAssignments                ProjectAssignment[]
+  leadingProjects                   Project[]                       @relation("ProjectLeader")
+  checkIns                          CheckIn[]
+  spaceSessions                     SpaceSession[]
+  reservations                      Reservation[]
+  commissionTransactions            CommissionTransaction[]
+  gmvTransactions                   GMVTransaction[]
+  payouts                           Payout[]
+  qrAsset                           QRAsset?
+  activityLogs                      ActivityLog[]
+  notifications                     Notification[]
+  files                             File[]
+  invitedInvitations                Invitation[]                    @relation("InvitedBy")
+  comments                          Comment[]
+  feedback                          Feedback[]
+  attendingReservations             Reservation[]                   @relation("ReservationAttendees")
+  collabPosts                       CollabPost[]
+  collabApplications                Application[]
+  conversationsAsPoster             Conversation[]                  @relation("ConversationPoster")
+  conversationsAsInitiator          Conversation[]                  @relation("ConversationInitiator")
+  collabMessages                    Message[]
+  directConversations               DirectConversationParticipant[]
+  directMessages                    DirectMessage[]
+  scanEvents                        ScanEvent[]
+  emailLogsReceived                 EmailLog[]                      @relation("EmailLogRecipient")
+  emailLogsSent                     EmailLog[]                      @relation("EmailLogSentBy")
+  reviewedApplications              MembershipApplication[]         @relation("MembershipApplicationReviewedBy")
+  notesUpdatedApplications          MembershipApplication[]         @relation("MembershipApplicationNotesUpdatedBy")
+  createdEvents                     Event[]                         @relation("EventCreatedBy")
+  eventRsvps                        EventRsvp[]
+  subscription                      MemberSubscription?
+  socialConnections                 SocialConnection[]
+  storeConnections                  StoreConnection[]
+  revenueGoal                       RevenueGoal?
+  collabPostLikes                   CollabPostLike[]
+  followers                         Follow[]                        @relation("MemberFollowers")
+  following                         Follow[]                        @relation("MemberFollowing")
+  sentProjectInvitations            ProjectInvitation[]             @relation("ProjectInvitationInvitedBy")
+  collaborationRequests             ProjectCollaborationRequest[]
+  legalAcceptances                  LegalAcceptance[]
+  publishedLegalVersions            LegalDocumentVersion[]          @relation("LegalDocumentVersionPublishedBy")
+  createdLegalVersions              LegalDocumentVersion[]          @relation("LegalDocumentVersionCreatedBy")
+  referredMembers                   Member[]                        @relation("MemberReferrals")
+  referralsMade                     ReferralLink[]                  @relation("ReferralLinkReferrer")
+  referralConnection                ReferralLink?                   @relation("ReferralLinkMember")
+  teamMembers                       Member[]                        @relation("AgencyTeam")
+  agencyAccessRequestsMade          AgencyAccessRequest[]           @relation("AgencyAccessRequestRequester")
+  agencyAccessRequestsReceived      AgencyAccessRequest[]           @relation("AgencyAccessRequestAgency")
+  agencyAccessRequestsDecided       AgencyAccessRequest[]           @relation("AgencyAccessRequestDecidedBy")
+  agencyInvitationsAgency           AgencyInvitation[]              @relation("AgencyInvitationAgency")
+  agencyInvitationsSent             AgencyInvitation[]              @relation("AgencyInvitationInvitedBy")
+  agencyInvitationsAccepted         AgencyInvitation[]              @relation("AgencyInvitationAcceptedBy")
+  agencyActivitiesAgency            AgencyActivity[]                @relation("AgencyActivityAgency")
+  agencyActivitiesActor             AgencyActivity[]                @relation("AgencyActivityActor")
+  agencyActivitiesTarget            AgencyActivity[]                @relation("AgencyActivityTarget")
+  kioskThemesPublished              KioskTheme[]                    @relation("KioskThemePublishedBy")
+  kioskThemesCreated                KioskTheme[]                    @relation("KioskThemeCreatedBy")
+  kioskSectionConfigsUpdated        KioskSectionConfig[]            @relation("KioskSectionConfigUpdatedBy")
+  kioskAnnouncementsCreated         KioskAnnouncement[]             @relation("KioskAnnouncementCreatedBy")
+  kioskAnnouncementsUpdated         KioskAnnouncement[]             @relation("KioskAnnouncementUpdatedBy")
+  eventsApproved                    Event[]                         @relation("EventApprovedBy")
+  eventsRejected                    Event[]                         @relation("EventRejectedBy")
+  eventsCancelled                   Event[]                         @relation("EventCancelledBy")
+  eventCheckIns                     EventCheckIn[]                  @relation("EventCheckInMember")
+  eventCheckInsStaffed              EventCheckIn[]                  @relation("EventCheckInStaff")
+  membershipUsageCounters           MembershipUsageCounter[]
+  membershipLifecycleEvents         MembershipLifecycleEvent[]      @relation("MembershipLifecycleEventMember")
+  membershipPricingSchedulesCreated MembershipPricingSchedule[]     @relation("MembershipPricingScheduleCreatedBy")
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([status])
+  @@index([role])
+  @@index([referredByMemberId])
+  @@index([agencyId])
+  @@map("members")
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+enum ContentCategory {
+  FITNESS
+  GAMING
+  FASHION
+  BEAUTY
+  LIFESTYLE
+  TECH
+  FOOD
+  TRAVEL
+  COMEDY
+  MUSIC
+  DANCE
+  BUSINESS
+  ENTREPRENEURSHIP
+  EDUCATION
+  PHOTOGRAPHY
+  MODELING
+  SPORTS
+  AUTOMOTIVE
+  PARENTING
+  PETS
+  FINANCE
+  LUXURY
+  HEALTH
+  ART
+  DIY
+  STREAMING
+  VLOGS
+  PODCASTS
+}
+
+// Private admin-only notes on a member's approval application. Append-only —
+// the list itself is the history (author + timestamp per row); never
+// visible to the member it's about.
+model MemberNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  memberId  String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String
+  createdAt DateTime @default(now())
+
+  member Member @relation("MemberNoteSubject", fields: [memberId], references: [id], onDelete: Cascade)
+  author Member @relation("MemberNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@map("member_notes")
+}
+
+// =============================================================================
+// COMPANIES & BRANDS
+// =============================================================================
+
+model Company {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  logoUrl        String?
+  website        String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members         Member[]
+  brands          Brand[]
+  projects        Project[]
+  gmvTransactions GMVTransaction[]
+  spaceSessions   SpaceSession[]
+
+  @@index([organizationId])
+  @@map("companies")
+}
+
+model Brand {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  companyId      String?  @db.Uuid
+  name           String
+  logoUrl        String?
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company            Company?            @relation(fields: [companyId], references: [id])
+  projects           Project[]
+  gmvTransactions    GMVTransaction[]
+  spaceSessions      SpaceSession[]
+  qrAsset            QRAsset?
+  projectInvitations ProjectInvitation[]
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@map("brands")
+}
+
+// =============================================================================
+// PROJECTS
+// =============================================================================
+
+model Project {
+  id              String        @id @default(uuid()) @db.Uuid
+  organizationId  String        @db.Uuid
+  projectCode     String        @unique // PRJ-000001
+  name            String
+  description     String?
+  clientId        String?       @db.Uuid
+  brandId         String?       @db.Uuid
+  status          ProjectStatus @default(PLANNING)
+  deadline        DateTime?
+  projectLeaderId String?       @db.Uuid
+
+  budget         Decimal @default(0) @db.Decimal(14, 2)
+  gmv            Decimal @default(0) @db.Decimal(14, 2)
+  commissionPool Decimal @default(0) @db.Decimal(14, 2)
+
+  startDate DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client        Company?     @relation(fields: [clientId], references: [id])
+  brand         Brand?       @relation(fields: [brandId], references: [id])
+  projectLeader Member?      @relation("ProjectLeader", fields: [projectLeaderId], references: [id])
+
+  assignments            ProjectAssignment[]
+  tasks                  Task[]
+  notes                  Note[]
+  files                  File[]
+  gmvTransactions        GMVTransaction[]
+  commissionTransactions CommissionTransaction[]
+  spaceSessions          SpaceSession[]
+  comments               Comment[]
+  qrAsset                QRAsset?
+  reservations           Reservation[]
+  collabMessageRefs      Message[]
+  invitations            ProjectInvitation[]
+  collaborationRequests  ProjectCollaborationRequest[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([brandId])
+  @@index([projectLeaderId])
+  @@map("projects")
+}
+
+model ProjectAssignment {
+  id              String           @id @default(uuid()) @db.Uuid
+  projectId       String           @db.Uuid
+  memberId        String           @db.Uuid
+  role            String
+  commissionPct   Decimal          @default(0) @db.Decimal(5, 2)
+  contributionPct Decimal          @default(0) @db.Decimal(5, 2)
+  hours           Decimal          @default(0) @db.Decimal(10, 2)
+  status          AssignmentStatus @default(ACTIVE)
+  assignedAt      DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+  @@index([projectId])
+  @@index([memberId])
+  @@map("project_assignments")
+}
+
+enum ProjectInvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+// Invite an email address (optionally tied to a Brand) to collaborate on a
+// Project — mirrors Invitation's token/expiry/status pattern but scoped to
+// a project instead of the whole org. Acceptance marks the row ACCEPTED; an
+// admin still finishes adding the invitee as a ProjectAssignment once they
+// have a Member account, same as the org-invite flow today.
+model ProjectInvitation {
+  id             String                  @id @default(uuid()) @db.Uuid
+  organizationId String                  @db.Uuid
+  projectId      String                  @db.Uuid
+  brandId        String?                 @db.Uuid
+  email          String
+  roleLabel      String
+  invitedById    String                  @db.Uuid
+  status         ProjectInvitationStatus @default(PENDING)
+  token          String                  @unique
+  expiresAt      DateTime
+  createdAt      DateTime                @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brand        Brand?       @relation(fields: [brandId], references: [id])
+  invitedBy    Member       @relation("ProjectInvitationInvitedBy", fields: [invitedById], references: [id])
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([email])
+  @@map("project_invitations")
+}
+
+enum CollaborationRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// A member requesting to join a Project they're not assigned to. Accepting
+// creates a ProjectAssignment.
+model ProjectCollaborationRequest {
+  id          String                     @id @default(uuid()) @db.Uuid
+  projectId   String                     @db.Uuid
+  memberId    String                     @db.Uuid
+  message     String?
+  status      CollaborationRequestStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime                   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+  @@index([projectId])
+  @@map("project_collaboration_requests")
+}
+
+model Task {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  title       String
+  description String?
+  status      String    @default("todo") // todo | in_progress | done
+  assigneeId  String?   @db.Uuid
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("tasks")
+}
+
+model Note {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  authorId  String?  @db.Uuid
+  body      String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("notes")
+}
+
+// A comment sets exactly one of projectId/collabPostId — enforced in the
+// service layer (addProjectComment / addCollabPostComment), not by a DB
+// constraint, since Prisma has no clean partial/conditional-check mechanism.
+model Comment {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String?  @db.Uuid
+  collabPostId String?  @db.Uuid
+  memberId     String   @db.Uuid
+  body         String
+  mentions     String[] @default([])
+  createdAt    DateTime @default(now())
+
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  collabPost CollabPost? @relation(fields: [collabPostId], references: [id], onDelete: Cascade)
+  member     Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([collabPostId])
+  @@map("comments")
+}
+
+// =============================================================================
+// FACILITY CHECK-IN
+// =============================================================================
+
+model CheckIn {
+  id        String        @id @default(uuid()) @db.Uuid
+  memberId  String        @db.Uuid
+  checkIn   DateTime      @default(now())
+  checkOut  DateTime?
+  duration  Int? // minutes; set on checkout, never overwritten after that
+  status    CheckInStatus @default(CHECKED_IN)
+  source    String        @default("qr") // qr | manual | usb_scanner
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([checkIn])
+  @@map("check_ins")
+}
+
+// =============================================================================
+// BOOTHS & ROOMS
+// =============================================================================
+
+model Space {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  type           SpaceType
+  capacity       Int?
+  location       String?
+  equipment      String[]  @default([])
+  imageUrl       String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessions     SpaceSession[]
+  reservations Reservation[]
+  events       Event[]
+  qrAsset      QRAsset?
+
+  @@index([organizationId])
+  @@map("spaces")
+}
+
+model Reservation {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  spaceId        String            @db.Uuid
+  memberId       String            @db.Uuid
+  projectId      String?           @db.Uuid
+  startTime      DateTime
+  endTime        DateTime
+  status         ReservationStatus @default(CONFIRMED)
+  notes          String?
+  reminderSentAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  space             Space        @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  member            Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project           Project?     @relation(fields: [projectId], references: [id])
+  attendees         Member[]     @relation("ReservationAttendees")
+  collabMessageRefs Message[]
+
+  @@index([spaceId, startTime])
+  @@index([memberId])
+  @@index([projectId])
+  @@map("reservations")
+}
+
+model SpaceSession {
+  id          String             @id @default(uuid()) @db.Uuid
+  spaceId     String             @db.Uuid
+  memberId    String             @db.Uuid
+  projectId   String?            @db.Uuid
+  brandId     String?            @db.Uuid
+  companyId   String?            @db.Uuid
+  status      SpaceSessionStatus @default(IN_PROGRESS)
+  startedAt   DateTime           @default(now())
+  finishedAt  DateTime?
+  durationMin Int?
+  createdAt   DateTime           @default(now())
+
+  space   Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  member  Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id])
+  brand   Brand?   @relation(fields: [brandId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([spaceId])
+  @@index([memberId])
+  @@index([projectId])
+  @@index([status])
+  @@map("space_sessions")
+}
+
+// =============================================================================
+// COMMISSION ENGINE
+// =============================================================================
+
+model CommissionTier {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  code           CommissionTierCode
+  name           String
+  percentage     Decimal            @db.Decimal(5, 2) // e.g. 12.00
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      Member[]
+
+  @@unique([organizationId, code])
+  @@map("commission_tiers")
+}
+
+model CommissionTransaction {
+  id               String             @id @default(uuid()) @db.Uuid
+  memberId         String             @db.Uuid
+  projectId        String?            @db.Uuid
+  gmvTransactionId String?            @unique @db.Uuid
+  tierCode         CommissionTierCode
+  percentage       Decimal            @db.Decimal(5, 2)
+  gmvAmount        Decimal            @db.Decimal(14, 2)
+  commissionAmount Decimal            @db.Decimal(14, 2)
+  projectPayout    Decimal            @default(0) @db.Decimal(14, 2)
+  companyPayout    Decimal            @default(0) @db.Decimal(14, 2)
+  remainingMargin  Decimal            @default(0) @db.Decimal(14, 2)
+  status           CommissionStatus   @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  member         Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project        Project?        @relation(fields: [projectId], references: [id])
+  gmvTransaction GMVTransaction? @relation(fields: [gmvTransactionId], references: [id])
+  payouts        Payout[]
+
+  @@index([memberId])
+  @@index([projectId])
+  @@index([status])
+  @@map("commission_transactions")
+}
+
+model Payout {
+  id                      String       @id @default(uuid()) @db.Uuid
+  memberId                String       @db.Uuid
+  commissionTransactionId String?      @db.Uuid
+  amount                  Decimal      @db.Decimal(14, 2)
+  status                  PayoutStatus @default(PENDING)
+  method                  String? // bank_transfer | check | other
+  paidAt                  DateTime?
+  reference               String?
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  member                Member                 @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  commissionTransaction CommissionTransaction? @relation(fields: [commissionTransactionId], references: [id])
+
+  @@index([memberId])
+  @@index([status])
+  @@map("payouts")
+}
+
+// =============================================================================
+// GMV
+// =============================================================================
+
+enum RevenueChannel {
+  BRAND_DEALS
+  TIKTOK_SHOP
+  ONLINE_STORE
+  AFFILIATE
+  UGC_PROJECTS
+  REFERRALS
+  OTHER
+}
+
+model GMVTransaction {
+  id              String         @id @default(uuid()) @db.Uuid
+  memberId        String         @db.Uuid
+  projectId       String?        @db.Uuid
+  companyId       String?        @db.Uuid
+  brandId         String?        @db.Uuid
+  amount          Decimal        @db.Decimal(14, 2)
+  description     String?
+  source          String? // freeform label (e.g. "Nike Campaign") — distinct from `channel` below
+  channel         RevenueChannel @default(OTHER)
+  externalId      String? // idempotency key for a future automated connector (TikTok Shop, Stripe, etc.); null for manual entries
+  syncSource      String? // e.g. "tiktok_shop", "stripe_connect" — origin tag for a future connector, mirrors SocialConnection's future-sync idiom; null for manual entries
+  transactionDate DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  member                Member                 @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project               Project?               @relation(fields: [projectId], references: [id])
+  company               Company?               @relation(fields: [companyId], references: [id])
+  brand                 Brand?                 @relation(fields: [brandId], references: [id])
+  commissionTransaction CommissionTransaction?
+
+  @@unique([syncSource, externalId])
+  @@index([memberId])
+  @@index([projectId])
+  @@index([companyId])
+  @@index([brandId])
+  @@index([transactionDate])
+  @@index([channel])
+  @@map("gmv_transactions")
+}
+
+model RevenueGoal {
+  id              String   @id @default(uuid()) @db.Uuid
+  memberId        String   @unique @db.Uuid
+  annualGoalCents Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("revenue_goals")
+}
+
+// =============================================================================
+// QR SYSTEM
+// =============================================================================
+
+model QRAsset {
+  id       String      @id @default(uuid()) @db.Uuid
+  type     QRAssetType
+  token    String      @unique
+  imageUrl String?
+
+  memberId   String? @unique @db.Uuid
+  projectId  String? @unique @db.Uuid
+  brandId    String? @unique @db.Uuid
+  spaceId    String? @unique @db.Uuid
+  visitorId  String? @unique @db.Uuid
+  locationId String? @unique @db.Uuid
+  eventId    String? @unique @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member   Member?   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brand    Brand?    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  space    Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  visitor  Visitor?  @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  event    Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@map("qr_assets")
+}
+
+// =============================================================================
+// INVITATIONS / ACCESS
+// =============================================================================
+
+model Invitation {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  email          String
+  role           SystemRole       @default(MEMBER)
+  invitedById    String?          @db.Uuid
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    Member?      @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitations")
+}
+
+// =============================================================================
+// LOGGING / AUDIT / NOTIFICATIONS / FILES
+// =============================================================================
+
+model ActivityLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  memberId       String?  @db.Uuid
+  action         String // e.g. "member.checked_in", "project.created"
+  entityType     String?
+  entityId       String?  @db.Uuid
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member?      @relation(fields: [memberId], references: [id])
+
+  @@index([organizationId])
+  @@index([memberId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  actorId        String?  @db.Uuid
+  action         String
+  entityType     String
+  entityId       String   @db.Uuid
+  before         Json?
+  after          Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  memberId  String           @db.Uuid
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  // Composite, matching the two actual query shapes in /api/notifications:
+  // findMany(memberId, order by createdAt) and count(memberId, readAt: null).
+  // The prior single-column @@index([memberId]) / @@index([readAt]) pair
+  // couldn't satisfy either query without a separate sort/filter step.
+  @@index([memberId, createdAt])
+  @@index([memberId, readAt])
+  @@map("notifications")
+}
+
+model File {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  projectId      String?  @db.Uuid
+  uploadedById   String?  @db.Uuid
+  name           String
+  url            String
+  mimeType       String?
+  sizeBytes      Int?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy   Member?      @relation(fields: [uploadedById], references: [id])
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("files")
+}
+
+// =============================================================================
+// FEEDBACK
+// =============================================================================
+
+model Feedback {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  memberId       String           @db.Uuid
+  category       FeedbackCategory @default(OTHER)
+  subject        String
+  body           String
+  status         FeedbackStatus   @default(OPEN)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([memberId])
+  @@index([status])
+  @@map("feedback")
+}
+
+// =============================================================================
+// COLLAB HUB MARKETPLACE
+// =============================================================================
+
+model CollabPost {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  memberId       String @db.Uuid
+
+  title       String
+  description String
+  category    CollabPostCategory
+  budgetType  CollabBudgetType
+  budgetNote  String?
+  dateNeeded  DateTime?
+  location    CollabLocation
+  expiresAt   DateTime?
+  status      CollabPostStatus   @default(OPEN)
+
+  imageUrls String[] @default([])
+  videoUrls String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member        Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  applications  Application[]
+  conversations Conversation[]
+  likes         CollabPostLike[]
+  comments      Comment[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([category])
+  @@index([memberId])
+  @@map("collab_posts")
+}
+
+model Application {
+  id           String            @id @default(uuid()) @db.Uuid
+  collabPostId String            @db.Uuid
+  applicantId  String            @db.Uuid
+  message      String?
+  status       ApplicationStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  respondedAt  DateTime?
+
+  collabPost CollabPost @relation(fields: [collabPostId], references: [id], onDelete: Cascade)
+  applicant  Member     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([collabPostId, applicantId])
+  @@index([collabPostId])
+  @@index([applicantId])
+  @@map("collab_applications")
+}
+
+model Conversation {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  collabPostId   String @db.Uuid
+  posterId       String @db.Uuid
+  initiatorId    String @db.Uuid
+
+  posterLastReadAt    DateTime?
+  initiatorLastReadAt DateTime?
+  posterTypingAt      DateTime?
+  initiatorTypingAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  collabPost   CollabPost   @relation(fields: [collabPostId], references: [id], onDelete: Cascade)
+  poster       Member       @relation("ConversationPoster", fields: [posterId], references: [id], onDelete: Cascade)
+  initiator    Member       @relation("ConversationInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@unique([collabPostId, initiatorId])
+  @@index([organizationId])
+  @@index([posterId])
+  @@index([initiatorId])
+  @@map("collab_conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @db.Uuid
+  senderId       String      @db.Uuid
+  type           MessageType @default(TEXT)
+
+  body             String?
+  attachmentUrl    String?
+  projectRefId     String? @db.Uuid
+  reservationRefId String? @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         Member       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  projectRef     Project?     @relation(fields: [projectRefId], references: [id])
+  reservationRef Reservation? @relation(fields: [reservationRefId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("collab_messages")
+}
+
+model CollabPostLike {
+  id           String   @id @default(uuid()) @db.Uuid
+  collabPostId String   @db.Uuid
+  memberId     String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  collabPost CollabPost @relation(fields: [collabPostId], references: [id], onDelete: Cascade)
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([collabPostId, memberId])
+  @@index([collabPostId])
+  @@map("collab_post_likes")
+}
+
+model Follow {
+  id          String   @id @default(uuid()) @db.Uuid
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  follower  Member @relation("MemberFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following Member @relation("MemberFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// Generic member-to-member direct messaging — independent of Collab Hub's
+// CollabPost-scoped Conversation/Message above, which stays untouched.
+// Participant-based (not a fixed 2-party poster/initiator pair) so group
+// chats can be added later without another migration.
+model DirectConversation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  isGroup        Boolean  @default(false)
+  name           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  participants DirectConversationParticipant[]
+  messages     DirectMessage[]
+
+  @@index([organizationId])
+  @@map("direct_conversations")
+}
+
+model DirectConversationParticipant {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @db.Uuid
+  memberId       String    @db.Uuid
+  lastReadAt     DateTime?
+  typingAt       DateTime?
+  joinedAt       DateTime  @default(now())
+
+  conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  member       Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, memberId])
+  @@index([memberId])
+  @@map("direct_conversation_participants")
+}
+
+model DirectMessage {
+  id             String            @id @default(uuid()) @db.Uuid
+  conversationId String            @db.Uuid
+  senderId       String            @db.Uuid
+  type           DirectMessageType @default(TEXT)
+  body           String?
+  attachmentUrl  String?
+  createdAt      DateTime          @default(now())
+
+  conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       Member             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("direct_messages")
+}
+
+// =============================================================================
+// KIOSK / VISITORS
+// =============================================================================
+
+model Visitor {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  company   String?
+
+  reasonForVisit      String
+  visitorType         VisitorType
+  expectedTimeLeaving DateTime?
+  photoUrl            String? // reserved for future use; not populated in v1
+
+  termsAcceptedAt DateTime
+  status          VisitorStatus @default(WAITING)
+
+  arrivedAt    DateTime  @default(now())
+  approvedAt   DateTime?
+  checkedOutAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  qrAsset      QRAsset?
+  scanEvents   ScanEvent[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([arrivedAt])
+  @@map("visitors")
+}
+
+// =============================================================================
+// LOCATIONS / SCAN EVENTS
+// =============================================================================
+
+enum LocationType {
+  ENTRANCE
+  BOOTH
+  PODCAST_ROOM
+  RECORDING_STUDIO
+  BEAUTY_CHAIR
+  ROOFTOP
+  CONFERENCE_ROOM
+  EDITING_BAY
+}
+
+model Location {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  name           String
+  slug           String
+  type           LocationType
+  active         Boolean      @default(true)
+  capacity       Int?
+  description    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scanEvents   ScanEvent[]
+  qrAsset      QRAsset?
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("locations")
+}
+
+enum ScanEventAction {
+  FACILITY_CHECK_IN
+  FACILITY_CHECK_OUT
+  SPACE_ENTER
+  SPACE_EXIT
+  VISITOR_CHECK_IN
+  VISITOR_CHECK_OUT
+}
+
+// Append-only audit log of every QR scan handled by the kiosk. Never updated
+// after creation ("do not overwrite previous records") — occupancy and
+// per-location session durations are always derived by reading history, the
+// same way Space occupancy is already computed fresh from SpaceSession/
+// Reservation rows elsewhere in this schema rather than stored.
+model ScanEvent {
+  id           String          @id @default(uuid()) @db.Uuid
+  memberId     String?         @db.Uuid
+  visitorId    String?         @db.Uuid
+  locationId   String?         @db.Uuid
+  // Denormalized copies of the location's name/type at scan time, so this
+  // row's meaning survives a location being later renamed, retyped, or
+  // deleted — matches the audit-log intent (a rename shouldn't rewrite
+  // history).
+  locationName String
+  locationType String
+  deviceId     String?
+  action       ScanEventAction
+  timestamp    DateTime        @default(now())
+  notes        String?
+
+  member   Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  visitor  Visitor?  @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  @@index([memberId])
+  @@index([locationId])
+  @@index([timestamp])
+  @@map("scan_events")
+}
+
+// =============================================================================
+// EMAIL
+// =============================================================================
+
+// DELIVERED/OPENED/CLICKED/BOUNCED/COMPLAINED are unused today — they exist
+// so a future Resend webhook handler (keyed off EmailLog.providerId) has
+// somewhere to write delivery-event status without another migration.
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+  RETRYING
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINED
+}
+
+// Backs the Email Center dashboard's Category filter/breakdown. Derived
+// automatically from the template name (see TEMPLATE_CATEGORY) — never set
+// by call sites directly.
+enum EmailCategory {
+  AUTHENTICATION
+  MEMBERSHIP
+  COMMUNITY
+  MESSAGING
+  PROJECTS
+  SPACES
+  EVENTS
+  ADMIN
+  BILLING
+  MARKETING
+  SYSTEM
+}
+
+// One row per EmailService.send call — backs the Admin Communications email
+// history/delivery-status view, the Email Center dashboard, and the queue's
+// retry bookkeeping. Never the source of truth for whether an email
+// "actually happened" beyond Resend's own record; this is CreatorHub360's
+// local audit trail of attempts.
+model EmailLog {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  to             String
+  recipientName  String?
+  subject        String
+  template       String
+  category       EmailCategory
+  status         EmailStatus   @default(QUEUED)
+  provider       String        @default("resend")
+  providerId     String?
+  from           String?
+  // No producer sets this today — the sync-send path has no reply-to
+  // concept — but it's schema-ready for when one does.
+  replyTo        String?
+  html           String?       @db.Text
+  text           String?       @db.Text
+  error          String?
+  memberId       String?       @db.Uuid
+  sentById       String?       @db.Uuid
+  attempts       Int           @default(0)
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  bouncedAt      DateTime?
+  failedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member?      @relation("EmailLogRecipient", fields: [memberId], references: [id], onDelete: SetNull)
+  sentBy       Member?      @relation("EmailLogSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@index([memberId])
+  @@map("email_logs")
+}
+
+// =============================================================================
+// MEMBERSHIP APPLICATIONS
+// =============================================================================
+
+enum MembershipApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// The public "Apply to Join" form writes only here — never a Member, never a
+// Supabase auth user. Approving one is what actually provisions the account
+// (see approveApplicationAction), reusing the same onboarding path as
+// admin-created members. Named MembershipApplication (not Application) since
+// that name is already taken by the unrelated Collab Hub job-application model.
+model MembershipApplication {
+  id                         String                      @id @default(uuid()) @db.Uuid
+  organizationId             String                      @db.Uuid
+  fullName                   String
+  email                      String
+  phone                      String
+  role                       MemberRole
+  company                    String?
+  website                    String?
+  businessRegistrationNumber String?
+  instagram                  String?
+  tiktok                     String?
+  youtube                    String?
+  city                       String?
+  state                      String?
+  country                    String?
+  reason                     String?
+  referredBy                 String?
+  // Structured affiliate tracking, distinct from the freeform `referredBy`
+  // text field above — the exact referral code (e.g. "AGY-001284") that was
+  // active (via QR/link param or manual entry) when this application was
+  // submitted. Validated against a real, active referrer at submit time; see
+  // ReferralLink for the full audit trail this feeds.
+  referralCode               String?
+  // "Existing Agency Claim Workflow" — set when the applicant chose "Request
+  // Access to Existing Agency" instead of registering a duplicate. Plain
+  // scalar (no FK), same pattern as referralCode above: validated in
+  // application code (see approveApplicationAction), not enforced at the DB
+  // layer, since the target agency is looked up by id at approval time.
+  claimedAgencyId            String?                     @db.Uuid
+  claimedAgencyRole          AgencyMemberRole?
+  // "Creator Request Notes" — the applicant's answer to "Why are you
+  // requesting to join this agency?", captured alongside the claim above and
+  // copied onto the AgencyAccessRequest at approval time (see
+  // approveApplicationAction / requestAgencyAccess).
+  claimRequestNote           String?
+  // Set when this application originated from an Owner/Manager's team
+  // invitation link — an admin-issued invite IS the agency-side approval,
+  // so approveApplicationAction auto-joins the new Member directly instead
+  // of creating a pending AgencyAccessRequest. Plain scalar (no FK), same
+  // pattern as claimedAgencyId.
+  agencyInviteToken          String?
+  status                     MembershipApplicationStatus @default(PENDING)
+  notes                      String?
+  notesUpdatedAt             DateTime?
+  notesUpdatedById           String?                     @db.Uuid
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  reviewedAt                 DateTime?
+  reviewedById               String?                     @db.Uuid
+
+  organization     Organization                           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewedBy       Member?                                @relation("MembershipApplicationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  notesUpdatedBy   Member?                                @relation("MembershipApplicationNotesUpdatedBy", fields: [notesUpdatedById], references: [id], onDelete: SetNull)
+  legalAcceptances MembershipApplicationLegalAcceptance[]
+  referralLink     ReferralLink?
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("membership_applications")
+}
+
+// =============================================================================
+// AFFILIATE / REFERRAL TRACKING
+// =============================================================================
+//
+// A generic, role-agnostic referral engine — today only AGENCY-role members
+// get a code (see REFERRAL_ELIGIBLE_ROLES in
+// features/referrals/config/referral-config.ts), but nothing here is
+// Agency-specific: referrerRole is stored per-link precisely so Brand/
+// Broker/Business Development/Staff referral IDs can be turned on later by
+// extending that one config array — no schema change required.
+
+// One row per referral relationship, created the moment a MembershipApplication
+// is submitted with a referral code (QR scan, link param, or manual entry) and
+// updated (never replaced) as that application is approved and the resulting
+// Member gets connected. This is the durable audit trail behind
+// Member.referredByMemberId/referredByCode — "attribution even months later"
+// even if the referrer or the application is later deleted.
+model ReferralLink {
+  id               String         @id @default(uuid()) @db.Uuid
+  organizationId   String         @db.Uuid
+  referrerMemberId String         @db.Uuid
+  referrerRole     MemberRole
+  referralCode     String
+  source           ReferralSource
+  status           ReferralStatus @default(PENDING)
+  applicationId    String?        @unique @db.Uuid
+  memberId         String?        @unique @db.Uuid
+  referredAt       DateTime       @default(now())
+  approvedAt       DateTime?
+  connectedAt      DateTime?
+  rejectedAt       DateTime?
+  reviewNote       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  referrer     Member                 @relation("ReferralLinkReferrer", fields: [referrerMemberId], references: [id], onDelete: Cascade)
+  application  MembershipApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  member       Member?                @relation("ReferralLinkMember", fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, referrerMemberId])
+  @@index([referralCode])
+  @@index([status])
+  @@map("referral_links")
+}
+
+enum ReferralSource {
+  QR_CODE
+  LINK
+  MANUAL_ENTRY
+}
+
+enum ReferralStatus {
+  PENDING // application submitted with this referral, awaiting review
+  ACTIVE // application approved — Member created and connected to the referrer
+  REJECTED // application rejected; referral never took effect
+  TRANSFERRED // superseded by a Super Admin-authorized reassignment
+}
+
+// =============================================================================
+// EXISTING AGENCY CLAIM WORKFLOW
+// =============================================================================
+
+enum AgencyMemberRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum AgencyAccessStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+// "If someone attempts to create an agency that already exists ... provide a
+// button: Request Access to Existing Agency." One row per person who asked
+// to join an existing agency's team instead of registering a duplicate.
+// Approval sets Member.agencyId/agencyRole on the requester — it never
+// mints a new referralCode, which is what makes "they inherit the agency's
+// existing Agency ID and creator network" true by construction.
+model AgencyAccessRequest {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  agencyId       String             @db.Uuid
+  requesterId    String             @unique @db.Uuid
+  role           AgencyMemberRole
+  status         AgencyAccessStatus @default(PENDING)
+  requestedAt    DateTime           @default(now())
+  decidedAt      DateTime?
+  decidedById    String?            @db.Uuid
+  reviewNote     String?
+  // "Creator Request Notes" — the creator's own answer to "Why are you
+  // requesting to join this agency?", captured at request time (Apply,
+  // Signup, or Settings manual entry) and shown to the agency's reviewers
+  // alongside the request. Stored permanently — never cleared on
+  // approval/rejection, so it stays part of the connection's history.
+  requestNote    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("AgencyAccessRequestAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  requester    Member       @relation("AgencyAccessRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  decidedBy    Member?      @relation("AgencyAccessRequestDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, agencyId])
+  @@index([status])
+  @@map("agency_access_requests")
+}
+
+enum AgencyInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+}
+
+// "Agency Invitations" — an Owner/Manager inviting a specific person by
+// email to join their team, distinct from AgencyAccessRequest (which is a
+// stranger's self-service request after hitting a duplicate-agency block).
+// An accepted invitation grants access directly — the invite itself is the
+// approval, mirroring how the platform's own admin Invitation model bypasses
+// MembershipApplication review.
+model AgencyInvitation {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organizationId String                 @db.Uuid
+  agencyId       String                 @db.Uuid
+  fullName       String
+  email          String
+  role           AgencyMemberRole
+  token          String                 @unique
+  status         AgencyInvitationStatus @default(PENDING)
+  invitedById    String                 @db.Uuid
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedById   String?                @db.Uuid
+  declinedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("AgencyInvitationAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  invitedBy    Member       @relation("AgencyInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  acceptedBy   Member?      @relation("AgencyInvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, agencyId])
+  @@index([email])
+  @@index([status])
+  @@map("agency_invitations")
+}
+
+enum AgencyActivityType {
+  INVITATION_SENT
+  INVITATION_ACCEPTED
+  INVITATION_DECLINED
+  INVITATION_REVOKED
+  TEAM_MEMBER_REMOVED
+  ROLE_CHANGED
+  OWNERSHIP_TRANSFERRED
+  CREATOR_REQUEST_RECEIVED
+  CREATOR_APPROVED
+  CREATOR_REJECTED
+  CREATOR_JOINED
+  FIRST_GMV
+  GMV_MILESTONE
+  PROFILE_UPDATED
+}
+
+// "Team Activity Feed" — a pre-rendered, human-readable narrative of events
+// scoped to one agency. Deliberately a separate table from AuditLog (which
+// stays the generic, actor/entity-shaped compliance trail used across the
+// whole app): milestones like GMV thresholds have no human actor, and this
+// table's `message` is written once at log time rather than reconstructed
+// per-render from raw before/after diffs.
+model AgencyActivity {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  agencyId       String             @db.Uuid
+  type           AgencyActivityType
+  actorId        String?            @db.Uuid
+  targetId       String?            @db.Uuid
+  message        String
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("AgencyActivityAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  actor        Member?      @relation("AgencyActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+  target       Member?      @relation("AgencyActivityTarget", fields: [targetId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, agencyId, createdAt])
+  @@map("agency_activities")
+}
+
+// One entry per legal document a signup flow requires explicit consent for.
+// DATA_PROCESSING has no standalone page of its own -- its clause lives inside
+// the Privacy Policy page (see features/legal/documents) -- but is tracked as
+// its own consent type since it's a legally distinct GDPR-style acceptance,
+// not just "I read the privacy policy."
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+  DATA_PROCESSING
+  MEDIA_RELEASE
+  LIABILITY_RELEASE
+}
+
+// The durable consent record for an existing Member -- written directly at
+// invite-based signup (Member already exists), or copied over from a
+// MembershipApplicationLegalAcceptance row the moment an application is
+// approved and its Member row is finally created (see
+// materializeLegalAcceptancesForMember). version/acceptedAt/ipAddress/
+// userAgent always reflect the *original* moment the person checked the box,
+// never the approval moment. ipAddress is nullable because collecting it is
+// itself a privacy-sensitive choice this app makes best-effort, not a
+// guarantee -- "where permitted" per the compliance requirement.
+model LegalAcceptance {
+  id           String            @id @default(uuid()) @db.Uuid
+  memberId     String            @db.Uuid
+  documentType LegalDocumentType
+  version      String
+  accepted     Boolean           @default(true)
+  acceptedAt   DateTime          @default(now())
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime          @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, documentType, version])
+  @@index([memberId])
+  @@map("legal_acceptances")
+}
+
+// The pre-Member mirror of LegalAcceptance for the public /apply flow, where
+// a MembershipApplication can sit PENDING for days before an admin approves
+// it and a Member row is created. Captured at submission time so the
+// timestamp/IP/user agent are never lost to that gap.
+model MembershipApplicationLegalAcceptance {
+  id            String            @id @default(uuid()) @db.Uuid
+  applicationId String            @db.Uuid
+  documentType  LegalDocumentType
+  version       String
+  accepted      Boolean           @default(true)
+  acceptedAt    DateTime          @default(now())
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime          @default(now())
+
+  application MembershipApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, documentType, version])
+  @@index([applicationId])
+  @@map("membership_application_legal_acceptances")
+}
+
+// The 4 documents that actually have a page/content of their own --
+// DATA_PROCESSING (a LegalDocumentType, used only for LegalAcceptance rows)
+// is deliberately excluded, since its clause lives inside the Privacy
+// Policy rather than as its own versioned document.
+enum LegalPageType {
+  TERMS
+  PRIVACY
+  MEDIA_RELEASE
+  LIABILITY_RELEASE
+}
+
+enum LegalVersionStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// Set only when a version is published -- drafts have no kind yet. MAJOR
+// publishes require every member's re-acceptance; MINOR publishes update
+// the displayed version without disturbing existing acceptances. Null on
+// the very first published version of a document (nothing to compare
+// against, so "major vs minor" doesn't yet apply).
+enum LegalVersionKind {
+  MAJOR
+  MINOR
+}
+
+// One row per draft or published revision of a legal document -- editing
+// never overwrites a prior row, so every version that was ever live stays
+// permanently readable for compare/audit purposes. The single "current"
+// version per documentType is derived (latest PUBLISHED row), never stored
+// redundantly, so there's exactly one place version state can drift from.
+model LegalDocumentVersion {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  documentType   LegalPageType
+  version        String
+  title          String
+  summary        String
+  sections       Json
+  status         LegalVersionStatus @default(DRAFT)
+  versionKind    LegalVersionKind?
+  changeSummary  String?
+  effectiveDate  DateTime?
+  publishedAt    DateTime?
+  publishedById  String?            @db.Uuid
+  createdById    String?            @db.Uuid
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  publishedBy  Member?      @relation("LegalDocumentVersionPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  createdBy    Member?      @relation("LegalDocumentVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, documentType, version])
+  @@index([organizationId, documentType, status])
+  @@map("legal_document_versions")
+}
+
+// The only schema addition in the "premium platform" UX initiative — every
+// other sprint is presentation-layer only. Real self-service RSVP (going/
+// maybe/not-going) needs persisted per-member state that nothing else in
+// the schema could safely be repurposed to hold.
+enum RsvpStatus {
+  GOING
+  MAYBE
+  NOT_GOING
+  WAITLISTED
+}
+
+// Draft -> (submit) -> PendingApproval -> Admin decides:
+//   Approve -> Published | Reject -> Rejected | Request Changes -> back to Draft (see Event.changeRequestNote)
+// Published events can later be Cancelled or Archived by an Admin/Super Admin.
+enum EventStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  REJECTED
+  CANCELLED
+}
+
+// 14 categories per the Event Management spec — each maps to an icon+color
+// in src/features/events/config/event-categories.ts, not stored here so the
+// visual treatment can change without a migration.
+enum EventCategory {
+  NETWORKING
+  WORKSHOP
+  CREATOR_MEETUP
+  PODCAST_RECORDING
+  PHOTOSHOOT
+  BRAND_ACTIVATION
+  PANEL_DISCUSSION
+  LAUNCH_PARTY
+  MASTERCLASS
+  COMMUNITY_MIXER
+  PRODUCT_DEMO
+  AWARDS_CEREMONY
+  HOLIDAY_CELEBRATION
+  OTHER
+}
+
+enum EventCheckInMethod {
+  QR
+  MANUAL
+}
+
+model Event {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  title          String
+  description    String?
+  location       String?
+  // Informational only for Reservation purposes — bookSpace never reads
+  // Event rows. Conflict-checking (see event-space-availability.service.ts)
+  // reads both tables directly instead of linking them structurally.
+  spaceId        String?  @db.Uuid
+  startTime      DateTime
+  endTime        DateTime
+  capacity       Int?
+  imageUrl       String?
+  createdById    String   @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  status   EventStatus   @default(DRAFT)
+  category EventCategory @default(OTHER)
+
+  // Proposal-form fields (Section 2 of the spec) — the host is often not the
+  // submitting Member (e.g. an admin submits on a sponsor's behalf), so this
+  // is free text distinct from createdBy.
+  hostName             String?
+  hostContact          String?
+  registrationDeadline DateTime?
+  website              String?
+  dressCode            String?
+  foodProvided         Boolean   @default(false)
+  parkingInfo          String?
+  equipmentNeeded      String[]  @default([])
+  // Future-ready per the spec's closing section — accepted and stored, not
+  // yet rendered by any player/checkout UI.
+  livestreamUrl        String?
+  ticketPriceCents     Int?
+  isPrivate            Boolean   @default(false)
+
+  // Array of {name, logoUrl, message?, ctaLabel?, ctaLink?}, same shape and
+  // rationale as KioskTheme.sponsors (theme/event-scoped, not queried
+  // independently).
+  sponsors Json?
+
+  // "Only one featured event at a time" — enforced in the service layer via
+  // a transactional unset-then-set, mirroring KioskTheme.isPinnedLive.
+  isFeatured Boolean @default(false)
+  viewCount  Int     @default(0)
+
+  submittedAt        DateTime?
+  approvedById       String?   @db.Uuid
+  approvedAt         DateTime?
+  rejectedById       String?   @db.Uuid
+  rejectedAt         DateTime?
+  rejectionReason    String?
+  // Admin feedback from "Request Changes" — persists until the member edits
+  // and resubmits (status returns to DRAFT rather than a separate status).
+  changeRequestNote  String?
+  cancelledById      String?   @db.Uuid
+  cancelledAt        DateTime?
+  cancellationReason String?
+  archivedAt         DateTime?
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  space        Space?         @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  createdBy    Member         @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  approvedBy   Member?        @relation("EventApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedBy   Member?        @relation("EventRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  cancelledBy  Member?        @relation("EventCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  rsvps        EventRsvp[]
+  checkIns     EventCheckIn[]
+  kioskThemes  KioskTheme[]
+  qrAsset      QRAsset?
+
+  @@index([organizationId])
+  @@index([startTime])
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@map("events")
+}
+
+model EventRsvp {
+  id                 String     @id @default(uuid()) @db.Uuid
+  eventId            String     @db.Uuid
+  memberId           String     @db.Uuid
+  status             RsvpStatus
+  // Only set while status = WAITLISTED — earliest position is promoted
+  // first when a GOING spot opens up.
+  waitlistPosition   Int?
+  reminderSentAt     DateTime?
+  startingSoonSentAt DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, memberId])
+  @@index([eventId])
+  @@index([memberId])
+  @@map("event_rsvps")
+}
+
+model EventCheckIn {
+  id            String             @id @default(uuid()) @db.Uuid
+  eventId       String             @db.Uuid
+  memberId      String             @db.Uuid
+  checkedInAt   DateTime           @default(now())
+  // Null when self-service (kiosk QR scan); set when an admin manually
+  // checks someone in from the Event Dashboard.
+  checkedInById String?            @db.Uuid
+  method        EventCheckInMethod @default(QR)
+
+  event       Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member      Member  @relation("EventCheckInMember", fields: [memberId], references: [id], onDelete: Cascade)
+  checkedInBy Member? @relation("EventCheckInStaff", fields: [checkedInById], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, memberId])
+  @@index([eventId])
+  @@map("event_check_ins")
+}
+
+// =============================================================================
+// MEMBERSHIP PLANS
+// =============================================================================
+// Internal plan/billing tracking — no payment processor is wired up. Fees are
+// recorded as they're collected outside the app via MembershipPayment; this
+// is intentionally not a Stripe-backed subscription system.
+
+enum BillingInterval {
+  MONTHLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+model MembershipPlan {
+  id              String          @id @default(uuid()) @db.Uuid
+  organizationId  String          @db.Uuid
+  name            String
+  description     String?
+  priceCents      Int
+  billingInterval BillingInterval @default(MONTHLY)
+  trialMonths     Int             @default(0)
+  // Free-text marketing bullets not tied to access control (e.g. "Creator
+  // Profile," "Community Access") — structured, enforceable benefits live in
+  // MembershipPlanFeatureValue instead (see that model's comment).
+  benefits        String[]        @default([])
+  // Which Role this plan is for — null means a generic/default plan
+  // usable by anyone. Lets multiple targeted plans (Creator/Brand/Agency/...)
+  // coexist per org without a schema change; getActivePlan() picks the
+  // best match for a given role.
+  appliesTo       MemberRole?
+  isActive        Boolean         @default(true)
+  // Lowest sortOrder among active plans targeting a Role is also the plan
+  // getActivePlan() grants on approval — reordering a package to the front
+  // makes it the new default trial plan, same as most SaaS "which tier is
+  // the entry tier" behavior.
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  organization        Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptions       MemberSubscription[]
+  featureValues       MembershipPlanFeatureValue[]
+  pricingSchedules    MembershipPricingSchedule[]
+  lifecycleEventsFrom MembershipLifecycleEvent[]   @relation("MembershipLifecycleFromPlan")
+  lifecycleEventsTo   MembershipLifecycleEvent[]   @relation("MembershipLifecycleToPlan")
+
+  @@index([organizationId])
+  @@map("membership_plans")
+}
+
+// =============================================================================
+// CONFIGURABLE MEMBERSHIP FEATURES (the "package benefits" engine)
+// =============================================================================
+// A Super Admin defines feature TYPES here (e.g. "Board Room Access",
+// "Guest Passes Per Day") without touching code, then sets a value per plan
+// via MembershipPlanFeatureValue. Access-control code (bookSpace, event
+// RSVP, etc.) reads these values by `key` rather than hardcoding
+// package-specific logic — adding a new package or a new benefit type never
+// requires a schema change or a redeploy, only new rows.
+
+enum MembershipFeatureValueType {
+  BOOLEAN
+  NUMBER
+  TEXT
+}
+
+// Usage-counter features (guest passes, event credits) need to know how
+// often their per-member consumption resets — NONE means the feature is a
+// static entitlement (e.g. Board Room Access), not a consumable counter.
+enum MembershipFeatureResetPeriod {
+  NONE
+  DAILY
+  MONTHLY
+}
+
+model MembershipFeature {
+  id             String                       @id @default(uuid()) @db.Uuid
+  organizationId String                       @db.Uuid
+  // Stable machine key access-control code reads by (e.g. "board_room_access")
+  // — never shown to users, never changes even if `label` is edited.
+  key            String
+  label          String
+  description    String?
+  valueType      MembershipFeatureValueType
+  resetPeriod    MembershipFeatureResetPeriod @default(NONE)
+  isActive       Boolean                      @default(true)
+  sortOrder      Int                          @default(0)
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  organization  Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planValues    MembershipPlanFeatureValue[]
+  usageCounters MembershipUsageCounter[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId, isActive])
+  @@map("membership_features")
+}
+
+// One row = "this plan includes this feature, at this value." A feature
+// with no row for a given plan means that plan doesn't include it at all
+// (e.g. Basic has no row for Board Room Access). Exactly one of
+// bool/number/textValue is populated, matching the feature's valueType.
+model MembershipPlanFeatureValue {
+  id              String   @id @default(uuid()) @db.Uuid
+  planId          String   @db.Uuid
+  featureId       String   @db.Uuid
+  boolValue       Boolean?
+  numberValue     Int?
+  textValue       String?
+  // NUMBER features only — "Unlimited Podcast Room Access" instead of a
+  // literal count.
+  isUnlimited     Boolean  @default(false)
+  // Optional full bullet-text override (e.g. "6 Guest Passes per day
+  // (Company Meetings)") — falls back to an auto-generated line from
+  // feature.label + the value when unset.
+  displayOverride String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  plan    MembershipPlan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  feature MembershipFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureId])
+  @@index([featureId])
+  @@map("membership_plan_feature_values")
+}
+
+// Per-member, per-period consumption of a usage-limited feature (guest
+// passes reset DAILY, event credits reset MONTHLY — see resetPeriod).
+// `period` is "YYYY-MM-DD" for DAILY, "YYYY-MM" for MONTHLY, computed by
+// the service layer, never by the client, so a member can't backdate usage.
+model MembershipUsageCounter {
+  id        String   @id @default(uuid()) @db.Uuid
+  memberId  String   @db.Uuid
+  featureId String   @db.Uuid
+  period    String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  member  Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  feature MembershipFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, featureId, period])
+  @@index([featureId, period])
+  @@map("membership_usage_counters")
+}
+
+// A future price change queued by a Super Admin ("Schedule future pricing
+// changes") — applied by a daily sweep once `effectiveAt` passes, leaving
+// `appliedAt` as the audit trail of when it actually took effect.
+model MembershipPricingSchedule {
+  id            String    @id @default(uuid()) @db.Uuid
+  planId        String    @db.Uuid
+  newPriceCents Int
+  effectiveAt   DateTime
+  appliedAt     DateTime?
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+
+  plan      MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  createdBy Member?        @relation("MembershipPricingScheduleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([planId])
+  @@index([effectiveAt, appliedAt])
+  @@map("membership_pricing_schedules")
+}
+
+enum MembershipLifecycleEventType {
+  SUBSCRIBED
+  TRIAL_CONVERTED
+  UPGRADED
+  DOWNGRADED
+  CANCELED
+  RESUMED
+  EXPIRED
+  PAST_DUE
+}
+
+// The single append-only log every membership analytics number (MRR
+// history, upgrades, downgrades, churn, trial conversions) is computed
+// from — written at each lifecycle transition point rather than derived
+// from MemberSubscription's current-state-only columns.
+model MembershipLifecycleEvent {
+  id             String                       @id @default(uuid()) @db.Uuid
+  organizationId String                       @db.Uuid
+  memberId       String                       @db.Uuid
+  type           MembershipLifecycleEventType
+  fromPlanId     String?                      @db.Uuid
+  toPlanId       String?                      @db.Uuid
+  metadata       Json?
+  createdAt      DateTime                     @default(now())
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member          @relation("MembershipLifecycleEventMember", fields: [memberId], references: [id], onDelete: Cascade)
+  fromPlan     MembershipPlan? @relation("MembershipLifecycleFromPlan", fields: [fromPlanId], references: [id], onDelete: SetNull)
+  toPlan       MembershipPlan? @relation("MembershipLifecycleToPlan", fields: [toPlanId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, type, createdAt])
+  @@index([memberId])
+  @@map("membership_lifecycle_events")
+}
+
+model MemberSubscription {
+  id                        String             @id @default(uuid()) @db.Uuid
+  memberId                  String             @unique @db.Uuid
+  planId                    String             @db.Uuid
+  status                    SubscriptionStatus @default(TRIALING)
+  startedAt                 DateTime           @default(now())
+  trialEndsAt               DateTime?
+  currentPeriodEnd          DateTime?
+  // When a cancellation takes effect — access continues until this date
+  // ("cancel at period end"), distinct from canceledAt (when cancel was
+  // requested). Also used by the PAST_DUE/CANCELED -> EXPIRED lifecycle sweep.
+  cancelAt                  DateTime?
+  canceledAt                DateTime?
+  trialEndingSoonNotifiedAt DateTime?
+  // Unused until a real payment gateway is integrated — reserved so that
+  // integration has somewhere to write without another migration.
+  paymentProviderCustomerId String?
+  externalSubscriptionId    String?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  member   Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan     MembershipPlan      @relation(fields: [planId], references: [id])
+  payments MembershipPayment[]
+
+  @@index([planId])
+  @@map("member_subscriptions")
+}
+
+model MembershipPayment {
+  id                   String   @id @default(uuid()) @db.Uuid
+  memberSubscriptionId String   @db.Uuid
+  amountCents          Int
+  paidAt               DateTime @default(now())
+  note                 String?
+  createdAt            DateTime @default(now())
+
+  subscription MemberSubscription @relation(fields: [memberSubscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([memberSubscriptionId])
+  @@map("membership_payments")
+}
+
+// =============================================================================
+// SOCIAL CONNECTIONS
+// =============================================================================
+// Real OAuth connections to social platforms for follower-count sync.
+// gmvSyncedCents/commissionSyncedCents stay null for these platforms — they
+// exist so a future commerce-platform connector (e.g. Shopify) doesn't need
+// a schema change.
+
+enum SocialPlatform {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+}
+
+enum SocialConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+model SocialConnection {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  memberId              String                 @db.Uuid
+  platform              SocialPlatform
+  status                SocialConnectionStatus @default(DISCONNECTED)
+  externalAccountId     String?
+  externalUsername      String?
+  followerCount         Int?
+  profileImageUrl       String? // avatar — all 3 platforms
+  followingCount        Int? // TikTok following_count, Instagram follows_count; null for YouTube
+  postCount             Int? // Instagram media_count, YouTube statistics.videoCount; null for TikTok
+  likesCount            Int? // TikTok total-likes metric only
+  engagementRate        Decimal?               @db.Decimal(5, 2) // percent, e.g. 3.42 — no provider populates this yet; reserved so a future metric doesn't need another migration
+  accountType           String? // Instagram only: "PERSONAL" | "BUSINESS" | "MEDIA_CREATOR"; free-form so other platforms can reuse without a migration
+  accessTokenEnc        String?
+  refreshTokenEnc       String?
+  tokenExpiresAt        DateTime?
+  gmvSyncedCents        Int?
+  commissionSyncedCents Int?
+  lastSyncedAt          DateTime?
+  lastSyncError         String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, platform])
+  @@map("social_connections")
+}
+
+// =============================================================================
+// STORE CONNECTIONS
+// =============================================================================
+// Real OAuth connections to e-commerce platforms for revenue sync. Generic
+// enough for Shopify today and other store providers later (WooCommerce,
+// BigCommerce) without a UI or schema change — same future-proofing idiom as
+// SocialConnection above and GMVTransaction.syncSource/externalId.
+
+enum StoreProvider {
+  SHOPIFY
+}
+
+enum StoreConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+model StoreConnection {
+  id                    String                @id @default(uuid()) @db.Uuid
+  memberId              String                @db.Uuid
+  provider              StoreProvider
+  status                StoreConnectionStatus @default(DISCONNECTED)
+  storeName             String?
+  storeDomain           String? // e.g. "acme.myshopify.com" — needed before OAuth can even start, unlike the social platforms
+  externalAccountId     String?
+  accessTokenEnc        String?
+  refreshTokenEnc       String?
+  tokenExpiresAt        DateTime?
+  gmvSyncedCents        Int? // populated once a real revenue-sync job ships; null until then
+  commissionSyncedCents Int?
+  revenueSyncStatus     String? // "idle" | "syncing" | "error" — separate from connection `status`
+  lastSyncedAt          DateTime?
+  lastSyncError         String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, provider])
+  @@map("store_connections")
+}
+
+// =============================================================================
+// DYNAMIC KIOSK EXPERIENCE SYSTEM
+// =============================================================================
+
+enum KioskThemeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum KioskAnimationStyle {
+  FADE
+  SLIDE
+  ZOOM
+  NONE
+}
+
+enum KioskLogoVariant {
+  DEFAULT
+  LIGHT
+  DARK
+  HIDDEN
+  CUSTOM
+}
+
+enum KioskButtonStyle {
+  SOLID
+  OUTLINE
+  GLASS
+  GRADIENT
+}
+
+// A closed, reusable catalog of visual flourishes rather than free-form
+// theming — each value maps to a generic, theme-color-tinted CSS/motion
+// effect (see kiosk-decorative-elements.config.ts), so any future theme can
+// mix-and-match them without a code change even though the effects
+// themselves are a fixed set.
+enum KioskDecorativeElement {
+  SNOWFALL
+  CHRISTMAS_LIGHTS
+  DECORATED_TREES
+  WRAPPED_GIFTS
+  GOLD_GLOW
+  PUMPKINS
+  SPIDER_WEBS
+  PURPLE_LIGHTING
+  FLOATING_GHOSTS
+  ANIMATED_BATS
+  LUXURY_VIGNETTE
+  LEATHER_TEXTURE
+  WHISKEY_GLOW
+  WARM_LIGHTING
+  COPPER_ACCENTS
+  CONFETTI
+  SPARKLES
+  BOKEH_LIGHTS
+}
+
+// "Schedule by Date / by Time / by Day of Week / Recurring Themes" — NONE
+// means the plain startDate..endDate (+ optional startTime..endTime) window
+// is the whole schedule; WEEKLY/MONTHLY_NTH_WEEKDAY layer a repeating rule
+// on top of that same window (never outside it).
+enum KioskRecurrence {
+  NONE
+  WEEKLY
+  MONTHLY_NTH_WEEKDAY
+}
+
+enum KioskSectionType {
+  HERO
+  WELCOME_MESSAGE
+  EVENT_BANNER
+  ANNOUNCEMENTS
+  SPONSORS
+  FEATURED_CREATOR
+  FEATURED_BRAND
+  HIGHLIGHTS
+  QR_CHECKIN
+  REGISTER_NOW
+  CUSTOM
+}
+
+enum KioskAnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum KioskInteractionType {
+  THEME_VIEW
+  QR_SCAN
+  CHECK_IN
+  REGISTRATION
+  CTA_CLICK
+  EVENT_SIGNUP
+}
+
+/**
+ * Every row is one version of a theme — never mutated once published, same
+ * versioning convention as LegalDocumentVersion. `themeKey` groups all
+ * versions of "the same theme" (stable across edits; a NEW themeKey is
+ * minted only by Duplicate, never by editing or rolling back). The "current"
+ * row for a themeKey is the one with the highest `version`; editing a
+ * PUBLISHED/ARCHIVED theme creates a new DRAFT version rather than mutating
+ * history, editing an already-DRAFT version updates it in place, and
+ * "Roll Back to Previous Version" creates a new PUBLISHED version copying an
+ * older version's fields (so history only ever grows, never rewrites).
+ * Only one theme per organization may be resolved "live" at a time — decided
+ * at read time by src/features/kiosk/services/kiosk-theme-resolution.service.ts,
+ * never stored as a boolean here (a stored "is live" flag would drift the
+ * instant the clock crosses a schedule boundary with nobody watching).
+ */
+model KioskTheme {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  themeKey       String           @db.Uuid
+  version        Int              @default(1)
+  status         KioskThemeStatus @default(DRAFT)
+
+  name        String
+  headline    String
+  subheadline String?
+  location    String?
+
+  backgroundImageUrl String?
+  backgroundVideoUrl String?
+  logoOverrideUrl    String?
+  logoVariant        KioskLogoVariant    @default(DEFAULT)
+  primaryColor       String?
+  secondaryColor     String?
+  accentColor        String?
+  buttonColor        String?
+  buttonTextColor    String?
+  buttonStyle        KioskButtonStyle    @default(SOLID)
+  textColor          String?
+  animationStyle     KioskAnimationStyle @default(FADE)
+  // Named palette shown in the editor as a reference swatch list (e.g.
+  // "Snow White #FFFFFF") and used to tint decorativeElements — separate
+  // from the functional colors above, which drive actual UI chrome.
+  themeColors Json? // array of { name: string, hex: string }
+
+  decorativeElements KioskDecorativeElement[] @default([])
+
+  ctaLabel String?
+  ctaLink  String?
+
+  showQrRegistration Boolean @default(false)
+
+  // Inline "Featured Event" card content for themes with no linked Event —
+  // reuses this row's own startDate/startTime/endTime/location fields for
+  // when/where, so date/time is never duplicated in two places. Ignored
+  // (superseded by live Event data) whenever eventId is set.
+  featuredEventTitle String?
+  featuredEventTags  String[] @default([])
+
+  promoBannerText String?
+  promoBannerLink String?
+
+  // Scheduling window — also doubles as the hero's displayed date/time
+  // ("Tonight 6:00 PM – 9:00 PM") so there's exactly one place editors set
+  // "when this happens," not two that could disagree.
+  startDate DateTime
+  endDate   DateTime
+  startTime String? // "HH:mm", 24h; null = all-day
+  endTime   String?
+
+  recurrence           KioskRecurrence @default(NONE)
+  recurrenceDaysOfWeek Int[]           @default([]) // 0=Sun..6=Sat, WEEKLY only
+  recurrenceNthWeek    Int? // 1-5, MONTHLY_NTH_WEEKDAY only ("First Monday")
+  recurrenceWeekday    Int? // 0=Sun..6=Sat, MONTHLY_NTH_WEEKDAY only
+
+  showCountdown Boolean @default(false)
+
+  // "If an Event exists ... Use Event as Kiosk Theme ... No duplicate entry
+  // required" — when set, the theme's displayed title/description/date/
+  // location/banner are read live from the Event rather than duplicated
+  // onto this row (see resolveThemeContent in the theme service).
+  eventId String? @db.Uuid
+
+  // Array of {name, logoUrl, message?, ctaLabel?, ctaLink?} — deliberately a
+  // JSON list rather than a join table: sponsors are theme-scoped, never
+  // queried independently, and the shape is still evolving (see spec's
+  // "Future Ready" — sponsor carousels).
+  sponsors Json?
+
+  isDefault    Boolean @default(false) // fallback theme when nothing else matches
+  isPinnedLive Boolean @default(false) // manual "force live now" override
+  priority     Int     @default(0) // tie-break when multiple schedules overlap
+
+  changeSummary String? // what changed this version (shown in version history)
+
+  publishedAt   DateTime?
+  publishedById String?   @db.Uuid
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event        Event?       @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  publishedBy  Member?      @relation("KioskThemePublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  createdBy    Member?      @relation("KioskThemeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, themeKey, version])
+  @@index([organizationId, themeKey])
+  @@index([organizationId, status])
+  @@index([organizationId, startDate, endDate])
+  @@map("kiosk_themes")
+}
+
+/**
+ * "Homepage Builder" — one row per section per organization, ordering and
+ * enabling/disabling the kiosk's home-screen sections. Theme-independent
+ * (the same layout applies regardless of which theme is currently live).
+ */
+model KioskSectionConfig {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  sectionType    KioskSectionType
+  // Stable identity for this row beyond sectionType alone — lets CUSTOM
+  // sections repeat (sectionType=CUSTOM, key="custom-<uuid>") while HERO/
+  // WELCOME_MESSAGE/etc stay singleton via key===sectionType.
+  key            String
+  label          String? // display name, required/used for CUSTOM sections
+  order          Int
+  enabled        Boolean          @default(true)
+  config         Json? // arbitrary per-section settings, future-ready
+  updatedById    String?          @db.Uuid
+  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedBy    Member?      @relation("KioskSectionConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, key])
+  @@index([organizationId, order])
+  @@map("kiosk_section_configs")
+}
+
+model KioskAnnouncement {
+  id             String                  @id @default(uuid()) @db.Uuid
+  organizationId String                  @db.Uuid
+  title          String
+  description    String?
+  imageUrl       String?
+  ctaLabel       String?
+  ctaLink        String?
+  priority       Int                     @default(0)
+  isPinned       Boolean                 @default(false)
+  status         KioskAnnouncementStatus @default(DRAFT)
+  startDate      DateTime?
+  endDate        DateTime?
+  createdById    String?                 @db.Uuid
+  updatedById    String?                 @db.Uuid
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy         Member?                 @relation("KioskAnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy         Member?                 @relation("KioskAnnouncementUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  interactionEvents KioskInteractionEvent[]
+
+  @@index([organizationId, status])
+  @@map("kiosk_announcements")
+}
+
+/**
+ * "Analytics" — one row per interaction. `themeKey` (not a specific
+ * version's id) so views/clicks roll up across every edit of the same
+ * theme, matching how the analytics dashboard reports "per theme," not
+ * "per version." No FK to KioskTheme (themeKey isn't a primary key) —
+ * resolved by application code, same tradeoff as ReferralLink.referralCode.
+ */
+model KioskInteractionEvent {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String               @db.Uuid
+  type           KioskInteractionType
+  themeKey       String?              @db.Uuid
+  announcementId String?              @db.Uuid
+  metadata       Json?
+  occurredAt     DateTime             @default(now())
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  announcement KioskAnnouncement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, type, occurredAt])
+  @@index([organizationId, themeKey])
+  @@map("kiosk_interaction_events")
+}

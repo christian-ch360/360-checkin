@@ -1,0 +1,62 @@
+"use client";
+
+import { useState } from "react";
+import { Menu } from "lucide-react";
+import type { SystemRole } from "@prisma/client";
+import { CREATOR_NAV_SECTIONS, ADMIN_NAV_SECTIONS } from "@/config/nav";
+import { hasPermission } from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { NavLink } from "@/components/layout/nav-link";
+
+export function MobileNav({ role }: { role: SystemRole }) {
+  const [open, setOpen] = useState(false);
+  const navSections = hasPermission(role, "admin.access") ? ADMIN_NAV_SECTIONS : CREATOR_NAV_SECTIONS;
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation">
+          <Menu className="size-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-64 p-0">
+        <SheetHeader className="border-b px-4 py-3">
+          <SheetTitle className="flex items-center gap-2 text-sm">
+            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
+              CH
+            </div>
+            CreatorHub360
+          </SheetTitle>
+        </SheetHeader>
+        <nav className="space-y-6 overflow-y-auto p-3">
+          {navSections.map((section) => {
+            const items = section.items.filter(
+              (item) => !item.permission || hasPermission(role, item.permission)
+            );
+            if (items.length === 0) return null;
+            return (
+              <div key={section.title}>
+                {section.title && (
+                  <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                    {section.title}
+                  </p>
+                )}
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      onNavigate={() => setOpen(false)}
+                      indicatorLayoutId="mobile-nav-active-indicator"
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+      </SheetContent>
+    </Sheet>
+  );
+}

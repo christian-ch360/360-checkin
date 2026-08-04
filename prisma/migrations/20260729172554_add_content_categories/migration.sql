@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "ContentCategory" AS ENUM ('FITNESS', 'GAMING', 'FASHION', 'BEAUTY', 'LIFESTYLE', 'TECH', 'FOOD', 'TRAVEL', 'COMEDY', 'MUSIC', 'DANCE', 'BUSINESS', 'ENTREPRENEURSHIP', 'EDUCATION', 'PHOTOGRAPHY', 'MODELING', 'SPORTS', 'AUTOMOTIVE', 'PARENTING', 'PETS', 'FINANCE', 'LUXURY', 'HEALTH', 'ART', 'DIY', 'STREAMING', 'VLOGS', 'PODCASTS');
+
+-- AlterTable
+ALTER TABLE "members" ADD COLUMN     "contentCategories" "ContentCategory"[] DEFAULT ARRAY[]::"ContentCategory"[];

@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "SpaceType" ADD VALUE 'CONTENT_BOOTH';
+

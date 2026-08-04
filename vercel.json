@@ -1,0 +1,9 @@
+{
+  "crons": [
+    { "path": "/api/cron/sync-integrations", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/subscription-lifecycle", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/reservation-reminders", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/event-reminders", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/daily-admin-summary", "schedule": "0 9 * * *" }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "CreatorHub360 Kiosk",
+  "short_name": "CH360 Kiosk",
+  "description": "Facility check-in kiosk for CreatorHub360.",
+  "start_url": "/kiosk",
+  "scope": "/kiosk",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/icons/icon-192", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512-maskable", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
