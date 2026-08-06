@@ -18,6 +18,7 @@ export function MemberHeader({
   companies,
   commissionTiers,
   canEdit,
+  canAssignAdminRoles,
   currentMemberId,
   isFollowing,
 }: {
@@ -49,6 +50,8 @@ export function MemberHeader({
   commissionTiers: { id: string; code: string; name: string; percentage: string }[];
   /** Whether the viewer may edit this member's profile fields — computed server-side (see canEditMemberProfile). */
   canEdit: boolean;
+  /** Whether the viewer holds roles.manage — shown as a hint in the Edit modal pointing to the Permissions card. */
+  canAssignAdminRoles: boolean;
   currentMemberId: string;
   isFollowing: boolean;
 }) {
@@ -116,6 +119,7 @@ export function MemberHeader({
               onOpenChange={setEditOpen}
               companies={companies}
               commissionTiers={commissionTiers}
+              canAssignAdminRoles={canAssignAdminRoles}
               member={{
                 id: member.id,
                 fullName: member.fullName,

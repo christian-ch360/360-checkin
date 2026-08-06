@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { KioskBackground } from "@/features/kiosk/components/kiosk-background";
-import { SafeAreaView } from "@/components/layout/safe-area-view";
+import { KioskChrome } from "@/features/kiosk/components/kiosk-chrome";
 
 // Deliberately does NOT call getCurrentMember()/redirect — this route tree
 // must stay public (see middleware.ts PUBLIC_PATHS). It also renders none of
@@ -25,14 +24,5 @@ export const viewport: Viewport = {
 };
 
 export default function KioskLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="kiosk-light fixed inset-0 overflow-hidden overscroll-none bg-white text-black">
-      <KioskBackground />
-      {/* Background bleeds full-screen; only this content column reserves
-          the notch/Dynamic Island/status bar/home indicator insets. */}
-      <SafeAreaView as="div" className="h-full">
-        {children}
-      </SafeAreaView>
-    </div>
-  );
+  return <KioskChrome>{children}</KioskChrome>;
 }

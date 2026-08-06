@@ -138,6 +138,7 @@ export default async function MemberProfilePage({
           percentage: t.percentage.toString(),
         }))}
         canEdit={canEditProfile}
+        canAssignAdminRoles={canManageRoles}
         currentMemberId={actor.id}
         isFollowing={isFollowing}
       />

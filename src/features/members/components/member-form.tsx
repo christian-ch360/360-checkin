@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -55,9 +56,10 @@ type MemberFormProps = {
   onOpenChange: (open: boolean) => void;
   companies: { id: string; name: string }[];
   commissionTiers: { id: string; code: string; name: string; percentage: string }[];
-  /** Only offered when adding a new member (never editing an existing one) —
-   * Super Admin promotion of an existing member goes through the dedicated
-   * Permissions card instead. */
+  /** Admin/Super Admin *options* are only offered when adding a new member —
+   * promoting an existing member goes through the dedicated Permissions card
+   * instead. When editing, this only controls whether the Role field shows a
+   * hint pointing there (see showAdminRoleOptions/showPermissionsHint below). */
   canAssignAdminRoles?: boolean;
   member?: {
     id: string;
@@ -90,6 +92,7 @@ export function MemberForm({
   const [isPending, startTransition] = useTransition();
   const isEdit = Boolean(member);
   const showAdminRoleOptions = !isEdit && canAssignAdminRoles;
+  const showPermissionsHint = isEdit && canAssignAdminRoles;
 
   const form = useForm<MemberInput>({
     resolver: zodResolver(memberSchema),
@@ -221,6 +224,11 @@ export function MemberForm({
                           ))}
                       </SelectContent>
                     </Select>
+                    {showPermissionsHint && (
+                      <FormDescription>
+                        To grant Admin or Super Admin access, use the Permissions card on this member&apos;s profile.
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

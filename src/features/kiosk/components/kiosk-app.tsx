@@ -6,6 +6,7 @@ import { resolveAndActOnKioskScan } from "@/features/kiosk/services/kiosk-scan-d
 import type { KioskCheckInResult } from "@/features/kiosk/services/kiosk-checkin.service";
 import type { KioskLocationRef } from "@/features/kiosk/services/kiosk-location-checkin.service";
 import { HomeScreen } from "@/features/kiosk/components/home-screen";
+import { KioskThemeBackground } from "@/features/kiosk/components/kiosk-theme-background";
 import { ScanScreen } from "@/features/kiosk/components/scan-screen";
 import { SuccessScreen } from "@/features/kiosk/components/success-screen";
 import { ErrorScreen } from "@/features/kiosk/components/error-screen";
@@ -17,6 +18,7 @@ import type { ResolvedKioskTheme } from "@/features/kiosk/services/kiosk-theme-r
 import type { KioskAnnouncementCard } from "@/features/kiosk/components/kiosk-rotating-announcements";
 import type { KioskFeaturedEvent } from "@/features/kiosk/services/kiosk-featured-event.service";
 import { recordKioskInteractionAction } from "@/features/kiosk/services/kiosk-analytics-actions";
+import { useKioskPreview } from "@/features/kiosk/context/kiosk-preview-context";
 
 // "Automatically activate and deactivate. No manual switching required." — a kiosk left open
 // for hours needs to pick up a newly-scheduled theme without anyone touching it; router.refresh()
@@ -56,10 +58,12 @@ export function KioskApp({
   featuredEvent?: KioskFeaturedEvent | null;
 }) {
   const router = useRouter();
+  const { isPreview } = useKioskPreview();
   const [screen, setScreen] = useState<Screen>({ name: "home" });
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isEntrance = !location || location.type === "ENTRANCE";
   const { isOnline, enqueue } = useOfflineQueue(async (rawScan) => {
+    if (isPreview) return;
     await resolveAndActOnKioskScan(rawScan, location);
   });
   const enabledSections = enabledSectionKeys ? new Set(enabledSectionKeys) : undefined;
@@ -73,9 +77,10 @@ export function KioskApp({
   }, []);
 
   useEffect(() => {
+    if (isPreview) return;
     const interval = setInterval(() => router.refresh(), THEME_REFRESH_MS);
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, isPreview]);
 
   function scheduleReset(ms: number) {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -93,6 +98,7 @@ export function KioskApp({
   }
 
   async function handleScan(rawScan: string) {
+    if (isPreview) return;
     if (!isOnline) {
       enqueue(rawScan);
       setScreen({ name: "error", outcome: "not_found" });
@@ -111,6 +117,7 @@ export function KioskApp({
   }
 
   function handleApplySubmitted() {
+    if (isPreview) return;
     setScreen({ name: "apply-success" });
     scheduleReset(APPLY_SUCCESS_RESET_MS);
     recordKioskInteractionAction("REGISTRATION", { themeKey: theme?.themeKey ?? null });
@@ -118,6 +125,7 @@ export function KioskApp({
 
   return (
     <div className="relative flex h-full w-full flex-col items-center overflow-y-auto px-6 py-12 sm:py-16">
+      <KioskThemeBackground theme={theme} />
       <OfflineBanner isOnline={isOnline} />
 
       {/* `m-auto` (not `justify-center` on the parent) centers this column
@@ -136,10 +144,12 @@ export function KioskApp({
             enabledSections={enabledSections}
             featuredEvent={featuredEvent}
             onCheckIn={() => {
+              if (isPreview) return;
               requestFullscreenOnce();
               setScreen({ name: "scanning" });
             }}
             onRegisterNow={() => {
+              if (isPreview) return;
               requestFullscreenOnce();
               setScreen({ name: "apply-form" });
             }}

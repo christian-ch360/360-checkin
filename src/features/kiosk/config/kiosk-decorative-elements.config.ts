@@ -10,7 +10,7 @@ import type { KioskDecorativeElement } from "@prisma/client";
  * *set* of effects is fixed; which themes use which, and in what colors, is
  * fully Super-Admin-configurable.
  */
-export type DecorativeEffectKind = "particles-fall" | "particles-float" | "twinkle" | "glow" | "sprite-drift";
+export type DecorativeEffectKind = "particles-fall" | "particles-float" | "twinkle" | "glow" | "sprite-drift" | "firework-burst" | "light-rays";
 
 export type DecorativeElementDef = {
   label: string;
@@ -39,6 +39,8 @@ export const KIOSK_DECORATIVE_ELEMENTS: Record<KioskDecorativeElement, Decorativ
   CONFETTI: { label: "Confetti", description: "Falling confetti pieces in the theme's colors.", effect: "particles-fall", sprite: "▪" },
   SPARKLES: { label: "Sparkles", description: "Twinkling sparkle particles.", effect: "twinkle" },
   BOKEH_LIGHTS: { label: "Bokeh Lights", description: "Soft out-of-focus light orbs drifting behind the content.", effect: "particles-float", sprite: "●" },
+  FIREWORKS: { label: "Fireworks", description: "Periodic firework bursts launching and exploding across the sky.", effect: "firework-burst" },
+  LIGHT_RAYS: { label: "Light Rays", description: "Soft animated light rays sweeping behind the content.", effect: "light-rays" },
 };
 
 export const KIOSK_DECORATIVE_ELEMENT_VALUES = Object.keys(KIOSK_DECORATIVE_ELEMENTS) as KioskDecorativeElement[];

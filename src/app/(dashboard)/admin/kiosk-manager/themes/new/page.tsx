@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { PageHeader } from "@/components/shared/page-header";
 import { KioskThemeEditor } from "@/features/kiosk/components/admin/kiosk-theme-editor";
+import { KIOSK_NAME, KIOSK_LOCATION } from "@/features/kiosk/config";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function NewKioskThemePage() {
           </Link>
         }
       />
-      <KioskThemeEditor events={events} />
+      <KioskThemeEditor events={events} kioskName={KIOSK_NAME} kioskLocation={KIOSK_LOCATION} />
     </div>
   );
 }

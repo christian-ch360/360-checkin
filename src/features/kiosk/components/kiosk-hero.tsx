@@ -3,12 +3,12 @@
 import { useEffect, useMemo } from "react";
 import { motion, type TargetAndTransition } from "framer-motion";
 import { CalendarDays, Clock, MapPin, Megaphone } from "lucide-react";
-import type { KioskDecorativeElement } from "@prisma/client";
 import type { ResolvedKioskTheme } from "@/features/kiosk/services/kiosk-theme-resolution.service";
 import { recordKioskInteractionAction } from "@/features/kiosk/services/kiosk-analytics-actions";
 import { useCountdown } from "@/features/kiosk/hooks/use-countdown";
-import { KioskDecorativeLayer } from "@/features/kiosk/components/kiosk-decorative-layer";
 import { LogoMark } from "@/features/auth/components/logo-mark";
+import { cn } from "@/lib/utils";
+import { useKioskPreview, useKioskNow } from "@/features/kiosk/context/kiosk-preview-context";
 
 const ANIMATION_VARIANTS: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition }> = {
   FADE: { initial: { opacity: 0 }, animate: { opacity: 1 } },
@@ -17,8 +17,7 @@ const ANIMATION_VARIANTS: Record<string, { initial: TargetAndTransition; animate
   NONE: { initial: { opacity: 1 }, animate: { opacity: 1 } },
 };
 
-function formatDateLabel(date: Date): string {
-  const today = new Date();
+function formatDateLabel(date: Date, today: Date): string {
   const isSameDay = date.toDateString() === today.toDateString();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
@@ -75,8 +74,10 @@ function buttonClassAndStyle(theme: ResolvedKioskTheme): { className: string; st
  * HomeScreen — those stay identical regardless of which theme is live.
  */
 export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
+  const { isPreview } = useKioskPreview();
+  const now = useKioskNow();
   const variant = ANIMATION_VARIANTS[theme.animationStyle] ?? ANIMATION_VARIANTS.FADE;
-  const dateLabel = formatDateLabel(theme.startDate);
+  const dateLabel = formatDateLabel(theme.startDate, now);
   const timeLabel = formatTimeRange(theme.startTime, theme.endTime);
   // Countdown target is the event's actual start instant — startDate alone is midnight, which
   // (for a same-day evening event) has already passed by the time anyone would see this.
@@ -99,58 +100,37 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
   // same dark-overlay/light-text treatment always has something to sit on.
   const hasColorBackground = !hasImageBackground && Boolean(theme.primaryColor);
   const hasBackground = hasImageBackground || hasColorBackground;
+  // Only fall back to hardcoded white when the theme has a background but no
+  // explicit textColor of its own — themes that configure both a background
+  // and a text color (e.g. a light gold background with dark text) get to
+  // keep their own contrast choice instead of being forced to white.
+  const forceWhiteText = hasBackground && !theme.textColor;
   const cta = buttonClassAndStyle(theme);
-  const decorativeElements = (theme.decorativeElements ?? []) as KioskDecorativeElement[];
-  const themeColors = Array.isArray(theme.themeColors) ? (theme.themeColors as { name: string; hex: string }[]) : null;
 
   useEffect(() => {
+    if (isPreview) return;
     recordKioskInteractionAction("THEME_VIEW", { themeKey: theme.themeKey });
-  }, [theme.themeKey]);
+  }, [theme.themeKey, isPreview]);
 
   return (
     <motion.div
       initial={variant.initial}
       animate={variant.animate}
       transition={{ duration: 0.7, ease: "easeOut" }}
-      className="relative flex w-full max-w-4xl flex-col items-center gap-6 overflow-hidden rounded-[40px] px-6 py-14 text-center sm:gap-8 sm:px-12 sm:py-20"
+      className="relative flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-14 text-center sm:gap-8 sm:px-12 sm:py-20"
     >
-      {hasImageBackground && (
-        <div aria-hidden="true" className="absolute inset-0 -z-10">
-          {theme.backgroundVideoUrl ? (
-            <video
-              src={theme.backgroundVideoUrl}
-              poster={theme.backgroundImageUrl ?? undefined}
-              className="size-full object-cover"
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element -- kiosk background is admin-supplied, arbitrary remote URLs
-            <img src={theme.backgroundImageUrl!} alt="" className="size-full object-cover" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
-        </div>
-      )}
-      {hasColorBackground && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 -z-10"
-          style={{
-            backgroundImage: `linear-gradient(160deg, ${theme.primaryColor}, ${theme.secondaryColor || theme.primaryColor})`,
-          }}
-        />
-      )}
-
-      <KioskDecorativeLayer elements={decorativeElements} themeColors={themeColors} />
-
       {theme.promoBannerText && (
         <a
           href={theme.promoBannerLink || undefined}
           target={theme.promoBannerLink ? "_blank" : undefined}
           rel={theme.promoBannerLink ? "noopener noreferrer" : undefined}
-          className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${hasBackground ? "bg-white/15 text-white backdrop-blur-sm" : "bg-black/[0.04]"} ${theme.promoBannerLink ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium",
+            hasBackground ? "bg-white/15 backdrop-blur-sm" : "bg-black/[0.04]",
+            forceWhiteText && "text-white",
+            theme.promoBannerLink ? "cursor-pointer hover:opacity-80" : "cursor-default"
+          )}
+          style={forceWhiteText ? undefined : textStyle}
         >
           <Megaphone className="size-3.5" /> {theme.promoBannerText}
         </a>
@@ -167,7 +147,7 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
         </div>
       )}
 
-      <div className={`relative space-y-4 px-2 ${hasBackground ? "text-white" : ""}`} style={hasBackground ? undefined : textStyle}>
+      <div className={cn("relative space-y-4 px-2", forceWhiteText && "text-white")} style={forceWhiteText ? undefined : textStyle}>
         {(dateLabel || timeLabel) && (
           <p className="flex items-center justify-center gap-2 text-sm font-medium tracking-[0.2em] uppercase opacity-80">
             {dateLabel && (
@@ -203,7 +183,11 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
             {theme.featuredEventTags.map((tag) => (
               <span
                 key={tag}
-                className={`rounded-full px-3 py-1 text-xs font-medium ${hasBackground ? "bg-white/15 text-white backdrop-blur-sm" : "bg-black/[0.04]"}`}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-medium",
+                  hasBackground ? "bg-white/15 backdrop-blur-sm" : "bg-black/[0.04]",
+                  forceWhiteText && "text-white"
+                )}
               >
                 {tag}
               </span>
@@ -213,7 +197,14 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
       </div>
 
       {countdown && (
-        <div className={`relative flex items-center gap-4 rounded-2xl px-6 py-3 ${hasBackground ? "bg-white/10 text-white backdrop-blur-sm" : "bg-black/[0.03]"}`}>
+        <div
+          className={cn(
+            "relative flex items-center gap-4 rounded-2xl px-6 py-3",
+            hasBackground ? "bg-white/10 backdrop-blur-sm" : "bg-black/[0.03]",
+            forceWhiteText && "text-white"
+          )}
+          style={forceWhiteText ? undefined : textStyle}
+        >
           {[
             { label: "hrs", value: countdown.hours },
             { label: "min", value: countdown.minutes },
@@ -231,7 +222,13 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
         {theme.ctaLabel && theme.ctaLink && (
           <a
             href={theme.ctaLink}
-            onClick={() => recordKioskInteractionAction("CTA_CLICK", { themeKey: theme.themeKey })}
+            onClick={(e) => {
+              if (isPreview) {
+                e.preventDefault();
+                return;
+              }
+              recordKioskInteractionAction("CTA_CLICK", { themeKey: theme.themeKey });
+            }}
             target="_blank"
             rel="noopener noreferrer"
             className={`inline-flex h-14 items-center justify-center rounded-2xl px-8 text-[15px] font-semibold shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98] ${cta.className}`}
@@ -243,7 +240,12 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
 
         {theme.showQrRegistration && theme.qrToken && (
           <div
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${hasBackground ? "bg-white/10 text-white backdrop-blur-sm" : "bg-black/[0.03]"}`}
+            className={cn(
+              "flex items-center gap-3 rounded-2xl px-4 py-3",
+              hasBackground ? "bg-white/10 backdrop-blur-sm" : "bg-black/[0.03]",
+              forceWhiteText && "text-white"
+            )}
+            style={forceWhiteText ? undefined : textStyle}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- dynamically generated QR image, not an optimizable static asset */}
             <img src={`/api/qr/${theme.qrToken}`} alt="Scan to register" className="size-16 rounded-lg bg-white p-1" />

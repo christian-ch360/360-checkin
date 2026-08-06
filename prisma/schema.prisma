@@ -2607,6 +2607,8 @@ enum KioskDecorativeElement {
   CONFETTI
   SPARKLES
   BOKEH_LIGHTS
+  FIREWORKS
+  LIGHT_RAYS
 }
 
 // "Schedule by Date / by Time / by Day of Week / Recurring Themes" — NONE

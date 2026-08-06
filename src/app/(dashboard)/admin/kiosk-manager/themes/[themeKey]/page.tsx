@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { PageHeader } from "@/components/shared/page-header";
 import { getThemeByKey, getThemeVersionHistory } from "@/features/kiosk/services/kiosk-theme.service";
 import { KioskThemeEditor } from "@/features/kiosk/components/admin/kiosk-theme-editor";
+import { KIOSK_NAME, KIOSK_LOCATION } from "@/features/kiosk/config";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,14 @@ export default async function EditKioskThemePage({ params }: { params: Promise<{
           </Link>
         }
       />
-      <KioskThemeEditor themeKey={themeKey} latest={latest} versionHistory={versionHistory} events={events} />
+      <KioskThemeEditor
+        themeKey={themeKey}
+        latest={latest}
+        versionHistory={versionHistory}
+        events={events}
+        kioskName={KIOSK_NAME}
+        kioskLocation={KIOSK_LOCATION}
+      />
     </div>
   );
 }
