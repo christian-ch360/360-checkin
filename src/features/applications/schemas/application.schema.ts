@@ -32,9 +32,9 @@ export const applicationSchema = z.object({
   instagram: z.string().trim().min(1, "Instagram is required"),
   tiktok: z.string().trim().min(1, "TikTok is required"),
   youtube: z.string().trim().optional().or(z.literal("")),
-  city: z.string().trim().min(1, "City is required"),
-  state: z.string().trim().min(1, "State/Province is required"),
-  country: z.string().trim().min(1, "Country is required"),
+  city: z.string().trim().optional().or(z.literal("")),
+  state: z.string().trim().optional().or(z.literal("")),
+  country: z.string().trim().optional().or(z.literal("")),
   referredBy: z.string().trim().min(1, "Let us know who referred you, or choose \"No Referral\""),
   // Structured affiliate tracking — distinct from the freeform referredBy
   // text above. Optional: most applicants have no referral code at all.

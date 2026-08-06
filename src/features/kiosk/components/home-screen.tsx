@@ -114,44 +114,44 @@ export function HomeScreen({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-          className={`grid w-full grid-cols-1 gap-6 ${showCheckIn && showRegister ? "sm:grid-cols-2" : ""}`}
+          className={`grid w-full grid-cols-1 gap-4 ${showCheckIn && showRegister ? "sm:grid-cols-2" : ""}`}
         >
-          {showCheckIn && (
-            <button
-              type="button"
-              onClick={onCheckIn}
-              className="group flex min-h-64 flex-col items-center justify-center gap-5 rounded-[32px] border border-black/10 bg-white px-8 py-12 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
-            >
-              <span className="flex size-20 items-center justify-center rounded-3xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
-                <QrCode className="size-9" />
-              </span>
-              <span className="flex flex-col items-center gap-1.5">
-                <span className="text-2xl font-semibold tracking-tight text-black">
-                  {isEntrance ? "Check In" : "Scan QR Code"}
-                </span>
-                <span className="text-[15px] text-black/50">Scan your member QR Code</span>
-              </span>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
-                Continue <ArrowRight className="size-4" />
-              </span>
-            </button>
-          )}
-
           {showRegister && (
             <button
               type="button"
               onClick={onRegisterNow}
-              className="group flex min-h-64 flex-col items-center justify-center gap-5 rounded-[32px] border border-black/10 bg-white px-8 py-12 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              className="group flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white px-6 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
             >
-              <span className="flex size-20 items-center justify-center rounded-3xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
-                <UserPlus className="size-9" />
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
+                <UserPlus className="size-5" />
               </span>
-              <span className="flex flex-col items-center gap-1.5">
-                <span className="text-2xl font-semibold tracking-tight text-black">Register</span>
-                <span className="text-[15px] text-black/50">Become a CreatorHub360 Member</span>
+              <span className="flex flex-col items-center gap-1">
+                <span className="text-lg font-semibold tracking-tight text-black">Register</span>
+                <span className="text-sm text-black/50">Become a CreatorHub360 Member</span>
               </span>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
-                Continue <ArrowRight className="size-4" />
+              <span className="flex items-center gap-1.5 text-xs font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+                Continue <ArrowRight className="size-3.5" />
+              </span>
+            </button>
+          )}
+
+          {showCheckIn && (
+            <button
+              type="button"
+              onClick={onCheckIn}
+              className="group flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white px-6 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+            >
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
+                <QrCode className="size-5" />
+              </span>
+              <span className="flex flex-col items-center gap-1">
+                <span className="text-lg font-semibold tracking-tight text-black">
+                  {isEntrance ? "Check In" : "Scan QR Code"}
+                </span>
+                <span className="text-sm text-black/50">Scan your member QR Code</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-xs font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+                Continue <ArrowRight className="size-3.5" />
               </span>
             </button>
           )}

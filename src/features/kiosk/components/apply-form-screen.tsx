@@ -2,20 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Loader2,
-  QrCode,
-  TrendingUp,
-  DoorOpen,
-  User,
-  Mail,
-  Phone,
-  Users2,
-  Building2,
-  Link2,
-  MapPin,
-  Globe,
-} from "lucide-react";
+import { Loader2, User, Mail, Phone, Users2, Link2 } from "lucide-react";
 import { submitApplicationAction, type SubmitApplicationState } from "@/features/applications/services/actions";
 import { APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
 import { AuthInput } from "@/features/auth/components/auth-input";
@@ -24,12 +11,6 @@ import { AuthCheckbox } from "@/features/auth/components/auth-checkbox";
 import { LegalConsentField } from "@/features/legal/components/legal-consent-field";
 
 const NO_REFERRAL = "No Referral";
-
-const BENEFITS = [
-  { icon: QrCode, title: "Check in, in seconds", description: "One QR scan clocks you into the building — kiosk, badge, or app." },
-  { icon: TrendingUp, title: "GMV and commission, live", description: "Every sale attributed to you automatically, tracked in real time." },
-  { icon: DoorOpen, title: "Spaces that book themselves", description: "Studios and rooms, ready when you need them." },
-];
 
 export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => void; onCancel: () => void }) {
   const [state, formAction, isPending] = useActionState<SubmitApplicationState, FormData>(
@@ -64,23 +45,6 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               CreatorHub360 membership gives you a home base to work, collaborate, and grow — reviewed and approved
               by our team so the community stays high quality.
             </p>
-          </div>
-
-          <div className="space-y-4 text-left">
-            {BENEFITS.map((b) => (
-              <div
-                key={b.title}
-                className="flex items-start gap-4 rounded-2xl border border-black/10 bg-black/[0.02] p-4"
-              >
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-white text-black/70">
-                  <b.icon className="size-5" />
-                </div>
-                <div>
-                  <p className="text-base font-medium text-black">{b.title}</p>
-                  <p className="text-sm text-black/50">{b.description}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -149,16 +113,6 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             <p className="text-black/50">All optional — but it helps us review faster.</p>
           </div>
 
-          <AuthInput
-            variant="light"
-            label="Company (optional)"
-            id="company"
-            name="company"
-            autoComplete="organization"
-            icon={<Building2 className="size-[18px]" />}
-            error={fieldErrors?.company}
-          />
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <AuthInput
               variant="light"
@@ -185,39 +139,6 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               name="youtube"
               icon={<Link2 className="size-[18px]" />}
               error={fieldErrors?.youtube}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <AuthInput
-              variant="light"
-              label="City"
-              id="city"
-              name="city"
-              autoComplete="address-level2"
-              icon={<MapPin className="size-[18px]" />}
-              error={fieldErrors?.city}
-              required
-            />
-            <AuthInput
-              variant="light"
-              label="State / Province"
-              id="state"
-              name="state"
-              autoComplete="address-level1"
-              icon={<MapPin className="size-[18px]" />}
-              error={fieldErrors?.state}
-              required
-            />
-            <AuthInput
-              variant="light"
-              label="Country"
-              id="country"
-              name="country"
-              autoComplete="country-name"
-              icon={<Globe className="size-[18px]" />}
-              error={fieldErrors?.country}
-              required
             />
           </div>
 
