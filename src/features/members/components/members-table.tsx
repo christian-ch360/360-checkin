@@ -17,8 +17,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MemberStatusBadge } from "@/features/members/components/member-status-badge";
 import { TierBadge } from "@/features/members/components/tier-badge";
+import { FollowerBadges } from "@/features/integrations/components/follower-badges";
 import { ROLE_LABELS } from "@/features/members/role-labels";
 import { formatCompactCurrency, formatHours } from "@/lib/utils/format";
+import type { SocialSummaryEntry } from "@/features/integrations/services/social-connections.service";
 
 export type MemberRow = {
   id: string;
@@ -32,6 +34,7 @@ export type MemberRow = {
   hoursWorked: string;
   company: { id: string; name: string } | null;
   commissionTier: { code: string; name: string; percentage: string } | null;
+  socialSummary: SocialSummaryEntry[];
 };
 
 function initials(name: string) {
@@ -62,6 +65,7 @@ const columns: ColumnDef<MemberRow>[] = [
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{row.original.fullName}</p>
           <p className="truncate text-xs text-muted-foreground">{row.original.memberNumber}</p>
+          <FollowerBadges summary={row.original.socialSummary} className="mt-0.5" />
         </div>
       </Link>
     ),

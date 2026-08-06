@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MemberStatusBadge } from "@/features/members/components/member-status-badge";
 import { TierBadge } from "@/features/members/components/tier-badge";
+import { FollowerBadges } from "@/features/integrations/components/follower-badges";
 import type { MemberRow } from "@/features/members/components/members-table";
 import { ROLE_LABELS } from "@/features/members/role-labels";
 import { formatCompactCurrency } from "@/lib/utils/format";
@@ -43,6 +44,8 @@ export function MembersMobileList({ data }: { data: MemberRow[] }) {
               {m.company ? ` · ${m.company.name}` : ""}
             </span>
           </div>
+
+          <FollowerBadges summary={m.socialSummary} className="mt-1.5" />
 
           <div className="mt-2 flex items-center justify-between">
             {m.commissionTier ? (

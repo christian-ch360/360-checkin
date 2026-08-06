@@ -384,17 +384,6 @@ export function ApplyForm({
           required
         />
 
-        <AuthTextarea
-          variant="light"
-          label="Why do you want to join?"
-          id="reason"
-          name="reason"
-          placeholder="Tell us a bit about yourself or your work."
-          minLength={20}
-          maxLength={1000}
-          required
-        />
-
         <AuthInput
           variant="light"
           label="Who referred you?"

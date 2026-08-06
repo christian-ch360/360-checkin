@@ -11,7 +11,14 @@ export type ProfileStatsResult = {
   followingCount: number | null;
   postCount: number | null;
   likesCount: number | null;
+  viewCount: bigint | null; // YouTube lifetime channel views only; null elsewhere
+  bio: string | null; // Instagram biography / TikTok bio_description; null for YouTube (no personal-bio field)
   accountType: string | null; // Instagram only ("PERSONAL" | "BUSINESS" | "MEDIA_CREATOR"); null elsewhere
+  // Platform "verified badge" status. Only TikTok's user info API documents
+  // an is_verified field at the user.info.profile scope this app already
+  // requests; Instagram's Business Basic /me and YouTube's channels.list
+  // don't expose one at this permission tier — null there, not guessed.
+  verified: boolean | null;
 };
 
 export type PlatformProvider = {
@@ -106,7 +113,10 @@ const youtube: PlatformProvider = {
       followingCount: null, // YouTube's public API has no "channels I'm following" count
       postCount: channel.statistics?.videoCount != null ? Number(channel.statistics.videoCount) : null,
       likesCount: null,
+      viewCount: channel.statistics?.viewCount != null ? BigInt(channel.statistics.viewCount) : null,
+      bio: null, // channels.list snippet.description is a channel description, not a personal bio
       accountType: null,
+      verified: null, // channels.list has no "verified" field at this scope
     };
   },
 };
@@ -179,7 +189,7 @@ const instagram: PlatformProvider = {
   },
   async fetchStats(accessToken) {
     const res = await fetch(
-      `https://graph.instagram.com/v22.0/me?fields=user_id,username,followers_count,follows_count,media_count,profile_picture_url,account_type&access_token=${accessToken}`
+      `https://graph.instagram.com/v22.0/me?fields=user_id,username,followers_count,follows_count,media_count,profile_picture_url,account_type,biography&access_token=${accessToken}`
     );
     if (!res.ok) throw new Error(`Instagram profile fetch failed: ${res.status} ${await res.text()}`);
     const data = await res.json();
@@ -191,7 +201,10 @@ const instagram: PlatformProvider = {
       followingCount: data.follows_count != null ? Number(data.follows_count) : null,
       postCount: data.media_count != null ? Number(data.media_count) : null,
       likesCount: null,
+      viewCount: null,
+      bio: data.biography ?? null,
       accountType: data.account_type ?? null,
+      verified: null, // Business Basic /me has no "verified badge" field at this scope
     };
   },
 };
@@ -253,7 +266,7 @@ const tiktok: PlatformProvider = {
   },
   async fetchStats(accessToken) {
     const res = await fetch(
-      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,username,follower_count,following_count,likes_count,avatar_url",
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,username,follower_count,following_count,likes_count,avatar_url,is_verified,bio_description",
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (!res.ok) throw new Error(`TikTok user fetch failed: ${res.status} ${await res.text()}`);
@@ -271,7 +284,10 @@ const tiktok: PlatformProvider = {
       // performance) need additional scopes requiring TikTok app review.
       postCount: null,
       likesCount: user.likes_count != null ? Number(user.likes_count) : null,
+      viewCount: null,
+      bio: user.bio_description ?? null,
       accountType: null,
+      verified: typeof user.is_verified === "boolean" ? user.is_verified : null,
     };
   },
 };

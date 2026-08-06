@@ -20,7 +20,6 @@ const VALID_APPLICATION_FIELDS = {
   city: "Los Angeles",
   state: "California",
   country: "United States",
-  reason: "I want to join CreatorHub360 to grow my creative business.",
   referredBy: "No Referral",
 };
 

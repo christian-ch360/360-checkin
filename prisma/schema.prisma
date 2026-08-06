@@ -190,6 +190,8 @@ enum NotificationType {
   EVENT_CAPACITY_REACHED
   EVENT_CANCELLED
   EVENT_WAITLIST_PROMOTED
+  ADMIN_ACCESS_GRANTED
+  SUPER_ADMIN_ACCESS_GRANTED
 }
 
 enum FeedbackCategory {
@@ -472,6 +474,7 @@ model Member {
   eventRsvps                        EventRsvp[]
   subscription                      MemberSubscription?
   socialConnections                 SocialConnection[]
+  socialFollowerHistory             SocialFollowerHistory[]
   storeConnections                  StoreConnection[]
   revenueGoal                       RevenueGoal?
   collabPostLikes                   CollabPostLike[]
@@ -750,6 +753,10 @@ model ProjectCollaborationRequest {
 
   @@unique([projectId, memberId])
   @@index([projectId])
+  // Supports the "requester's own row" branch of this table's RLS policy —
+  // the (projectId, memberId) unique index can't serve a memberId-only
+  // lookup efficiently since memberId isn't its leading column.
+  @@index([memberId])
   @@map("project_collaboration_requests")
 }
 
@@ -801,6 +808,9 @@ model Comment {
 
   @@index([projectId])
   @@index([collabPostId])
+  // Supports the "member's own comment" branch of comments' RLS policy
+  // (`"memberId" = rls.member_id()`), evaluated on every read.
+  @@index([memberId])
   @@map("comments")
 }
 
@@ -877,6 +887,9 @@ model Reservation {
   @@index([spaceId, startTime])
   @@index([memberId])
   @@index([projectId])
+  // Supports the admin org-wide branch of this table's RLS policy
+  // (`rls.is_admin() AND "organizationId" = rls.org_id()`).
+  @@index([organizationId])
   @@map("reservations")
 }
 
@@ -1610,7 +1623,6 @@ model MembershipApplication {
   city                       String?
   state                      String?
   country                    String?
-  reason                     String?
   referredBy                 String?
   // Structured affiliate tracking, distinct from the freeform `referredBy`
   // text field above — the exact referral code (e.g. "AGY-001284") that was
@@ -1698,6 +1710,11 @@ model ReferralLink {
   member       Member?                @relation("ReferralLinkMember", fields: [memberId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, referrerMemberId])
+  // Supports the "referrer can read own referral links" branch of this
+  // table's RLS policy standalone — the composite (organizationId,
+  // referrerMemberId) index above can't serve a referrerMemberId-only
+  // lookup efficiently since referrerMemberId isn't its leading column.
+  @@index([referrerMemberId])
   @@index([referralCode])
   @@index([status])
   @@map("referral_links")
@@ -2139,6 +2156,10 @@ model EventCheckIn {
 
   @@unique([eventId, memberId])
   @@index([eventId])
+  // Supports the "member's own check-in" branch of event_check_ins' RLS
+  // policy. The existing (eventId, memberId) unique index can't serve a
+  // memberId-only lookup efficiently since memberId isn't its leading column.
+  @@index([memberId])
   @@map("event_check_ins")
 }
 
@@ -2195,6 +2216,9 @@ model MembershipPlan {
   lifecycleEventsTo   MembershipLifecycleEvent[]   @relation("MembershipLifecycleToPlan")
 
   @@index([organizationId])
+  // Supports the anon-facing "active plans are public" RLS policy
+  // (`"isActive" = true`), evaluated on every unauthenticated /apply visit.
+  @@index([isActive])
   @@map("membership_plans")
 }
 
@@ -2421,18 +2445,37 @@ model SocialConnection {
   status                SocialConnectionStatus @default(DISCONNECTED)
   externalAccountId     String?
   externalUsername      String?
+  // Derived from platform + externalUsername at sync time (e.g.
+  // https://instagram.com/<username>) — stored rather than computed
+  // client-side purely so it's available wherever a connection row is read,
+  // including outside the app's own components (exports, admin tooling).
+  profileUrl            String?
   followerCount         Int?
   profileImageUrl       String? // avatar — all 3 platforms
   followingCount        Int? // TikTok following_count, Instagram follows_count; null for YouTube
   postCount             Int? // Instagram media_count, YouTube statistics.videoCount; null for TikTok
   likesCount            Int? // TikTok total-likes metric only
+  viewCount             BigInt? // YouTube statistics.viewCount (lifetime channel views) only — can exceed Int range for large channels
+  bio                   String? // Instagram biography / TikTok bio_description; null for YouTube (channels.list snippet.description is a channel description, not a personal bio — not mapped here to avoid conflating the two)
   engagementRate        Decimal?               @db.Decimal(5, 2) // percent, e.g. 3.42 — no provider populates this yet; reserved so a future metric doesn't need another migration
+  // Platform "verified badge" status. Only TikTok's user.info API documents
+  // an is_verified field today; Instagram's Business Basic /me and YouTube's
+  // channels.list don't expose one at this permission tier, so this stays
+  // null for those two rather than guessing — see docs/SOCIAL_INTEGRATIONS.md.
+  verified              Boolean?
   accountType           String? // Instagram only: "PERSONAL" | "BUSINESS" | "MEDIA_CREATOR"; free-form so other platforms can reuse without a migration
   accessTokenEnc        String?
   refreshTokenEnc       String?
   tokenExpiresAt        DateTime?
   gmvSyncedCents        Int?
   commissionSyncedCents Int?
+  // Set at the START of every sync attempt, success or failure — distinct
+  // from lastSyncedAt (only set on success) so the UI/ops can tell "we tried
+  // 30 seconds ago and it's still running or just failed" apart from
+  // "we haven't tried in a while." Also doubles as the atomic claim used to
+  // prevent two syncs running concurrently for the same connection — see
+  // syncConnection()'s use of updateMany's affected-row count.
+  lastSyncAttempt       DateTime?
   lastSyncedAt          DateTime?
   lastSyncError         String?
   createdAt             DateTime               @default(now())
@@ -2442,6 +2485,27 @@ model SocialConnection {
 
   @@unique([memberId, platform])
   @@map("social_connections")
+}
+
+// Append-only time series behind the Growth Analytics feature (today/7d/30d/
+// 90d/lifetime deltas, trend %) — never updated or overwritten, one row per
+// successful sync. Deliberately NOT a foreign key to SocialConnection: that
+// row only ever gets its status flipped to DISCONNECTED (never deleted) when
+// a member disconnects, but a real FK there would still codify a lifecycle
+// dependency this table must never have. History outlives connect/disconnect/
+// reconnect cycles by design — it's keyed on memberId+platform directly and
+// only ever cascades away with the Member itself.
+model SocialFollowerHistory {
+  id         String         @id @default(uuid()) @db.Uuid
+  memberId   String         @db.Uuid
+  platform   SocialPlatform
+  followers  Int
+  capturedAt DateTime       @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, platform, capturedAt])
+  @@map("social_follower_history")
 }
 
 // =============================================================================
@@ -2626,7 +2690,7 @@ model KioskTheme {
   // Named palette shown in the editor as a reference swatch list (e.g.
   // "Snow White #FFFFFF") and used to tint decorativeElements — separate
   // from the functional colors above, which drive actual UI chrome.
-  themeColors Json? // array of { name: string, hex: string }
+  themeColors        Json? // array of { name: string, hex: string }
 
   decorativeElements KioskDecorativeElement[] @default([])
 

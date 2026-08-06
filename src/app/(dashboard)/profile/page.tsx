@@ -15,6 +15,7 @@ import { listMyProjects } from "@/features/projects/services/projects.service";
 import { listMyEvents } from "@/features/events/services/events.service";
 import { listMyCollaborations } from "@/features/collab-hub/services/collab-post.service";
 import { getConnectionsForMember } from "@/features/integrations/services/social-connections.service";
+import { getFollowerGrowthForMember } from "@/features/integrations/services/follower-growth.service";
 import { getStoreConnectionsForMember } from "@/features/integrations/services/store-connections.service";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -72,6 +73,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     getStoreConnectionsForMember(actor.id),
   ]);
 
+  const growth = await getFollowerGrowthForMember(
+    actor.id,
+    connections.map((c) => ({ platform: c.platform, followerCount: c.followerCount }))
+  );
+
   return (
     <div className="space-y-8">
       <PageHeader title="Profile" description="Your identity, membership, and standing at CreatorHub360." />
@@ -119,6 +125,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             }}
             membershipStatusLabel={membership ? SUBSCRIPTION_STATUS_META[membership.status].label : null}
             connections={connections}
+            growth={growth}
           />
         </TabsContent>
 

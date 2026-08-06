@@ -26,6 +26,19 @@ export const SYSTEM_ROLE_LABELS: Record<SystemRole, string> = {
 // /admin Permissions table.
 export const STANDARD_SYSTEM_ROLES: SystemRole[] = ["MEMBER", "ADMIN", "SUPER_ADMIN"];
 
+// Single source of truth for "is this a promotion or a demotion" — used by
+// both the Permissions card (confirmation dialog copy) and
+// updateMemberSystemRole (audit action name + whether to send an access-
+// granted notification), so the two can never disagree about direction.
+export const SYSTEM_ROLE_RANK: Record<SystemRole, number> = {
+  GUEST: 0,
+  MEMBER: 0,
+  PROJECT_LEADER: 0,
+  MANAGER: 0,
+  ADMIN: 1,
+  SUPER_ADMIN: 2,
+};
+
 // Roles that require roles.manage to grant — used both to gate invites
 // server-side and to filter the invite form's role options client-side.
 export const RESTRICTED_INVITE_ROLES: SystemRole[] = ["ADMIN", "SUPER_ADMIN"];

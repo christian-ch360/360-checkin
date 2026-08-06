@@ -43,7 +43,6 @@ export type ApplicationDetail = {
   city: string | null;
   state: string | null;
   country: string | null;
-  reason: string | null;
   referredBy: string | null;
   status: MembershipApplicationStatus;
   notes: string | null;
@@ -57,9 +56,9 @@ export type ApplicationDetail = {
 function Field({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
-    <div>
+    <div className="min-w-0 w-full">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="text-sm">{value}</p>
+      <p className="text-sm break-words">{value}</p>
     </div>
   );
 }
@@ -70,20 +69,20 @@ function Field({ label, value }: { label: string; value: string | null }) {
 // submitted value" case). "Not Provided" only when the field was empty.
 function SocialField({ label, url, rawValue }: { label: string; url: string | null; rawValue: string | null }) {
   return (
-    <div>
+    <div className="min-w-0 w-full">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       {url ? (
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          className="inline-flex max-w-full items-center gap-1 text-sm font-medium text-primary break-words hover:underline"
         >
-          {label}
-          <ExternalLink className="size-3" />
+          <span className="break-words">{label}</span>
+          <ExternalLink className="size-3 shrink-0" />
         </a>
       ) : rawValue ? (
-        <p className="text-sm">{rawValue}</p>
+        <p className="text-sm break-words">{rawValue}</p>
       ) : (
         <p className="text-sm text-muted-foreground">Not Provided</p>
       )}
@@ -184,7 +183,7 @@ export function ApplicationReview({
           <CardHeader>
             <CardTitle className="text-base">Application details</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Full name" value={application.fullName} />
             <Field label="Role" value={ROLE_LABELS[application.role]} />
             <Field label="Email" value={application.email} />
@@ -200,17 +199,6 @@ export function ApplicationReview({
             <Field label="Applied" value={format(new Date(application.createdAt), "MMM d, yyyy h:mm a")} />
           </CardContent>
         </Card>
-
-        {application.reason && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Reason for joining</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap text-muted-foreground">{application.reason}</p>
-            </CardContent>
-          </Card>
-        )}
 
         <ApplicationHistory entries={history} />
       </div>
@@ -273,24 +261,29 @@ export function ApplicationReview({
         <Card>
           <CardContent className="space-y-2 pt-6 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
-              <Mail className="size-3.5" /> {application.email}
+              <Mail className="size-3.5 shrink-0" />
+              <span className="min-w-0 break-words">{application.email}</span>
             </p>
             <p className="flex items-center gap-2">
-              <Phone className="size-3.5" /> {application.phone}
+              <Phone className="size-3.5 shrink-0" />
+              <span className="min-w-0 break-words">{application.phone}</span>
             </p>
             {application.company && (
               <p className="flex items-center gap-2">
-                <Building2 className="size-3.5" /> {application.company}
+                <Building2 className="size-3.5 shrink-0" />
+                <span className="min-w-0 break-words">{application.company}</span>
               </p>
             )}
             {location && (
               <p className="flex items-center gap-2">
-                <MapPin className="size-3.5" /> {location}
+                <MapPin className="size-3.5 shrink-0" />
+                <span className="min-w-0 break-words">{location}</span>
               </p>
             )}
             {application.instagram && (
               <p className="flex items-center gap-2">
-                <Camera className="size-3.5" /> {application.instagram}
+                <Camera className="size-3.5 shrink-0" />
+                <span className="min-w-0 break-words">{application.instagram}</span>
               </p>
             )}
           </CardContent>

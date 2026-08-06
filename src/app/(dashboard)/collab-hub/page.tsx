@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
-import { listCollabMembers, listAllSkills } from "@/features/collab-hub/services/collab-hub.service";
+import { listCollabMembers, listAllSkills, type CollabSortKey } from "@/features/collab-hub/services/collab-hub.service";
 import { listCollabPosts } from "@/features/collab-hub/services/collab-post.service";
 import { CollabMemberCard } from "@/features/collab-hub/components/collab-member-card";
 import { CollabFilters } from "@/features/collab-hub/components/collab-filters";
@@ -9,7 +9,7 @@ import { CollabPostFormDialog } from "@/features/collab-hub/components/collab-po
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { isDemoModeActive, demoListCollabPosts, demoListCollabMembers, demoListAllSkills } from "@/features/demo-data";
-import type { MemberRole, ContentCategory } from "@prisma/client";
+import type { MemberRole, ContentCategory, SocialPlatform } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,12 @@ export default async function CollabHubPage({
     skill?: string;
     category?: string;
     available?: string;
+    platforms?: string;
+    minFollowers?: string;
+    verified?: string;
+    recentlySynced?: string;
+    location?: string;
+    sort?: string;
   }>;
 }) {
   const actor = await requireCurrentMember();
@@ -110,7 +116,19 @@ async function DirectoryView({
   isDemo,
 }: {
   organizationId: string;
-  params: { search?: string; role?: string; skill?: string; category?: string; available?: string };
+  params: {
+    search?: string;
+    role?: string;
+    skill?: string;
+    category?: string;
+    available?: string;
+    platforms?: string;
+    minFollowers?: string;
+    verified?: string;
+    recentlySynced?: string;
+    location?: string;
+    sort?: string;
+  };
   isDemo: boolean;
 }) {
   const memberFilters = {
@@ -119,8 +137,19 @@ async function DirectoryView({
     skill: params.skill,
     category: params.category as ContentCategory | undefined,
     availableOnly: params.available === "1",
+    platforms: params.platforms ? (params.platforms.split(",") as SocialPlatform[]) : undefined,
+    minFollowers: params.minFollowers ? Number(params.minFollowers) : undefined,
+    verifiedOnly: params.verified === "1",
+    recentlySyncedOnly: params.recentlySynced === "1",
+    location: params.location,
+    sort: params.sort as CollabSortKey | undefined,
   };
 
+  // listCollabMembers already attaches each member's socialSummary from one
+  // cached, org-wide aggregate query — no second social-data fetch needed
+  // here. Demo mode has no real SocialConnection rows, so its fixture
+  // members carry an empty summary (same effectively-harmless outcome the
+  // batched query used to produce for demo IDs).
   const [members, skills] = isDemo
     ? [demoListCollabMembers(memberFilters), demoListAllSkills()]
     : await Promise.all([listCollabMembers(organizationId, memberFilters), listAllSkills(organizationId)]);

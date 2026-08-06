@@ -35,11 +35,6 @@ export const applicationSchema = z.object({
   city: z.string().trim().min(1, "City is required"),
   state: z.string().trim().min(1, "State/Province is required"),
   country: z.string().trim().min(1, "Country is required"),
-  reason: z
-    .string()
-    .trim()
-    .min(20, "Tell us a bit more about why you want to join (at least 20 characters)")
-    .max(1000, "Keep your response under 1000 characters"),
   referredBy: z.string().trim().min(1, "Let us know who referred you, or choose \"No Referral\""),
   // Structured affiliate tracking — distinct from the freeform referredBy
   // text above. Optional: most applicants have no referral code at all.

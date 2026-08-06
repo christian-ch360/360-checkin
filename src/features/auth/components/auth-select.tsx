@@ -8,8 +8,9 @@ export function AuthSelect({
   className,
   children,
   variant = "dark",
+  error,
   ...props
-}: ComponentProps<"select"> & { label: string; icon: ReactNode; variant?: "dark" | "light" }) {
+}: ComponentProps<"select"> & { label: string; icon: ReactNode; variant?: "dark" | "light"; error?: string }) {
   const light = variant === "light";
   return (
     <div className="space-y-2">
@@ -19,8 +20,8 @@ export function AuthSelect({
       <div
         className={
           light
-            ? "group relative flex h-14 items-center rounded-2xl border border-black/10 bg-black/[0.02] transition-colors focus-within:border-black/25 focus-within:bg-black/[0.04]"
-            : "group relative flex h-14 items-center rounded-xl border border-white/10 bg-white/[0.03] transition-colors focus-within:border-white/25 focus-within:bg-white/[0.06]"
+            ? "group relative flex h-14 items-center rounded-2xl border border-black/10 bg-black/[0.02] transition-colors focus-within:border-black/25 focus-within:bg-black/[0.04] has-[[aria-invalid=true]]:border-destructive/50 has-[[aria-invalid=true]]:bg-destructive/[0.04]"
+            : "group relative flex h-14 items-center rounded-xl border border-white/10 bg-white/[0.03] transition-colors focus-within:border-white/25 focus-within:bg-white/[0.06] has-[[aria-invalid=true]]:border-destructive/50 has-[[aria-invalid=true]]:bg-destructive/[0.06]"
         }
       >
         <span
@@ -35,6 +36,7 @@ export function AuthSelect({
         <select
           id={id}
           data-slot="select"
+          aria-invalid={error ? true : undefined}
           className={`h-full w-full min-w-0 flex-1 appearance-none bg-transparent pr-2 text-[15px] outline-none ${light ? "text-black" : "text-white"} ${className ?? ""}`}
           {...props}
         >
@@ -50,6 +52,7 @@ export function AuthSelect({
           <ChevronDown className="size-4" />
         </span>
       </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Loader2,
   QrCode,
   TrendingUp,
   DoorOpen,
-  ArrowLeft,
   User,
   Mail,
   Phone,
@@ -21,10 +20,8 @@ import { submitApplicationAction, type SubmitApplicationState } from "@/features
 import { APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
 import { AuthInput } from "@/features/auth/components/auth-input";
 import { AuthSelect } from "@/features/auth/components/auth-select";
-import { AuthTextarea } from "@/features/auth/components/auth-textarea";
 import { AuthCheckbox } from "@/features/auth/components/auth-checkbox";
 import { LegalConsentField } from "@/features/legal/components/legal-consent-field";
-import { ApplyProgress } from "@/features/kiosk/components/apply-progress";
 
 const NO_REFERRAL = "No Referral";
 
@@ -39,24 +36,18 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
     submitApplicationAction,
     null
   );
-  const [step, setStep] = useState(1);
   const [noReferral, setNoReferral] = useState(false);
   const [referredBy, setReferredBy] = useState("");
-  const step2Ref = useRef<HTMLDivElement>(null);
-  const step3Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (state?.success) onSubmitted();
   }, [state, onSubmitted]);
 
-  function goNext(fromStep: number, ref: React.RefObject<HTMLDivElement | null>) {
-    const invalid = ref.current?.querySelector<HTMLInputElement | HTMLSelectElement>(":invalid");
-    if (invalid) {
-      invalid.reportValidity();
-      return;
-    }
-    setStep(fromStep + 1);
-  }
+  const fieldErrors = state?.fieldErrors;
+  // Only show the global banner for failures that couldn't be attributed to
+  // a specific field (an unexpected server/database error, or an agency
+  // duplicate) — field-level validation errors render inline instead.
+  const globalError = state?.error && !fieldErrors ? state.error : undefined;
 
   return (
     <motion.div
@@ -65,11 +56,8 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="flex w-full max-w-xl flex-col gap-8 rounded-[32px] border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.1)] sm:p-8"
     >
-      <ApplyProgress step={step} />
-
-      <form action={formAction} className="space-y-6 overflow-y-auto">
-        {/* Step 1 — Welcome */}
-        <div className={step === 1 ? "space-y-8 text-center" : "hidden"}>
+      <form action={formAction} className="space-y-8 overflow-y-auto">
+        <div className="space-y-8 text-center">
           <div className="space-y-3">
             <h1 className="text-4xl font-semibold tracking-tight text-balance text-black">Welcome to CreatorHub360</h1>
             <p className="text-lg text-black/50 text-balance">
@@ -94,27 +82,9 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               </div>
             ))}
           </div>
-
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="min-h-14 flex-1 rounded-2xl border border-black/10 text-lg font-medium text-black outline-none transition-colors hover:bg-black/[0.03] active:bg-black/[0.06] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="flex min-h-14 flex-[2] items-center justify-center rounded-2xl bg-black text-lg font-semibold text-white outline-none transition-transform active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/25 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
-            >
-              Get Started
-            </button>
-          </div>
         </div>
 
-        {/* Step 2 — About You */}
-        <div ref={step2Ref} className={step === 2 ? "space-y-4" : "hidden"}>
+        <div className="space-y-4">
           <div className="space-y-1 text-center">
             <h2 className="text-2xl font-semibold tracking-tight text-black">About You</h2>
             <p className="text-black/50">Tell us who you are.</p>
@@ -127,6 +97,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             name="fullName"
             autoComplete="name"
             icon={<User className="size-[18px]" />}
+            error={fieldErrors?.fullName}
             required
           />
 
@@ -138,6 +109,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             type="email"
             autoComplete="email"
             icon={<Mail className="size-[18px]" />}
+            error={fieldErrors?.email}
             required
           />
 
@@ -149,6 +121,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             type="tel"
             autoComplete="tel"
             icon={<Phone className="size-[18px]" />}
+            error={fieldErrors?.phone}
             required
           />
 
@@ -159,6 +132,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             name="role"
             icon={<Users2 className="size-[18px]" />}
             defaultValue="CREATOR"
+            error={fieldErrors?.role}
             required
           >
             {APPLICANT_ROLE_VALUES.map((role) => (
@@ -167,28 +141,9 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               </option>
             ))}
           </AuthSelect>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-black/10 text-lg font-medium text-black outline-none transition-colors hover:bg-black/[0.03] active:bg-black/[0.06] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
-            >
-              <ArrowLeft className="size-5" />
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={() => goNext(2, step2Ref)}
-              className="flex min-h-14 flex-[2] items-center justify-center rounded-2xl bg-black text-lg font-semibold text-white outline-none transition-transform active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/25 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
-            >
-              Continue
-            </button>
-          </div>
         </div>
 
-        {/* Step 3 — Details */}
-        <div ref={step3Ref} className={step === 3 ? "space-y-4" : "hidden"}>
+        <div className="space-y-4">
           <div className="space-y-1 text-center">
             <h2 className="text-2xl font-semibold tracking-tight text-black">A Few More Details</h2>
             <p className="text-black/50">All optional — but it helps us review faster.</p>
@@ -201,12 +156,36 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             name="company"
             autoComplete="organization"
             icon={<Building2 className="size-[18px]" />}
+            error={fieldErrors?.company}
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <AuthInput variant="light" label="Instagram" id="instagram" name="instagram" icon={<Link2 className="size-[18px]" />} required />
-            <AuthInput variant="light" label="TikTok" id="tiktok" name="tiktok" icon={<Link2 className="size-[18px]" />} required />
-            <AuthInput variant="light" label="YouTube (optional)" id="youtube" name="youtube" icon={<Link2 className="size-[18px]" />} />
+            <AuthInput
+              variant="light"
+              label="Instagram"
+              id="instagram"
+              name="instagram"
+              icon={<Link2 className="size-[18px]" />}
+              error={fieldErrors?.instagram}
+              required
+            />
+            <AuthInput
+              variant="light"
+              label="TikTok"
+              id="tiktok"
+              name="tiktok"
+              icon={<Link2 className="size-[18px]" />}
+              error={fieldErrors?.tiktok}
+              required
+            />
+            <AuthInput
+              variant="light"
+              label="YouTube (optional)"
+              id="youtube"
+              name="youtube"
+              icon={<Link2 className="size-[18px]" />}
+              error={fieldErrors?.youtube}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -217,6 +196,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               name="city"
               autoComplete="address-level2"
               icon={<MapPin className="size-[18px]" />}
+              error={fieldErrors?.city}
               required
             />
             <AuthInput
@@ -226,6 +206,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               name="state"
               autoComplete="address-level1"
               icon={<MapPin className="size-[18px]" />}
+              error={fieldErrors?.state}
               required
             />
             <AuthInput
@@ -235,19 +216,10 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               name="country"
               autoComplete="country-name"
               icon={<Globe className="size-[18px]" />}
+              error={fieldErrors?.country}
               required
             />
           </div>
-
-          <AuthTextarea
-            variant="light"
-            label="Reason for Joining"
-            id="reason"
-            name="reason"
-            minLength={20}
-            maxLength={1000}
-            required
-          />
 
           <AuthInput
             variant="light"
@@ -259,6 +231,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             value={noReferral ? NO_REFERRAL : referredBy}
             onChange={(e) => !noReferral && setReferredBy(e.target.value)}
             readOnly={noReferral}
+            error={fieldErrors?.referredBy}
             required
           />
           <AuthCheckbox
@@ -278,6 +251,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               links={[{ href: "/legal/terms", label: "Terms & Conditions" }]}
               required
             />
+            {fieldErrors?.termsAccepted && <p className="text-sm text-destructive">{fieldErrors.termsAccepted}</p>}
             <LegalConsentField
               variant="light"
               id="privacyAccepted"
@@ -286,6 +260,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               links={[{ href: "/legal/privacy", label: "Privacy Policy" }]}
               required
             />
+            {fieldErrors?.privacyAccepted && <p className="text-sm text-destructive">{fieldErrors.privacyAccepted}</p>}
             <LegalConsentField
               variant="light"
               id="dataProcessingAccepted"
@@ -294,6 +269,9 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               links={[{ href: "/legal/privacy#data-processing", label: "Privacy Policy" }]}
               required
             />
+            {fieldErrors?.dataProcessingAccepted && (
+              <p className="text-sm text-destructive">{fieldErrors.dataProcessingAccepted}</p>
+            )}
             <LegalConsentField
               variant="light"
               id="mediaReleaseAccepted"
@@ -305,19 +283,21 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               ]}
               required
             />
+            {fieldErrors?.mediaReleaseAccepted && (
+              <p className="text-sm text-destructive">{fieldErrors.mediaReleaseAccepted}</p>
+            )}
           </div>
 
-          {state?.error && <p className="text-center text-base text-red-600">{state.error}</p>}
+          {globalError && <p className="text-center text-base text-red-600">{globalError}</p>}
 
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={onCancel}
               disabled={isPending}
-              className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-black/10 text-lg font-medium text-black outline-none transition-colors hover:bg-black/[0.03] active:bg-black/[0.06] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              className="flex min-h-14 flex-1 items-center justify-center rounded-2xl border border-black/10 text-lg font-medium text-black outline-none transition-colors hover:bg-black/[0.03] active:bg-black/[0.06] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
             >
-              <ArrowLeft className="size-5" />
-              Back
+              Cancel
             </button>
             <button
               type="submit"

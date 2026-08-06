@@ -57,31 +57,30 @@ export async function submitApplication(input: ApplicationInput) {
     }
   }
 
-  const application = await prisma.membershipApplication.create({
-    data: {
-      organizationId: organization.id,
-      fullName: input.fullName,
-      email: input.email,
-      phone: input.phone,
-      role: input.role,
-      company: input.company || null,
-      website: input.website || null,
-      businessRegistrationNumber: input.businessRegistrationNumber || null,
-      instagram: input.instagram || null,
-      tiktok: input.tiktok || null,
-      youtube: input.youtube || null,
-      city: input.city || null,
-      state: input.state || null,
-      country: input.country || null,
-      reason: input.reason || null,
-      referredBy: input.referredBy || null,
-      referralCode: input.referralCode ? input.referralCode.trim().toUpperCase() : null,
-      claimedAgencyId: invitation ? invitation.agencyId : claimedMatch ? claimedMatch.existingAgency.id : null,
-      claimedAgencyRole: invitation ? invitation.role : claimedMatch ? input.claimAgencyRole : null,
-      claimRequestNote: !invitation && claimedMatch ? input.claimRequestNote || null : null,
-      agencyInviteToken: invitation ? input.agencyInviteToken : null,
-    },
-  });
+  const applicationData: Prisma.MembershipApplicationUncheckedCreateInput = {
+    organizationId: organization.id,
+    fullName: input.fullName,
+    email: input.email,
+    phone: input.phone,
+    role: input.role,
+    company: input.company || null,
+    website: input.website || null,
+    businessRegistrationNumber: input.businessRegistrationNumber || null,
+    instagram: input.instagram || null,
+    tiktok: input.tiktok || null,
+    youtube: input.youtube || null,
+    city: input.city || null,
+    state: input.state || null,
+    country: input.country || null,
+    referredBy: input.referredBy || null,
+    referralCode: input.referralCode ? input.referralCode.trim().toUpperCase() : null,
+    claimedAgencyId: invitation ? invitation.agencyId : claimedMatch ? claimedMatch.existingAgency.id : null,
+    claimedAgencyRole: invitation ? invitation.role : claimedMatch ? input.claimAgencyRole : null,
+    claimRequestNote: !invitation && claimedMatch ? input.claimRequestNote || null : null,
+    agencyInviteToken: invitation ? input.agencyInviteToken : null,
+  };
+  console.log("[submitApplication] PRISMA DATA", applicationData);
+  const application = await prisma.membershipApplication.create({ data: applicationData });
 
   // Re-validates server-side regardless of what the client already checked —
   // silently no-ops (no ReferralLink row) on an invalid/stale code rather

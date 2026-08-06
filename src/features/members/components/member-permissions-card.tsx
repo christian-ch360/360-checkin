@@ -7,7 +7,10 @@ import { Loader2, ShieldCheck } from "lucide-react";
 import type { SystemRole } from "@prisma/client";
 import { updateMemberSystemRole } from "@/features/admin/services/actions";
 import { RoleBadge } from "@/features/members/components/role-badge";
-import { SYSTEM_ROLE_LABELS as ROLE_LABELS, STANDARD_SYSTEM_ROLES as STANDARD_ROLES } from "@/lib/permissions/member-rules";
+import {
+  SYSTEM_ROLE_LABELS as ROLE_LABELS,
+  STANDARD_SYSTEM_ROLES as STANDARD_ROLES,
+} from "@/lib/permissions/member-rules";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,27 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-const PROMOTE_COPY: Record<string, string> = {
-  "MEMBER->ADMIN": "This will grant administrative access.",
-  "ADMIN->SUPER_ADMIN": "This will grant full administrative access, including the ability to manage other admins.",
-  "MEMBER->SUPER_ADMIN": "This will grant full administrative access, including the ability to manage other admins.",
-};
-
-const DEMOTE_COPY: Record<string, string> = {
-  "ADMIN->MEMBER": "This will remove their administrative access.",
-  "SUPER_ADMIN->ADMIN": "This will remove their ability to manage other admins.",
-  "SUPER_ADMIN->MEMBER": "This will remove all administrative access.",
-};
-
-const ROLE_RANK: Record<SystemRole, number> = {
-  MEMBER: 0,
-  GUEST: 0,
-  PROJECT_LEADER: 0,
-  MANAGER: 0,
-  ADMIN: 1,
-  SUPER_ADMIN: 2,
-};
 
 export function MemberPermissionsCard({
   member,
@@ -55,6 +37,9 @@ export function MemberPermissionsCard({
   const [pendingRole, setPendingRole] = useState<SystemRole | null>(null);
 
   const isStandardRole = STANDARD_ROLES.includes(member.systemRole);
+  // Regular Admins never get an interactive Select, even disabled — they
+  // must not see Admin/Super Admin as options at all, not just be blocked
+  // from picking them. Only a Super Admin (canManageRoles) gets the dropdown.
   const canEdit = canManageRoles && !isSelf && isStandardRole;
 
   function onConfirm() {
@@ -73,13 +58,6 @@ export function MemberPermissionsCard({
     });
   }
 
-  const isPromotion = pendingRole ? ROLE_RANK[pendingRole] > ROLE_RANK[member.systemRole] : false;
-  const copyKey = pendingRole ? `${member.systemRole}->${pendingRole}` : "";
-  const dialogCopy = pendingRole
-    ? (isPromotion ? PROMOTE_COPY[copyKey] : DEMOTE_COPY[copyKey]) ??
-      `${member.fullName}'s role will change from ${ROLE_LABELS[member.systemRole]} to ${ROLE_LABELS[pendingRole]}.`
-    : "";
-
   return (
     <>
       <Card>
@@ -96,30 +74,31 @@ export function MemberPermissionsCard({
           </div>
 
           {isStandardRole ? (
-            <>
-              <Select
-                value={member.systemRole}
-                onValueChange={(v) => setPendingRole(v as SystemRole)}
-                disabled={!canEdit || isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STANDARD_ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {ROLE_LABELS[role]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {!canManageRoles && (
-                <p className="text-xs text-muted-foreground">Only Super Admins can change permissions.</p>
-              )}
-              {canManageRoles && isSelf && (
-                <p className="text-xs text-muted-foreground">You can&apos;t change your own permissions.</p>
-              )}
-            </>
+            canManageRoles ? (
+              <>
+                <Select
+                  value={member.systemRole}
+                  onValueChange={(v) => setPendingRole(v as SystemRole)}
+                  disabled={!canEdit || isPending}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STANDARD_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {ROLE_LABELS[role]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isSelf && (
+                  <p className="text-xs text-muted-foreground">You can&apos;t change your own permissions.</p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Only Super Admins can change permissions.</p>
+            )
           ) : (
             <p className="text-xs text-muted-foreground">
               This member has a legacy role not managed here. Use the full{" "}
@@ -135,18 +114,27 @@ export function MemberPermissionsCard({
       <AlertDialog open={pendingRole !== null} onOpenChange={(open) => !open && setPendingRole(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isPromotion ? "Promote" : "Demote"} {member.fullName} to {pendingRole ? ROLE_LABELS[pendingRole] : ""}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>{dialogCopy}</AlertDialogDescription>
+            <AlertDialogTitle>Change Member Role?</AlertDialogTitle>
+            <AlertDialogDescription>You are about to change this member&apos;s platform role.</AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Old Role</span>
+              <span className="font-medium">{ROLE_LABELS[member.systemRole]}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">New Role</span>
+              <span className="font-medium">{pendingRole ? ROLE_LABELS[pendingRole] : ""}</span>
+            </div>
+            <p className="pt-1 text-xs text-muted-foreground">This affects permissions immediately.</p>
+          </div>
           <AlertDialogFooter>
             <Button variant="outline" onClick={() => setPendingRole(null)} disabled={isPending}>
               Cancel
             </Button>
             <Button onClick={onConfirm} disabled={isPending}>
               {isPending && <Loader2 className="size-4 animate-spin" />}
-              Confirm
+              Confirm Role Change
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

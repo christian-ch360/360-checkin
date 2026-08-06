@@ -3,7 +3,9 @@ import type { MemberRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { FollowerBadges } from "@/features/integrations/components/follower-badges";
 import { ROLE_LABELS } from "@/features/members/role-labels";
+import type { SocialSummaryEntry } from "@/features/integrations/services/social-connections.service";
 
 function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
@@ -21,6 +23,7 @@ export function CollabMemberCard({
     skills: string[];
     availableForCollab: boolean;
     company: { name: string } | null;
+    socialSummary: SocialSummaryEntry[];
   };
 }) {
   return (
@@ -39,6 +42,7 @@ export function CollabMemberCard({
                   {ROLE_LABELS[member.role]}
                   {member.company ? ` · ${member.company.name}` : ""}
                 </p>
+                <FollowerBadges summary={member.socialSummary} className="mt-0.5" />
               </div>
             </div>
             <Badge

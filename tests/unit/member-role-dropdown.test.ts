@@ -89,7 +89,6 @@ describe("Add Member Role dropdown — admin-assignable role values", () => {
       city: "Los Angeles",
       state: "California",
       country: "United States",
-      reason: "I want to join CreatorHub360 to grow my creative business.",
       referredBy: "No Referral",
       termsAccepted: true as const,
       privacyAccepted: true as const,

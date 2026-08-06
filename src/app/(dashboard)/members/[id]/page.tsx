@@ -24,6 +24,10 @@ import { CollabStatsPanel } from "@/features/collab-hub/components/collab-stats-
 import { MemberQrSection } from "@/features/qr/components/member-qr-section";
 import { ensureQRAsset } from "@/features/qr/services/qr-asset.service";
 import { MemberPermissionsCard } from "@/features/members/components/member-permissions-card";
+import { SocialPresence } from "@/features/integrations/components/social-presence";
+import { CreatorSocialSummary } from "@/features/integrations/components/creator-social-summary";
+import { getConnectionsForMember } from "@/features/integrations/services/social-connections.service";
+import { getFollowerGrowthForMember } from "@/features/integrations/services/follower-growth.service";
 import { ReferralTransferCard } from "@/features/referrals/components/referral-transfer-card";
 import { AgencyMergeCard } from "@/features/agencies/components/agency-merge-card";
 import { MemberNotesCard } from "@/features/members/components/member-notes-card";
@@ -59,7 +63,7 @@ export default async function MemberProfilePage({
   // may view another member's QR section on their profile.
   const canViewQr = isSelf || canManage;
 
-  const [companies, commissionTiers, collabStats, attendanceStats, spaceTimeStats, isFollowing, memberAuditLogs] =
+  const [companies, commissionTiers, collabStats, attendanceStats, spaceTimeStats, isFollowing, memberAuditLogs, socialConnections] =
     await Promise.all([
       listCompaniesForOrg(actor.organizationId),
       listCommissionTiersForOrg(actor.organizationId),
@@ -68,7 +72,15 @@ export default async function MemberProfilePage({
       getMemberSpaceTimeStats(member.id),
       prisma.follow.findUnique({ where: { followerId_followingId: { followerId: actor.id, followingId: member.id } } }).then(Boolean),
       canManage ? listMemberAuditLogs(actor.organizationId, member.id) : Promise.resolve([]),
+      canManage ? getConnectionsForMember(member.id) : Promise.resolve([]),
     ]);
+
+  const socialGrowth = canManage
+    ? await getFollowerGrowthForMember(
+        member.id,
+        socialConnections.map((c) => ({ platform: c.platform, followerCount: c.followerCount }))
+      )
+    : {};
 
   // Every member gets a QR at creation time (ensureQRAsset is idempotent —
   // it never regenerates an existing token). This just self-heals any
@@ -136,6 +148,13 @@ export default async function MemberProfilePage({
         <StatCard label="Current commission" value={formatCompactCurrency(Number(member.currentCommission))} icon={Percent} accent="warning" />
         <StatCard label="Hours worked" value={formatHours(Number(member.hoursWorked))} icon={Clock} />
       </div>
+
+      {canManage && (
+        <div className="space-y-4">
+          <CreatorSocialSummary connections={socialConnections} />
+          <SocialPresence connections={socialConnections} growth={socialGrowth} variant="admin" />
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

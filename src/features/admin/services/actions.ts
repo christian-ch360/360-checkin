@@ -6,9 +6,16 @@ import Papa from "papaparse";
 import { prisma } from "@/lib/db/prisma";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
-import { SYSTEM_ROLE_LABELS, systemRoleValues, canManageMemberRole, canInviteWithRole } from "@/lib/permissions/member-rules";
+import {
+  SYSTEM_ROLE_LABELS,
+  systemRoleValues,
+  canManageMemberRole,
+  canInviteWithRole,
+  SYSTEM_ROLE_RANK,
+} from "@/lib/permissions/member-rules";
 import { isLastSuperAdmin } from "@/lib/db/member-role-guards";
 import { logAudit } from "@/lib/db/audit-log";
+import { createNotification } from "@/lib/notifications";
 import type { SystemRole } from "@prisma/client";
 import { generateInvitationToken, defaultInvitationExpiry } from "@/features/admin/services/invitations.service";
 import { generateMemberNumber, isUniqueConstraintError } from "@/features/members/services/member-number";
@@ -155,9 +162,11 @@ export async function updateMemberSystemRole(memberId: string, role: SystemRole)
 
   if (target.systemRole === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
     if (await isLastSuperAdmin(actor.organizationId, memberId)) {
-      return { success: false, error: "Can't remove the last Super Admin." };
+      return { success: false, error: "CreatorHub360 must always have at least one Super Admin." };
     }
   }
+
+  const isPromotion = SYSTEM_ROLE_RANK[role] > SYSTEM_ROLE_RANK[target.systemRole];
 
   await prisma.member.update({
     where: { id: memberId, organizationId: actor.organizationId },
@@ -167,12 +176,26 @@ export async function updateMemberSystemRole(memberId: string, role: SystemRole)
   await logAudit({
     organizationId: actor.organizationId,
     actorId: actor.id,
-    action: "member.role_changed",
+    action: isPromotion ? "member.role.promoted" : "member.role.demoted",
     entityType: "member",
     entityId: memberId,
     before: { systemRole: target.systemRole },
     after: { systemRole: role },
   });
+
+  if (isPromotion && role === "ADMIN") {
+    await createNotification(memberId, {
+      type: "ADMIN_ACCESS_GRANTED",
+      title: "Administrator Access Granted",
+      body: "You have been promoted to an Administrator.",
+    });
+  } else if (isPromotion && role === "SUPER_ADMIN") {
+    await createNotification(memberId, {
+      type: "SUPER_ADMIN_ACCESS_GRANTED",
+      title: "Super Admin Access Granted",
+      body: "You have been promoted to a Super Administrator.",
+    });
+  }
 
   revalidatePath("/admin");
   revalidatePath(`/members/${memberId}`);

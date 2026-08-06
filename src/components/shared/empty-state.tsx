@@ -11,7 +11,8 @@ export function EmptyState({
 }: {
   icon?: LucideIcon;
   title: string;
-  description?: string;
+  /** Plain string in the common case; pass a fragment/list for a richer body (e.g. an "unlocks" bullet list). */
+  description?: ReactNode;
   action?: ReactNode;
   className?: string;
 }) {
@@ -24,7 +25,7 @@ export function EmptyState({
       )}
       <div className="space-y-1">
         <p className="text-base font-medium">{title}</p>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        {description && <div className="text-sm text-muted-foreground">{description}</div>}
       </div>
       {action}
     </div>

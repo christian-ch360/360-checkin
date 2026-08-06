@@ -3,7 +3,7 @@ import "server-only";
 import type { SocialPlatform } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { encryptToken } from "@/lib/crypto/token-cipher";
-import { PROVIDERS, isPlatformConfigured } from "@/features/integrations/config/providers";
+import { PROVIDERS, isPlatformConfigured, type ProfileStatsResult } from "@/features/integrations/config/providers";
 import { signOAuthState } from "@/features/integrations/services/oauth-state";
 import { ensureFreshAccessToken } from "@/features/integrations/services/token-refresh.service";
 import { IntegrationError } from "@/features/integrations/services/errors";
@@ -14,6 +14,25 @@ function redirectUriFor(platform: SocialPlatform): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   return `${base}/api/integrations/${platform.toLowerCase()}/callback`;
 }
+
+/** A public profile link derived from what fetchStats already returned — never a separate API call. YouTube uses the channel ID (externalAccountId) rather than username, since externalUsername there is a display name, not a URL-safe handle. */
+function buildProfileUrl(platform: SocialPlatform, stats: ProfileStatsResult): string | null {
+  switch (platform) {
+    case "INSTAGRAM":
+      return stats.externalUsername ? `https://instagram.com/${stats.externalUsername}` : null;
+    case "TIKTOK":
+      return stats.externalUsername ? `https://www.tiktok.com/@${stats.externalUsername}` : null;
+    case "YOUTUBE":
+      return stats.externalAccountId ? `https://www.youtube.com/channel/${stats.externalAccountId}` : null;
+  }
+}
+
+// Minimum time between sync attempts on the same connection before another
+// one is allowed to start — the atomic claim in syncConnection() below uses
+// this as its window. Long enough to cover a real OAuth-token-refresh +
+// fetchStats round trip; short enough that a crashed/timed-out attempt
+// doesn't lock a member out of retrying for more than a few seconds.
+const SYNC_CLAIM_WINDOW_MS = 20_000;
 
 /** Returns null (rather than throwing) when the platform has no credentials configured — the caller renders "Not configured". */
 export function buildAuthorizeUrl(platform: SocialPlatform, memberId: string): string | null {
@@ -35,22 +54,30 @@ export async function exchangeAndStoreConnection(platform: SocialPlatform, membe
     throw new IntegrationError("instagram_personal_account");
   }
 
+  const now = new Date();
+  const profileUrl = buildProfileUrl(platform, stats);
+
   await prisma.socialConnection.upsert({
     where: { memberId_platform: { memberId, platform } },
     update: {
       status: "CONNECTED",
       externalAccountId: stats.externalAccountId,
       externalUsername: stats.externalUsername,
+      profileUrl,
       followerCount: stats.followerCount,
       profileImageUrl: stats.profileImageUrl,
       followingCount: stats.followingCount,
       postCount: stats.postCount,
       likesCount: stats.likesCount,
+      viewCount: stats.viewCount,
+      bio: stats.bio,
       accountType: stats.accountType,
+      verified: stats.verified,
       accessTokenEnc: encryptToken(token.accessToken),
       refreshTokenEnc: token.refreshToken ? encryptToken(token.refreshToken) : null,
       tokenExpiresAt: token.expiresInSec ? new Date(Date.now() + token.expiresInSec * 1000) : null,
-      lastSyncedAt: new Date(),
+      lastSyncAttempt: now,
+      lastSyncedAt: now,
       lastSyncError: null,
     },
     create: {
@@ -59,18 +86,31 @@ export async function exchangeAndStoreConnection(platform: SocialPlatform, membe
       status: "CONNECTED",
       externalAccountId: stats.externalAccountId,
       externalUsername: stats.externalUsername,
+      profileUrl,
       followerCount: stats.followerCount,
       profileImageUrl: stats.profileImageUrl,
       followingCount: stats.followingCount,
       postCount: stats.postCount,
       likesCount: stats.likesCount,
+      viewCount: stats.viewCount,
+      bio: stats.bio,
       accountType: stats.accountType,
+      verified: stats.verified,
       accessTokenEnc: encryptToken(token.accessToken),
       refreshTokenEnc: token.refreshToken ? encryptToken(token.refreshToken) : null,
       tokenExpiresAt: token.expiresInSec ? new Date(Date.now() + token.expiresInSec * 1000) : null,
-      lastSyncedAt: new Date(),
+      lastSyncAttempt: now,
+      lastSyncedAt: now,
     },
   });
+
+  // First Growth Analytics data point — connecting counts as a successful
+  // sync, same as any later manual/scheduled one.
+  if (stats.followerCount != null) {
+    await prisma.socialFollowerHistory.create({
+      data: { memberId, platform, followers: stats.followerCount, capturedAt: now },
+    });
+  }
 
   // Keep the self-reported Member.followerCount roughly in sync once a real
   // connection exists — the higher of the two, since a member may be
@@ -95,15 +135,45 @@ export async function getConnectionsForMember(memberId: string) {
       configured: isPlatformConfigured(platform),
       status: connection?.status ?? "DISCONNECTED",
       externalUsername: connection?.externalUsername ?? null,
+      profileUrl: connection?.profileUrl ?? null,
       followerCount: connection?.followerCount ?? null,
       followingCount: connection?.followingCount ?? null,
       postCount: connection?.postCount ?? null,
       likesCount: connection?.likesCount ?? null,
+      viewCount: connection?.viewCount ?? null,
+      bio: connection?.bio ?? null,
       profileImageUrl: connection?.profileImageUrl ?? null,
+      verified: connection?.verified ?? null,
       lastSyncedAt: connection?.lastSyncedAt ?? null,
+      lastSyncAttempt: connection?.lastSyncAttempt ?? null,
       lastSyncError: connection?.lastSyncError ?? null,
     };
   });
+}
+
+export type SocialSummaryEntry = { platform: SocialPlatform; followerCount: number; verified: boolean };
+
+/**
+ * One batched query for a whole page of members (member directory, /members
+ * table, Collab Hub directory) — never N+1 per row. Only ever queried for
+ * the member IDs actually being rendered on that page (already paginated
+ * upstream), and only returns platforms with a real synced follower count;
+ * a member with nothing connected simply has no entry in the returned map.
+ */
+export async function getSocialSummaryForMembers(memberIds: string[]): Promise<Record<string, SocialSummaryEntry[]>> {
+  if (memberIds.length === 0) return {};
+
+  const connections = await prisma.socialConnection.findMany({
+    where: { memberId: { in: memberIds }, followerCount: { not: null } },
+    select: { memberId: true, platform: true, followerCount: true, verified: true },
+  });
+
+  const byMember: Record<string, SocialSummaryEntry[]> = {};
+  for (const c of connections) {
+    if (c.followerCount == null) continue;
+    (byMember[c.memberId] ??= []).push({ platform: c.platform, followerCount: c.followerCount, verified: c.verified ?? false });
+  }
+  return byMember;
 }
 
 export async function disconnectConnection(memberId: string, platform: SocialPlatform) {
@@ -117,6 +187,23 @@ export async function syncConnection(memberId: string, platform: SocialPlatform)
   const connection = await prisma.socialConnection.findUnique({ where: { memberId_platform: { memberId, platform } } });
   if (!connection?.accessTokenEnc) throw new Error("Not connected");
 
+  // Atomic claim: only proceed if the last attempt (successful, failed, or
+  // still in flight) started outside the claim window. Guards against the
+  // daily cron and a member's own "Sync Now" click racing on the same
+  // connection, or a double-click firing two syncs at once — whichever
+  // request loses the race gets a clear "already running" error instead of
+  // silently duplicating work or clobbering the other's result.
+  const claim = await prisma.socialConnection.updateMany({
+    where: {
+      id: connection.id,
+      OR: [{ lastSyncAttempt: null }, { lastSyncAttempt: { lt: new Date(Date.now() - SYNC_CLAIM_WINDOW_MS) } }],
+    },
+    data: { lastSyncAttempt: new Date() },
+  });
+  if (claim.count === 0) {
+    throw new Error("A sync for this account is already running. Try again in a few seconds.");
+  }
+
   const provider = PROVIDERS[platform];
   try {
     const accessToken = await ensureFreshAccessToken(platform, connection);
@@ -126,16 +213,29 @@ export async function syncConnection(memberId: string, platform: SocialPlatform)
       data: {
         status: "CONNECTED",
         externalUsername: stats.externalUsername,
+        profileUrl: buildProfileUrl(platform, stats),
         followerCount: stats.followerCount,
         profileImageUrl: stats.profileImageUrl,
         followingCount: stats.followingCount,
         postCount: stats.postCount,
         likesCount: stats.likesCount,
+        viewCount: stats.viewCount,
+        bio: stats.bio,
         accountType: stats.accountType,
+        verified: stats.verified,
         lastSyncedAt: new Date(),
         lastSyncError: null,
       },
     });
+
+    // Growth Analytics data point — append-only, one row per successful
+    // sync, never overwritten. A failed sync (caught below) never reaches
+    // this line, so history only ever records real, confirmed counts.
+    if (stats.followerCount != null) {
+      await prisma.socialFollowerHistory.create({
+        data: { memberId, platform, followers: stats.followerCount },
+      });
+    }
   } catch (err) {
     // Log the real error for debugging — never expose provider/API internals
     // to the member. This catch never writes follower/etc. fields, so a

@@ -147,6 +147,36 @@ connect one real test account per platform (the app owner's own, added as
 a tester in each developer dashboard), and confirm the follower count
 shown on `/profile` matches that account's real public follower count.
 
+## Rate limits (supplement, 2026-08-05 — Automatic Follower Sync feature)
+
+Researched while adding the daily/manual follower-sync + growth-history
+feature, to size the batching added to the scheduled sync job
+(`scheduled-sync.service.ts`, 5 connections at a time with a 500ms pause
+between batches).
+
+- **Instagram (Graph API family, which `graph.instagram.com` follows)** —
+  Meta's standard, long-documented Graph API call-count formula caps each
+  app+user pair at roughly 200 calls/hour, scaling with the number of
+  engaged users. A once-daily sync per connection, plus occasional manual
+  "Sync Now" clicks, stays trivially under this regardless of member count.
+- **TikTok (`/v2/user/info/`)** — TikTok's public developer docs do not
+  publish one fixed numeric rate limit for this endpoint the way Meta does;
+  limits are enforced per client and can vary by review tier. Rather than
+  assume a number I can't verify, the mitigation here is structural: only
+  `CONNECTED` rows are ever synced (never a blanket scan of every member),
+  requests are batched and staggered, and the daily cron only runs once —
+  the same posture that would stay safe under most reasonable per-app
+  limits without depending on a specific published ceiling.
+- **YouTube Data API v3** — publishes an explicit daily quota (10,000 units/
+  day by default per project; `channels.list` costs 1 unit/call), which a
+  once-daily sync per connection uses a negligible fraction of even at
+  significant scale.
+
+This app already respects all three by construction (batched, connected-
+only, once-daily automatic + rate-limited-by-usage manual), independent of
+the exact numbers above — the batching exists so this remains true even if
+a platform's limit turns out to be stricter than expected.
+
 ## Operational notes for whoever owns the developer-app credentials
 
 - Meta Graph API versions expire ~2 years after release. `v22.0` (bumped

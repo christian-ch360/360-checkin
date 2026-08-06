@@ -6,8 +6,9 @@ export function AuthInput({
   icon,
   className,
   variant = "dark",
+  error,
   ...props
-}: ComponentProps<"input"> & { label: string; icon: ReactNode; variant?: "dark" | "light" }) {
+}: ComponentProps<"input"> & { label: string; icon: ReactNode; variant?: "dark" | "light"; error?: string }) {
   const light = variant === "light";
   return (
     <div className="space-y-2">
@@ -33,10 +34,12 @@ export function AuthInput({
         <input
           id={id}
           data-slot="input"
+          aria-invalid={error ? true : undefined}
           className={`h-full w-full min-w-0 flex-1 bg-transparent pr-4 text-[15px] outline-none ${light ? "text-black placeholder:text-black/30" : "text-white placeholder:text-white/30"} ${className ?? ""}`}
           {...props}
         />
       </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

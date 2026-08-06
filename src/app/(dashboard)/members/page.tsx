@@ -1,5 +1,6 @@
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { listMembers, listCompaniesForOrg, listCommissionTiersForOrg } from "@/features/members/services/members.service";
+import { getSocialSummaryForMembers } from "@/features/integrations/services/social-connections.service";
 import { MembersTable, type MemberRow } from "@/features/members/components/members-table";
 import { MembersMobileList } from "@/features/members/components/members-mobile-list";
 import { MembersFilters } from "@/features/members/components/members-filters";
@@ -36,6 +37,10 @@ export default async function MembersPage({
     listCommissionTiersForOrg(actor.organizationId),
   ]);
 
+  // One batched query for the whole page — demo member IDs simply won't
+  // match any real social_connections rows, so this is harmless under demo mode.
+  const socialSummaries = await getSocialSummaryForMembers(members.map((m) => m.id));
+
   const rows: MemberRow[] = members.map((m) => ({
     id: m.id,
     memberNumber: m.memberNumber,
@@ -54,6 +59,7 @@ export default async function MembersPage({
           percentage: m.commissionTier.percentage.toString(),
         }
       : null,
+    socialSummary: socialSummaries[m.id] ?? [],
   }));
 
   return (

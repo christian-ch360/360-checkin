@@ -3,15 +3,19 @@ import type { MemberRole, VerificationStatus, ContentCategory } from "@prisma/cl
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProfileHeader } from "@/features/creator-dashboard/components/profile-header";
-import { SocialStatsList } from "@/features/creator-dashboard/components/social-stats-list";
+import { SocialPresence } from "@/features/integrations/components/social-presence";
+import { CreatorSocialSummary } from "@/features/integrations/components/creator-social-summary";
 import type { getConnectionsForMember } from "@/features/integrations/services/social-connections.service";
+import type { getFollowerGrowthForMember } from "@/features/integrations/services/follower-growth.service";
 
 type SocialConnections = Awaited<ReturnType<typeof getConnectionsForMember>>;
+type FollowerGrowthByPlatform = Awaited<ReturnType<typeof getFollowerGrowthForMember>>;
 
 export function ProfileTab({
   member,
   membershipStatusLabel,
   connections,
+  growth,
 }: {
   member: {
     id: string;
@@ -43,6 +47,7 @@ export function ProfileTab({
   };
   membershipStatusLabel: string | null;
   connections: SocialConnections;
+  growth: FollowerGrowthByPlatform;
 }) {
   return (
     <div className="space-y-4">
@@ -92,10 +97,12 @@ export function ProfileTab({
                 ))}
               </div>
             )}
-            <SocialStatsList connections={connections} />
           </CardContent>
         </Card>
       </div>
+
+      <CreatorSocialSummary connections={connections} />
+      <SocialPresence connections={connections} growth={growth} variant="member" />
     </div>
   );
 }

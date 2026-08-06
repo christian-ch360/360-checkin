@@ -86,6 +86,7 @@ describe("social provider fetchStats", () => {
             following_count: 218,
             likes_count: 2_400_000,
             avatar_url: "https://p16-sign.tiktokcdn.com/avatar.jpg",
+            is_verified: true,
           },
         },
         error: { code: "ok", message: "" },
@@ -98,6 +99,7 @@ describe("social provider fetchStats", () => {
     expect(stats.followingCount).toBe(218);
     expect(stats.likesCount).toBe(2_400_000);
     expect(stats.externalUsername).toBe("janecreator");
+    expect(stats.verified).toBe(true);
   });
 
   it("throws when TikTok returns a scope_not_authorized-style error body", async () => {

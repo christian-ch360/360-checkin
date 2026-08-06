@@ -67,8 +67,8 @@ export function QrCodeSection({
             <p>
               This QR code is tied to {memberNumber} and only readable by CreatorHub360&rsquo;s check-in and
               building-access scanners — it doesn&rsquo;t expose your personal details to whoever scans it.
-              Refreshing it immediately invalidates the old code everywhere it&rsquo;s been printed, saved, or
-              added to a wallet, so only do that if you believe it&rsquo;s been compromised or lost.
+              Refreshing it immediately invalidates the old code everywhere it&rsquo;s been printed or saved,
+              so only do that if you believe it&rsquo;s been compromised or lost.
             </p>
           </div>
         </div>

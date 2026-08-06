@@ -56,7 +56,6 @@ export default async function ApplicationDetailPage({
           city: application.city,
           state: application.state,
           country: application.country,
-          reason: application.reason,
           referredBy: application.referredBy,
           status: application.status,
           notes: application.notes,

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Maximize2, Download, Copy, RefreshCw, Wallet, Share2 } from "lucide-react";
+import { Maximize2, Download, Copy, RefreshCw, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -45,10 +45,6 @@ export function MemberQrSection({
       .writeText(memberNumber)
       .then(() => toast.success("Member ID copied"))
       .catch(() => toast.error("Couldn't copy member ID"));
-  }
-
-  function walletPlaceholder(wallet: string) {
-    toast.info(`${wallet} support is coming soon`);
   }
 
   async function handleShare() {
@@ -117,28 +113,18 @@ export function MemberQrSection({
           </div>
 
           {isMobile ? (
-            <div className="w-full space-y-2">
-              <div className="grid grid-cols-3 gap-2">
-                <Button variant="outline" size="sm" onClick={() => setFullscreenOpen(true)}>
-                  <Maximize2 /> Full Screen
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <a href={src} download={downloadName}>
-                    <Download /> Download
-                  </a>
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleShare}>
-                  <Share2 /> Share
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => walletPlaceholder("Apple Wallet")}>
-                  <Wallet /> Apple Wallet
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => walletPlaceholder("Google Wallet")}>
-                  <Wallet /> Google Wallet
-                </Button>
-              </div>
+            <div className="grid w-full grid-cols-3 gap-2">
+              <Button variant="outline" size="sm" onClick={() => setFullscreenOpen(true)}>
+                <Maximize2 /> Full Screen
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={src} download={downloadName}>
+                  <Download /> Download
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 /> Share
+              </Button>
             </div>
           ) : (
             <div className="flex w-full flex-col gap-2">
@@ -156,14 +142,6 @@ export function MemberQrSection({
               <Button variant="outline" size="sm" className="w-full" onClick={copyMemberId}>
                 <Copy /> Copy Member ID
               </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => walletPlaceholder("Apple Wallet")}>
-                  <Wallet /> Apple Wallet
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => walletPlaceholder("Google Wallet")}>
-                  <Wallet /> Google Wallet
-                </Button>
-              </div>
             </div>
           )}
 
@@ -178,8 +156,8 @@ export function MemberQrSection({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Refresh this QR code?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    The current QR code will stop working immediately — anywhere it&apos;s printed, saved, or
-                    added to a wallet will need to be replaced. This can&apos;t be undone.
+                    The current QR code will stop working immediately — anywhere it&apos;s printed or saved will
+                    need to be replaced. This can&apos;t be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

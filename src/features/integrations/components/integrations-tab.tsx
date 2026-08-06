@@ -2,17 +2,19 @@ import { Store } from "lucide-react";
 import { PlatformCard } from "@/features/integrations/components/platform-card";
 import { ConnectStoreDialog } from "@/features/integrations/components/connect-store-dialog";
 import { IntegrationsSuccessDialog } from "@/features/integrations/components/integrations-success-dialog";
+import { CreatorSocialSummary } from "@/features/integrations/components/creator-social-summary";
 import { Button } from "@/components/ui/button";
 import { disconnectPlatform, resyncPlatform } from "@/features/integrations/services/actions";
 import { disconnectStore, resyncStore } from "@/features/integrations/services/store-actions";
 import { SOCIAL_META } from "@/features/integrations/config/social-meta";
+import { SOCIAL_UNLOCK_BULLETS } from "@/features/integrations/config/copy";
 import type { getConnectionsForMember } from "@/features/integrations/services/social-connections.service";
 import type { getStoreConnectionsForMember } from "@/features/integrations/services/store-connections.service";
 
 type SocialConnections = Awaited<ReturnType<typeof getConnectionsForMember>>;
 type StoreConnections = Awaited<ReturnType<typeof getStoreConnectionsForMember>>;
 
-function formatCount(n: number | null): string | null {
+function formatCount(n: number | bigint | null): string | null {
   if (n == null) return null;
   return n.toLocaleString();
 }
@@ -37,15 +39,11 @@ export function IntegrationsTab({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CreatorSocialSummary connections={connections} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {connections.map((connection) => {
           const meta = SOCIAL_META[connection.platform];
-          const metricParts = [
-            connection.followerCount != null && `${formatCount(connection.followerCount)} followers`,
-            connection.followingCount != null && `${formatCount(connection.followingCount)} following`,
-            connection.postCount != null && `${formatCount(connection.postCount)} posts`,
-            connection.likesCount != null && `${formatCount(connection.likesCount)} likes`,
-          ].filter(Boolean) as string[];
 
           return (
             <PlatformCard
@@ -57,16 +55,18 @@ export function IntegrationsTab({
               configured={connection.configured}
               status={connection.status}
               accountLabel={connection.externalUsername ? `@${connection.externalUsername}` : null}
-              metricLabel={metricParts.length > 0 ? metricParts.join(" · ") : null}
+              verified={connection.verified}
               profileImageUrl={connection.profileImageUrl}
               lastSyncedAt={connection.lastSyncedAt}
               lastSyncError={connection.lastSyncError}
               connectHref={`/api/integrations/${connection.platform.toLowerCase()}/connect`}
+              unlockBullets={SOCIAL_UNLOCK_BULLETS}
               statRows={[
                 connection.followerCount != null && { label: "Followers", value: formatCount(connection.followerCount)! },
                 connection.followingCount != null && { label: "Following", value: formatCount(connection.followingCount)! },
                 connection.postCount != null && { label: "Posts", value: formatCount(connection.postCount)! },
                 connection.likesCount != null && { label: "Likes", value: formatCount(connection.likesCount)! },
+                connection.viewCount != null && { label: "Views", value: formatCount(connection.viewCount)! },
               ].filter(Boolean) as { label: string; value: string }[]}
               onSync={resyncPlatform.bind(null, connection.platform)}
               onDisconnect={disconnectPlatform.bind(null, connection.platform)}
@@ -83,7 +83,6 @@ export function IntegrationsTab({
             configured={store.configured}
             status={store.status}
             accountLabel={store.storeName}
-            metricLabel={store.storeDomain}
             lastSyncedAt={store.lastSyncedAt}
             lastSyncError={store.lastSyncError}
             connectTrigger={

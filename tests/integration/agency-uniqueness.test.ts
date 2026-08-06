@@ -135,7 +135,6 @@ describe("Agency Uniqueness (integration, real Postgres)", () => {
           city: "Austin",
           state: "TX",
           country: "USA",
-          reason: "We would love to partner with CreatorHub360 for our roster of creators.",
           referredBy: "No Referral",
           referralCode: "",
           termsAccepted: true,

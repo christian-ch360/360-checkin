@@ -218,6 +218,15 @@ function buildCollabMembers(members: DemoMember[]): DemoCollabMember[] {
       skills: m.skills,
       availableForCollab: m.availableForCollab,
       company: m.company ? { name: m.company.name } : null,
+      memberSince: m.memberSince,
+      // Demo members have no real SocialConnection rows (same as the
+      // pre-existing getSocialSummaryForMembers behavior, which always
+      // returned {} for demo IDs) — directory filters/sort tied to social
+      // data are simply a no-op under demo mode.
+      socialSummary: [],
+      totalFollowers: m.followerCount ?? 0,
+      monthlyGrowth: null,
+      lastSocialSyncAt: null,
     }));
 }
 
