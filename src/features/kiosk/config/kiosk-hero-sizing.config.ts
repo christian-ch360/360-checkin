@@ -7,11 +7,11 @@
  * already used for colors elsewhere in the theme.
  */
 export const KIOSK_HERO_SIZE_DEFAULTS = {
-  logoSize: 180,
-  titleSize: 72,
-  subtitleSize: 24,
-  dateTimeSize: 16,
-  locationSize: 16,
+  logoSize: 270,
+  titleSize: 86,
+  subtitleSize: 28,
+  dateTimeSize: 18,
+  locationSize: 18,
   countdownSize: 30,
 } as const;
 

@@ -79,7 +79,7 @@ export function HomeScreen({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="flex w-full max-w-4xl flex-col items-center gap-8 text-center sm:gap-10"
+      className="flex w-full max-w-4xl flex-col items-center gap-6 text-center sm:gap-8"
     >
       {showHero &&
         (isThemed && theme ? (
@@ -114,22 +114,22 @@ export function HomeScreen({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-          className={`grid w-full max-w-xs grid-cols-1 gap-3 ${showCheckIn && showRegister ? "sm:max-w-md sm:grid-cols-2" : ""}`}
+          className={`-mt-2 grid w-full max-w-[270px] grid-cols-1 gap-2.5 sm:-mt-4 sm:gap-3 ${showCheckIn && showRegister ? "sm:max-w-[380px] sm:grid-cols-2" : ""}`}
         >
           {showRegister && (
             <button
               type="button"
               onClick={onRegisterNow}
-              className="group flex flex-col items-center justify-center gap-2 rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              className="group relative flex min-h-11 flex-col items-center justify-center gap-1.5 rounded-3xl border border-black/10 bg-white px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
             >
-              <span className="flex size-9 items-center justify-center rounded-xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
-                <UserPlus className="size-4" />
+              <span className="flex size-7 items-center justify-center rounded-xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
+                <UserPlus className="size-3.5" />
               </span>
               <span className="flex flex-col items-center gap-0.5">
                 <span className="text-base font-semibold tracking-tight text-black">Register</span>
                 <span className="text-xs text-black/50">Become a Member</span>
               </span>
-              <span className="flex items-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+              <span className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
                 Continue <ArrowRight className="size-3" />
               </span>
             </button>
@@ -139,10 +139,10 @@ export function HomeScreen({
             <button
               type="button"
               onClick={onCheckIn}
-              className="group flex flex-col items-center justify-center gap-2 rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              className="group relative flex min-h-11 flex-col items-center justify-center gap-1.5 rounded-3xl border border-black/10 bg-white px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
             >
-              <span className="flex size-9 items-center justify-center rounded-xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
-                <QrCode className="size-4" />
+              <span className="flex size-7 items-center justify-center rounded-xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
+                <QrCode className="size-3.5" />
               </span>
               <span className="flex flex-col items-center gap-0.5">
                 <span className="text-base font-semibold tracking-tight text-black">
@@ -150,7 +150,7 @@ export function HomeScreen({
                 </span>
                 <span className="text-xs text-black/50">Scan your QR Code</span>
               </span>
-              <span className="flex items-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+              <span className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
                 Continue <ArrowRight className="size-3" />
               </span>
             </button>

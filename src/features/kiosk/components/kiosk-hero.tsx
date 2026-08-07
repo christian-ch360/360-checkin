@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { motion, type TargetAndTransition } from "framer-motion";
-import { CalendarDays, Car, Clock, MapPin, Megaphone } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Megaphone, ParkingCircle } from "lucide-react";
 import type { ResolvedKioskTheme } from "@/features/kiosk/services/kiosk-theme-resolution.service";
 import { recordKioskInteractionAction } from "@/features/kiosk/services/kiosk-analytics-actions";
 import { useCountdown } from "@/features/kiosk/hooks/use-countdown";
@@ -140,7 +140,7 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
       initial={variant.initial}
       animate={variant.animate}
       transition={{ duration: 0.7, ease: "easeOut" }}
-      className="relative flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-14 text-center sm:gap-8 sm:px-12 sm:py-20"
+      className="relative flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-10 text-center sm:gap-8 sm:px-12 sm:py-14"
     >
       {theme.promoBannerText && (
         <a
@@ -212,15 +212,16 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
           </p>
         )}
         {(theme.featuredEventTitle || theme.location || theme.parkingInfo) && (
-          <div className="flex flex-col items-center gap-2.5" style={{ fontSize: fluidPx(locationSize) }}>
+          <div className="mb-5 flex flex-col items-center gap-2" style={{ fontSize: fluidPx(locationSize) }}>
             {theme.location && (
               <p className="flex flex-wrap items-center justify-center gap-1.5 opacity-70">
                 <MapPin className="size-3.5" /> {theme.location}
               </p>
             )}
             {theme.parkingInfo && (
-              <p className="flex flex-wrap items-center justify-center gap-1.5 opacity-70">
-                <Car className="size-3.5" /> {theme.parkingInfo}
+              <p className="inline-flex items-start justify-center gap-1.5 text-center leading-relaxed font-medium opacity-70">
+                <ParkingCircle className="mt-0.5 size-3.5 shrink-0" />
+                <span>{theme.parkingInfo}</span>
               </p>
             )}
           </div>
@@ -267,45 +268,47 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
         </div>
       )}
 
-      <div className="relative flex flex-wrap items-center justify-center gap-4">
-        {theme.ctaLabel && theme.ctaLink && (
-          <a
-            href={theme.ctaLink}
-            onClick={(e) => {
-              if (isPreview) {
-                e.preventDefault();
-                return;
-              }
-              recordKioskInteractionAction("CTA_CLICK", { themeKey: theme.themeKey });
-            }}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`inline-flex h-14 items-center justify-center rounded-2xl px-8 text-[15px] font-semibold shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98] ${cta.className}`}
-            style={cta.style}
-          >
-            {theme.ctaLabel}
-          </a>
-        )}
+      {((theme.ctaLabel && theme.ctaLink) || (theme.showQrRegistration && theme.qrToken)) && (
+        <div className="relative flex flex-wrap items-center justify-center gap-4">
+          {theme.ctaLabel && theme.ctaLink && (
+            <a
+              href={theme.ctaLink}
+              onClick={(e) => {
+                if (isPreview) {
+                  e.preventDefault();
+                  return;
+                }
+                recordKioskInteractionAction("CTA_CLICK", { themeKey: theme.themeKey });
+              }}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex h-14 items-center justify-center rounded-2xl px-8 text-[15px] font-semibold shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98] ${cta.className}`}
+              style={cta.style}
+            >
+              {theme.ctaLabel}
+            </a>
+          )}
 
-        {theme.showQrRegistration && theme.qrToken && (
-          <div
-            className={cn(
-              "flex items-center gap-3 rounded-2xl px-4 py-3",
-              hasBackground ? "bg-white/10 backdrop-blur-sm" : "bg-black/[0.03]",
-              forceWhiteText && "text-white"
-            )}
-            style={forceWhiteText ? undefined : textStyle}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- dynamically generated QR image, not an optimizable static asset */}
-            <img src={`/api/qr/${theme.qrToken}`} alt="Scan to register" className="size-16 rounded-lg bg-white p-1" />
-            <span className="text-left text-xs font-medium opacity-80">
-              Scan to
-              <br />
-              Register
-            </span>
-          </div>
-        )}
-      </div>
+          {theme.showQrRegistration && theme.qrToken && (
+            <div
+              className={cn(
+                "flex items-center gap-3 rounded-2xl px-4 py-3",
+                hasBackground ? "bg-white/10 backdrop-blur-sm" : "bg-black/[0.03]",
+                forceWhiteText && "text-white"
+              )}
+              style={forceWhiteText ? undefined : textStyle}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- dynamically generated QR image, not an optimizable static asset */}
+              <img src={`/api/qr/${theme.qrToken}`} alt="Scan to register" className="size-16 rounded-lg bg-white p-1" />
+              <span className="text-left text-xs font-medium opacity-80">
+                Scan to
+                <br />
+                Register
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }
