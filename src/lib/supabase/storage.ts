@@ -58,3 +58,49 @@ export async function uploadAvatarFile(path: string, blob: Blob): Promise<string
   const { data } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
+
+const KIOSK_ASSETS_BUCKET = "kiosk-assets";
+const KIOSK_BACKGROUND_MAX_BYTES = 10 * 1024 * 1024; // 10MB — full-bleed hero backgrounds, not compressed client-side like avatars
+const KIOSK_BACKGROUND_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+let kioskBucketEnsured = false;
+
+/** Same lazy, self-healing bucket-creation pattern as ensureAvatarBucket(). */
+export async function ensureKioskAssetsBucket(): Promise<boolean> {
+  if (kioskBucketEnsured) return true;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { data: existing } = await admin.storage.getBucket(KIOSK_ASSETS_BUCKET);
+  if (!existing) {
+    const { error } = await admin.storage.createBucket(KIOSK_ASSETS_BUCKET, {
+      public: true,
+      fileSizeLimit: KIOSK_BACKGROUND_MAX_BYTES,
+      allowedMimeTypes: KIOSK_BACKGROUND_MIME_TYPES,
+    });
+    if (error && !/already exists/i.test(error.message)) {
+      throw error;
+    }
+  }
+
+  kioskBucketEnsured = true;
+  return true;
+}
+
+/** Uploads a kiosk theme background image and returns its public URL. */
+export async function uploadKioskBackgroundImage(path: string, blob: Blob): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) throw new Error("Image storage is not configured (SUPABASE_SERVICE_ROLE_KEY missing).");
+
+  await ensureKioskAssetsBucket();
+
+  const { error } = await admin.storage.from(KIOSK_ASSETS_BUCKET).upload(path, blob, {
+    contentType: blob.type || "image/jpeg",
+    upsert: true,
+  });
+  if (error) throw error;
+
+  const { data } = admin.storage.from(KIOSK_ASSETS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}

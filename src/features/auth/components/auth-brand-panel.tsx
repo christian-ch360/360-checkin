@@ -39,14 +39,7 @@ export function AuthBrandPanel() {
         transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
         className="max-w-md space-y-6"
       >
-        <h2 className="text-3xl font-semibold tracking-tight text-balance text-white lg:text-4xl xl:text-5xl">
-          The operating system for your creator campus.
-        </h2>
-        <p className="text-lg text-white/50 text-balance">
-          Members, projects, spaces, and GMV — one workspace, built for how CreatorHub360 actually runs.
-        </p>
-
-        <div className="space-y-5 pt-4">
+        <div className="space-y-5">
           {FEATURES.map((f, i) => (
             <motion.div
               key={f.title}

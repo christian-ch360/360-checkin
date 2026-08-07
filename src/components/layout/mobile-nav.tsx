@@ -8,6 +8,7 @@ import { hasPermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { NavLink } from "@/components/layout/nav-link";
+import { LogoMark } from "@/features/auth/components/logo-mark";
 
 export function MobileNav({ role }: { role: SystemRole }) {
   const [open, setOpen] = useState(false);
@@ -23,9 +24,7 @@ export function MobileNav({ role }: { role: SystemRole }) {
       <SheetContent side="left" className="w-64 p-0">
         <SheetHeader className="border-b px-4 py-3">
           <SheetTitle className="flex items-center gap-2 text-sm">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
-              CH
-            </div>
+            <LogoMark size="xs" />
             CreatorHub360
           </SheetTitle>
         </SheetHeader>

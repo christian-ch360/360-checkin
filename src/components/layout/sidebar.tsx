@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/permissions";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "@/components/layout/nav-link";
+import { LogoMark } from "@/features/auth/components/logo-mark";
 
 export function Sidebar({ role, memberRole }: { role: SystemRole; memberRole: MemberRole }) {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
@@ -30,9 +31,7 @@ export function Sidebar({ role, memberRole }: { role: SystemRole; memberRole: Me
       className="hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex"
     >
       <div className="flex h-14 items-center gap-2 border-b px-4">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-          CH
-        </div>
+        <LogoMark size="xs" />
         {!sidebarCollapsed && (
           <span className="truncate text-sm font-semibold tracking-tight">
             CreatorHub360

@@ -68,6 +68,7 @@ export function EventProposalForm({
       endTime: defaults?.endTime,
       capacity: defaults?.capacity,
       imageUrl: defaults?.imageUrl ?? "",
+      logoUrl: defaults?.logoUrl ?? "",
       hostName: defaults?.hostName ?? "",
       hostContact: defaults?.hostContact ?? "",
       registrationDeadline: defaults?.registrationDeadline ?? undefined,
@@ -226,6 +227,20 @@ export function EventProposalForm({
                   <FormControl>
                     <Input placeholder="https://…" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="logoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event logo URL (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://…" {...field} />
+                  </FormControl>
+                  <FormDescription>Falls back to the CreatorHub360 logo if left blank.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

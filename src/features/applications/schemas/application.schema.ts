@@ -43,9 +43,6 @@ export const applicationSchema = z.object({
   referralSource: z.enum(["QR_CODE", "LINK", "MANUAL_ENTRY"]).optional(),
   termsAccepted: z.literal(true, { message: "You must accept the Terms & Conditions to apply" }),
   privacyAccepted: z.literal(true, { message: "You must accept the Privacy Policy to apply" }),
-  dataProcessingAccepted: z.literal(true, {
-    message: "You must consent to the collection and processing of your personal data to apply",
-  }),
   mediaReleaseAccepted: z.literal(true, {
     message: "You must accept the Media Release and Release of Liability to apply",
   }),

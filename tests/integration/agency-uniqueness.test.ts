@@ -139,7 +139,6 @@ describe("Agency Uniqueness (integration, real Postgres)", () => {
           referralCode: "",
           termsAccepted: true,
           privacyAccepted: true,
-          dataProcessingAccepted: true,
           mediaReleaseAccepted: true,
         })
       ).rejects.toThrow(AgencyDuplicateError);

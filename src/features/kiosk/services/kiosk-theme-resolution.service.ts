@@ -30,6 +30,12 @@ export type ResolvedKioskTheme = {
   backgroundVideoUrl: string | null;
   logoOverrideUrl: string | null;
   logoVariant: string;
+  heroLogoSize: number | null;
+  heroTitleSize: number | null;
+  heroSubtitleSize: number | null;
+  heroDateTimeSize: number | null;
+  heroLocationSize: number | null;
+  heroCountdownSize: number | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -55,6 +61,7 @@ export type ResolvedKioskTheme = {
   featuredEventTags: string[];
   promoBannerText: string | null;
   promoBannerLink: string | null;
+  parkingInfo: string | null;
 };
 
 type KioskThemeRow = Awaited<ReturnType<typeof fetchPublishedThemes>>[number];
@@ -63,7 +70,11 @@ async function fetchPublishedThemes(organizationId: string) {
   return prisma.kioskTheme.findMany({
     where: { organizationId, status: "PUBLISHED" },
     orderBy: { version: "desc" },
-    include: { event: { select: { title: true, description: true, location: true, imageUrl: true, startTime: true, endTime: true } } },
+    include: {
+      event: {
+        select: { title: true, description: true, location: true, imageUrl: true, startTime: true, endTime: true, parkingInfo: true },
+      },
+    },
   });
 }
 
@@ -118,10 +129,17 @@ function resolveScheduleAndContent(
     headline: event?.title ?? row.headline,
     subheadline: row.subheadline ?? event?.description ?? null,
     location: event?.location ?? row.location,
+    parkingInfo: event?.parkingInfo ?? row.parkingInfo,
     backgroundImageUrl: row.backgroundImageUrl ?? event?.imageUrl ?? null,
     backgroundVideoUrl: row.backgroundVideoUrl,
     logoOverrideUrl: row.logoOverrideUrl,
     logoVariant: row.logoVariant,
+    heroLogoSize: row.heroLogoSize,
+    heroTitleSize: row.heroTitleSize,
+    heroSubtitleSize: row.heroSubtitleSize,
+    heroDateTimeSize: row.heroDateTimeSize,
+    heroLocationSize: row.heroLocationSize,
+    heroCountdownSize: row.heroCountdownSize,
     primaryColor: row.primaryColor,
     secondaryColor: row.secondaryColor,
     accentColor: row.accentColor,

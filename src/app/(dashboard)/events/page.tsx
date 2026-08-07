@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
-import { listUpcomingEvents, listPastEvents, listMyEventProposals } from "@/features/events/services/events.service";
+import { listUpcomingEvents, listPastEvents, listMyEventProposals, getOrganizationLogoUrl } from "@/features/events/services/events.service";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/shared/page-header";
 import { EventCard } from "@/features/events/components/event-card";
@@ -28,10 +28,11 @@ export default async function EventsPage() {
   const actor = await requireCurrentMember();
   const canManage = hasPermission(actor.systemRole, "events.manage");
 
-  const [upcoming, past, myProposals] = await Promise.all([
+  const [upcoming, past, myProposals, organizationLogoUrl] = await Promise.all([
     isDemoModeActive(actor) ? Promise.resolve(demoListUpcomingEvents()) : listUpcomingEvents(actor.organizationId),
     listPastEvents(actor.organizationId),
     listMyEventProposals(actor.organizationId, actor.id),
+    getOrganizationLogoUrl(actor.organizationId),
   ]);
 
   return (
@@ -70,7 +71,7 @@ export default async function EventsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {upcoming.map((event) => (
-                <EventCard key={event.id} event={event} />
+                <EventCard key={event.id} event={event} organizationLogoUrl={organizationLogoUrl} />
               ))}
             </div>
           )}
@@ -81,7 +82,7 @@ export default async function EventsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {past.map((event) => (
-                <EventCard key={event.id} event={event} />
+                <EventCard key={event.id} event={event} organizationLogoUrl={organizationLogoUrl} />
               ))}
             </div>
           )}

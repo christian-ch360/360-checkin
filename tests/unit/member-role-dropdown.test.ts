@@ -92,7 +92,6 @@ describe("Add Member Role dropdown — admin-assignable role values", () => {
       referredBy: "No Referral",
       termsAccepted: true as const,
       privacyAccepted: true as const,
-      dataProcessingAccepted: true as const,
       mediaReleaseAccepted: true as const,
     };
     // Sanity check: this base data is otherwise fully valid for a real role.

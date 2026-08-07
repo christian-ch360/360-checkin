@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo } from "react";
 import { motion, type TargetAndTransition } from "framer-motion";
-import { CalendarDays, Clock, MapPin, Megaphone } from "lucide-react";
+import { CalendarDays, Car, Clock, MapPin, Megaphone } from "lucide-react";
 import type { ResolvedKioskTheme } from "@/features/kiosk/services/kiosk-theme-resolution.service";
 import { recordKioskInteractionAction } from "@/features/kiosk/services/kiosk-analytics-actions";
 import { useCountdown } from "@/features/kiosk/hooks/use-countdown";
 import { LogoMark } from "@/features/auth/components/logo-mark";
 import { cn } from "@/lib/utils";
 import { useKioskPreview, useKioskNow } from "@/features/kiosk/context/kiosk-preview-context";
+import { formatDateLabel } from "@/features/kiosk/config/kiosk-schedule";
+import { KIOSK_HERO_SIZE_DEFAULTS } from "@/features/kiosk/config/kiosk-hero-sizing.config";
 
 const ANIMATION_VARIANTS: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition }> = {
   FADE: { initial: { opacity: 0 }, animate: { opacity: 1 } },
@@ -16,15 +18,6 @@ const ANIMATION_VARIANTS: Record<string, { initial: TargetAndTransition; animate
   ZOOM: { initial: { opacity: 0, scale: 0.94 }, animate: { opacity: 1, scale: 1 } },
   NONE: { initial: { opacity: 1 }, animate: { opacity: 1 } },
 };
-
-function formatDateLabel(date: Date, today: Date): string {
-  const isSameDay = date.toDateString() === today.toDateString();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  if (isSameDay) return "Tonight";
-  if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-  return date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-}
 
 function formatTimeRange(startTime: string | null, endTime: string | null): string | null {
   if (!startTime && !endTime) return null;
@@ -36,6 +29,21 @@ function formatTimeRange(startTime: string | null, endTime: string | null): stri
   };
   if (startTime && endTime) return `${format12h(startTime)} – ${format12h(endTime)}`;
   return format12h(startTime ?? endTime!);
+}
+
+/**
+ * Container-relative fluid sizing for the Hero's theme-configurable logo/type
+ * sizes: the admin's chosen px value applies exactly at a 1200px-wide
+ * container (a full kiosk/desktop display) and scales down proportionally on
+ * narrower containers (Tablet/Kiosk/Mobile Theme Editor previews, and real
+ * narrow-screen kiosks), floored so it never becomes illegible. Relies on the
+ * `container-type: inline-size` set on KioskChrome, which both the live
+ * kiosk (sized to the real viewport) and the Theme Editor's device preview
+ * frames already establish.
+ */
+function fluidPx(px: number): string {
+  const min = Math.round(px * 0.45);
+  return `clamp(${min}px, ${(px / 12).toFixed(2)}cqw, ${px}px)`;
 }
 
 /** Button appearance driven by theme.buttonStyle — the same 4 styles the Theme Editor offers. */
@@ -81,9 +89,18 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
   const timeLabel = formatTimeRange(theme.startTime, theme.endTime);
   // Countdown target is the event's actual start instant — startDate alone is midnight, which
   // (for a same-day evening event) has already passed by the time anyone would see this.
+  // Read startDate's calendar day via UTC accessors (see formatDateLabel above), then build a
+  // LOCAL Date from those same day/month/year components before layering startTime on top —
+  // `new Date(theme.startDate)` + local setHours() would silently re-derive the local calendar
+  // day of the UTC-midnight instant, landing the countdown on the wrong day in any timezone
+  // behind UTC.
   const countdownTarget = useMemo(() => {
     if (!theme.showCountdown) return null;
-    const target = new Date(theme.startDate);
+    const target = new Date(
+      theme.startDate.getUTCFullYear(),
+      theme.startDate.getUTCMonth(),
+      theme.startDate.getUTCDate()
+    );
     if (theme.startTime) {
       const [h, m] = theme.startTime.split(":").map(Number);
       target.setHours(h, m, 0, 0);
@@ -106,6 +123,12 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
   // keep their own contrast choice instead of being forced to white.
   const forceWhiteText = hasBackground && !theme.textColor;
   const cta = buttonClassAndStyle(theme);
+  const logoSize = theme.heroLogoSize ?? KIOSK_HERO_SIZE_DEFAULTS.logoSize;
+  const titleSize = theme.heroTitleSize ?? KIOSK_HERO_SIZE_DEFAULTS.titleSize;
+  const subtitleSize = theme.heroSubtitleSize ?? KIOSK_HERO_SIZE_DEFAULTS.subtitleSize;
+  const dateTimeSize = theme.heroDateTimeSize ?? KIOSK_HERO_SIZE_DEFAULTS.dateTimeSize;
+  const locationSize = theme.heroLocationSize ?? KIOSK_HERO_SIZE_DEFAULTS.locationSize;
+  const countdownSize = theme.heroCountdownSize ?? KIOSK_HERO_SIZE_DEFAULTS.countdownSize;
 
   useEffect(() => {
     if (isPreview) return;
@@ -140,16 +163,28 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
         <div className="relative">
           {theme.logoVariant === "CUSTOM" && theme.logoOverrideUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- admin-supplied logo override
-            <img src={theme.logoOverrideUrl} alt="" className="h-10 w-auto object-contain" />
+            <img
+              src={theme.logoOverrideUrl}
+              alt=""
+              className="w-auto object-contain"
+              style={{ height: fluidPx(logoSize) }}
+            />
           ) : (
-            <LogoMark size="md" variant={theme.logoVariant === "LIGHT" ? "light" : "dark"} />
+            <LogoMark
+              size="xl"
+              variant={theme.logoVariant === "LIGHT" ? "light" : "dark"}
+              style={{ width: fluidPx(logoSize), height: fluidPx(logoSize) }}
+            />
           )}
         </div>
       )}
 
       <div className={cn("relative space-y-4 px-2", forceWhiteText && "text-white")} style={forceWhiteText ? undefined : textStyle}>
         {(dateLabel || timeLabel) && (
-          <p className="flex items-center justify-center gap-2 text-sm font-medium tracking-[0.2em] uppercase opacity-80">
+          <p
+            className="flex items-center justify-center gap-2 font-medium tracking-[0.2em] uppercase opacity-80"
+            style={{ fontSize: fluidPx(dateTimeSize) }}
+          >
             {dateLabel && (
               <span className="flex items-center gap-1.5">
                 <CalendarDays className="size-3.5" /> {dateLabel}
@@ -163,20 +198,32 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
           </p>
         )}
         <h1
-          className="text-4xl font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl"
-          style={hasBackground ? undefined : accentStyle}
+          className="font-semibold tracking-tight text-balance"
+          style={{ fontSize: fluidPx(titleSize), ...(hasBackground ? undefined : accentStyle) }}
         >
           {theme.headline}
         </h1>
-        {theme.subheadline && <p className="text-lg text-balance opacity-80 sm:text-2xl">{theme.subheadline}</p>}
-        {(theme.featuredEventTitle || theme.location) && (
-          <p className="flex flex-wrap items-center justify-center gap-1.5 text-sm opacity-70">
-            {theme.location && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="size-3.5" /> {theme.location}
-              </span>
-            )}
+        {theme.subheadline && (
+          <p
+            className="text-balance whitespace-pre-line opacity-80"
+            style={{ fontSize: fluidPx(subtitleSize) }}
+          >
+            {theme.subheadline}
           </p>
+        )}
+        {(theme.featuredEventTitle || theme.location || theme.parkingInfo) && (
+          <div className="flex flex-col items-center gap-2.5" style={{ fontSize: fluidPx(locationSize) }}>
+            {theme.location && (
+              <p className="flex flex-wrap items-center justify-center gap-1.5 opacity-70">
+                <MapPin className="size-3.5" /> {theme.location}
+              </p>
+            )}
+            {theme.parkingInfo && (
+              <p className="flex flex-wrap items-center justify-center gap-1.5 opacity-70">
+                <Car className="size-3.5" /> {theme.parkingInfo}
+              </p>
+            )}
+          </div>
         )}
         {theme.featuredEventTags.length > 0 && (
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -211,7 +258,9 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
             { label: "sec", value: countdown.seconds },
           ].map((unit) => (
             <div key={unit.label} className="flex flex-col items-center gap-0.5">
-              <span className="font-mono text-2xl font-semibold tabular-nums sm:text-3xl">{String(unit.value).padStart(2, "0")}</span>
+              <span className="font-mono font-semibold tabular-nums" style={{ fontSize: fluidPx(countdownSize) }}>
+                {String(unit.value).padStart(2, "0")}
+              </span>
               <span className="text-[10px] font-medium tracking-widest uppercase opacity-60">{unit.label}</span>
             </div>
           ))}

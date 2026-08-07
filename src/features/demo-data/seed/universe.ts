@@ -381,6 +381,7 @@ function buildEvents(rng: ReturnType<typeof createRng>, members: DemoMember[]): 
       endTime: subHours(startTime, -2),
       capacity: rng.int(15, 60),
       imageUrl: null,
+      logoUrl: null,
       createdById: creator.id,
       createdAt: subDays(startTime, 14),
       updatedAt: subDays(startTime, 14),

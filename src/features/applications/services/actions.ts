@@ -66,8 +66,6 @@ export async function submitApplicationAction(
     agencyInviteToken: optionalStringField(formData, "agencyInviteToken"),
     termsAccepted: formData.get("termsAccepted") === "on" || formData.get("termsAccepted") === "true",
     privacyAccepted: formData.get("privacyAccepted") === "on" || formData.get("privacyAccepted") === "true",
-    dataProcessingAccepted:
-      formData.get("dataProcessingAccepted") === "on" || formData.get("dataProcessingAccepted") === "true",
     mediaReleaseAccepted:
       formData.get("mediaReleaseAccepted") === "on" || formData.get("mediaReleaseAccepted") === "true",
   };

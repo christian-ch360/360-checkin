@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { CalendarDays, Users } from "lucide-react";
 import { useCountdown } from "@/features/kiosk/hooks/use-countdown";
+import { EventLogo } from "@/features/events/components/event-logo";
 import type { KioskFeaturedEvent } from "@/features/kiosk/services/kiosk-featured-event.service";
 
 function formatCountdown(c: { hours: number; minutes: number; seconds: number }) {
@@ -33,6 +34,7 @@ export function KioskFeaturedEventBanner({ event }: { event: NonNullable<KioskFe
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex w-full max-w-2xl flex-col items-center gap-5 rounded-[28px] border border-black/10 bg-white/80 px-8 py-8 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] backdrop-blur-sm"
     >
+      <EventLogo logoUrl={event.logoUrl} organizationLogoUrl={event.organizationLogoUrl} alt={`${event.title} logo`} size={56} />
       <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1 text-xs font-medium tracking-wide text-black/50 uppercase">
         <CalendarDays className="size-3.5" /> Happening {countdown ? "soon" : "now"}
       </span>

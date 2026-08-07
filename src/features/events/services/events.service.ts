@@ -94,6 +94,12 @@ export async function getEventDetail(organizationId: string, eventId: string) {
 
 export type EventWithDetail = Awaited<ReturnType<typeof getEventDetail>>;
 
+/** Single lightweight lookup for the event-logo fallback chain — see resolveEventLogoSrc(). */
+export async function getOrganizationLogoUrl(organizationId: string): Promise<string | null> {
+  const organization = await prisma.organization.findUnique({ where: { id: organizationId }, select: { logoUrl: true } });
+  return organization?.logoUrl ?? null;
+}
+
 /** Member's own proposals across every status — powers the "My Proposals"/Drafts view on the events page. */
 export async function listMyEventProposals(organizationId: string, memberId: string) {
   return prisma.event.findMany({

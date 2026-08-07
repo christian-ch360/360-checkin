@@ -2052,6 +2052,10 @@ model Event {
   endTime        DateTime
   capacity       Int?
   imageUrl       String?
+  // Square brand mark shown in event cards/hero/kiosk banners — distinct from
+  // imageUrl (a wide cover/background photo). Falls back to the org logo,
+  // then the CreatorHub360 default — see resolveEventLogoSrc().
+  logoUrl        String?
   createdById    String   @db.Uuid
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -2676,11 +2680,24 @@ model KioskTheme {
   headline    String
   subheadline String?
   location    String?
+  // Shown directly beneath the hero's location row — same "inline content,
+  // superseded by the linked Event when set" pattern as location itself.
+  parkingInfo String?
 
   backgroundImageUrl String?
   backgroundVideoUrl String?
   logoOverrideUrl    String?
   logoVariant        KioskLogoVariant    @default(DEFAULT)
+  // Hero sizing, in px — null means "use KIOSK_HERO_SIZE_DEFAULTS" (see
+  // kiosk-hero-defaults.config.ts), same nullable-with-fallback pattern as
+  // the color fields below. Resolved at render time in kiosk-hero.tsx, not
+  // here, so every consumer (draft/publish/preview/live) reads one place.
+  heroLogoSize       Int?
+  heroTitleSize      Int?
+  heroSubtitleSize   Int?
+  heroDateTimeSize   Int?
+  heroLocationSize   Int?
+  heroCountdownSize  Int?
   primaryColor       String?
   secondaryColor     String?
   accentColor        String?

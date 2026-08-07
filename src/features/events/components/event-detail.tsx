@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import {
-  PartyPopper,
   MapPin,
   Users,
   CalendarClock,
@@ -21,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RsvpButtonGroup } from "@/features/events/components/rsvp-button-group";
 import { AttendeeList } from "@/features/events/components/attendee-list";
+import { EventLogo } from "@/features/events/components/event-logo";
 import { EVENT_CATEGORY_META } from "@/features/events/config/event-categories";
 import type { RsvpStatus, EventCategory } from "@prisma/client";
 
@@ -33,6 +33,7 @@ export type EventDetailData = {
   endTime: Date;
   capacity: number | null;
   category: EventCategory;
+  logoUrl: string | null;
   hostName: string | null;
   hostContact: string | null;
   website: string | null;
@@ -68,10 +69,12 @@ export function EventDetail({
   event,
   currentMemberId,
   isManager = false,
+  organizationLogoUrl,
 }: {
   event: EventDetailData;
   currentMemberId: string;
   isManager?: boolean;
+  organizationLogoUrl?: string | null;
 }) {
   const place = event.location ?? event.space?.name ?? null;
   const going = event.rsvps.filter((r) => r.status === "GOING");
@@ -86,7 +89,13 @@ export function EventDetail({
   return (
     <div className="space-y-6">
       <div className="relative flex flex-col justify-end gap-3 overflow-hidden rounded-2xl border bg-primary/5 p-6 text-primary sm:h-56">
-        <PartyPopper className="pointer-events-none absolute -right-4 -bottom-4 size-32 opacity-10" />
+        <EventLogo
+          logoUrl={event.logoUrl}
+          organizationLogoUrl={organizationLogoUrl}
+          alt={`${event.title} logo`}
+          size={64}
+          className="pointer-events-none absolute top-6 right-6 border border-primary/10 bg-white/70 p-1.5"
+        />
         <Badge variant="outline" className={`w-fit gap-1.5 ${categoryMeta.badgeClass}`}>
           <CategoryIcon className="size-3" /> {categoryMeta.label}
         </Badge>

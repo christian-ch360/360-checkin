@@ -26,7 +26,6 @@ const VALID_APPLICATION_FIELDS = {
 const REQUIRED_APPLICATION_CONSENTS = {
   termsAccepted: true as const,
   privacyAccepted: true as const,
-  dataProcessingAccepted: true as const,
   mediaReleaseAccepted: true as const,
 };
 
@@ -97,7 +96,7 @@ describe("applicationSchema legal consent requirements", () => {
     }
   });
 
-  it("accepts the application once all 4 consents are true", () => {
+  it("accepts the application once all 3 consents are true", () => {
     const result = applicationSchema.safeParse({ ...VALID_APPLICATION_FIELDS, ...REQUIRED_APPLICATION_CONSENTS });
     expect(result.success).toBe(true);
   });

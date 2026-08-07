@@ -12,7 +12,11 @@ import { SafeAreaView } from "@/components/layout/safe-area-view";
  */
 export function KioskChrome({ children }: { children: ReactNode }) {
   return (
-    <div className="kiosk-light fixed inset-0 overflow-hidden overscroll-none bg-white text-black">
+    // @container: gives the Hero's fluid, theme-configurable type/logo sizes (see
+    // kiosk-hero.tsx's fluidPx()) a real width to scale against in both places this
+    // shell renders — the live kiosk (sized to the actual viewport) and the Theme
+    // Editor's device preview frames (sized to that frame's chosen width).
+    <div className="kiosk-light [container-type:inline-size] fixed inset-0 overflow-hidden overscroll-none bg-white text-black">
       <KioskBackground />
       {/* Background bleeds full-screen; only this content column reserves
           the notch/Dynamic Island/status bar/home indicator insets. */}

@@ -2,14 +2,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { KioskLogoVariant } from "@prisma/client";
+import { KIOSK_HERO_SIZE_RANGES } from "@/features/kiosk/config/kiosk-hero-sizing.config";
+import { BackgroundImageUpload } from "../background-image-upload";
+import { SizeSliderField } from "../size-slider-field";
 import type { FormState, UpdateFormField } from "../types";
 
-export function BrandingSection({ form, update }: { form: FormState; update: UpdateFormField }) {
+export function BrandingSection({ form, update, themeKey }: { form: FormState; update: UpdateFormField; themeKey?: string }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="theme-bg">Background Image URL</Label>
-        <Input id="theme-bg" value={form.backgroundImageUrl} onChange={(e) => update("backgroundImageUrl", e.target.value)} />
+        <Label>Background Image</Label>
+        <BackgroundImageUpload themeKey={themeKey} value={form.backgroundImageUrl} onChange={(url) => update("backgroundImageUrl", url)} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="theme-bg-video">Background Video URL (optional)</Label>
@@ -40,6 +43,17 @@ export function BrandingSection({ form, update }: { form: FormState; update: Upd
           </div>
         )}
       </div>
+
+      {form.logoVariant !== "DEFAULT" && form.logoVariant !== "HIDDEN" && (
+        <SizeSliderField
+          id="theme-hero-logo-size"
+          label="Hero Logo Size"
+          value={form.heroLogoSize}
+          min={KIOSK_HERO_SIZE_RANGES.logoSize.min}
+          max={KIOSK_HERO_SIZE_RANGES.logoSize.max}
+          onChange={(v) => update("heroLogoSize", v)}
+        />
+      )}
     </div>
   );
 }

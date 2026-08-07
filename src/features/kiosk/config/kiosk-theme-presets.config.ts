@@ -143,10 +143,14 @@ export function resolvePresetSchedule(
 > {
   if (schedule.kind === "weekly") {
     const daysUntil = (schedule.dayOfWeek - now.getDay() + 7) % 7;
-    const nextOccurrence = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntil);
+    // startDate/endDate are civil calendar dates encoded as UTC midnight (see
+    // kiosk-theme.service.ts / kiosk-schedule.ts) — Date.UTC(...) here keeps this the ONLY write
+    // path, matching the editor's `new Date("YYYY-MM-DD")` encoding exactly, instead of the local
+    // 3-arg constructor (which encodes local midnight, a different on-disk value per server TZ).
+    const nextOccurrence = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + daysUntil));
     return {
       startDate: nextOccurrence,
-      endDate: new Date(2099, 11, 31),
+      endDate: new Date(Date.UTC(2099, 11, 31)),
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       recurrence: "WEEKLY",
@@ -154,9 +158,9 @@ export function resolvePresetSchedule(
     };
   }
 
-  let candidate = new Date(now.getFullYear(), schedule.month - 1, schedule.day);
-  if (candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-    candidate = new Date(now.getFullYear() + 1, schedule.month - 1, schedule.day);
+  let candidate = new Date(Date.UTC(now.getFullYear(), schedule.month - 1, schedule.day));
+  if (candidate < new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))) {
+    candidate = new Date(Date.UTC(now.getFullYear() + 1, schedule.month - 1, schedule.day));
   }
   return {
     startDate: candidate,

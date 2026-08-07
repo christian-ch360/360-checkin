@@ -21,6 +21,7 @@ const eventFieldsSchema = z.object({
   endTime: z.date(),
   capacity: z.number().int().positive().optional(),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  logoUrl: z.string().url().optional().or(z.literal("")),
   hostName: z.string().min(2, "Host name is required"),
   hostContact: z.string().min(3, "Host contact is required"),
   registrationDeadline: z.date().optional(),

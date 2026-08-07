@@ -79,13 +79,13 @@ export function HomeScreen({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="flex w-full max-w-4xl flex-col items-center gap-12 text-center sm:gap-16"
+      className="flex w-full max-w-4xl flex-col items-center gap-8 text-center sm:gap-10"
     >
       {showHero &&
         (isThemed && theme ? (
           <KioskHero theme={theme} />
         ) : (
-          <div className="flex flex-col items-center gap-6 sm:gap-8">
+          <div className="flex flex-col items-center gap-4 sm:gap-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -94,7 +94,7 @@ export function HomeScreen({
               <LogoMark size="xl" variant="light" />
             </motion.div>
 
-            <div className="space-y-4 px-2">
+            <div className="space-y-3 px-2">
               <p className="text-sm font-medium tracking-[0.2em] text-black/40 uppercase">{kioskName}</p>
               <h1 className="text-4xl font-semibold tracking-tight text-balance text-black sm:text-6xl lg:text-7xl">
                 {headline}
@@ -114,23 +114,23 @@ export function HomeScreen({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-          className={`grid w-full grid-cols-1 gap-4 ${showCheckIn && showRegister ? "sm:grid-cols-2" : ""}`}
+          className={`grid w-full max-w-xs grid-cols-1 gap-3 ${showCheckIn && showRegister ? "sm:max-w-md sm:grid-cols-2" : ""}`}
         >
           {showRegister && (
             <button
               type="button"
               onClick={onRegisterNow}
-              className="group flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white px-6 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              className="group flex flex-col items-center justify-center gap-2 rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
             >
-              <span className="flex size-12 items-center justify-center rounded-2xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
-                <UserPlus className="size-5" />
+              <span className="flex size-9 items-center justify-center rounded-xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
+                <UserPlus className="size-4" />
               </span>
-              <span className="flex flex-col items-center gap-1">
-                <span className="text-lg font-semibold tracking-tight text-black">Register</span>
-                <span className="text-sm text-black/50">Become a CreatorHub360 Member</span>
+              <span className="flex flex-col items-center gap-0.5">
+                <span className="text-base font-semibold tracking-tight text-black">Register</span>
+                <span className="text-xs text-black/50">Become a Member</span>
               </span>
-              <span className="flex items-center gap-1.5 text-xs font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
-                Continue <ArrowRight className="size-3.5" />
+              <span className="flex items-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+                Continue <ArrowRight className="size-3" />
               </span>
             </button>
           )}
@@ -139,19 +139,19 @@ export function HomeScreen({
             <button
               type="button"
               onClick={onCheckIn}
-              className="group flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white px-6 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              className="group flex flex-col items-center justify-center gap-2 rounded-3xl border border-black/10 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 hover:-translate-y-1 hover:border-black/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_30px_60px_-20px_rgba(0,0,0,0.15)] active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
             >
-              <span className="flex size-12 items-center justify-center rounded-2xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
-                <QrCode className="size-5" />
+              <span className="flex size-9 items-center justify-center rounded-xl bg-black/[0.03] text-black transition-colors duration-300 group-hover:bg-black group-hover:text-white">
+                <QrCode className="size-4" />
               </span>
-              <span className="flex flex-col items-center gap-1">
-                <span className="text-lg font-semibold tracking-tight text-black">
+              <span className="flex flex-col items-center gap-0.5">
+                <span className="text-base font-semibold tracking-tight text-black">
                   {isEntrance ? "Check In" : "Scan QR Code"}
                 </span>
-                <span className="text-sm text-black/50">Scan your member QR Code</span>
+                <span className="text-xs text-black/50">Scan your QR Code</span>
               </span>
-              <span className="flex items-center gap-1.5 text-xs font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
-                Continue <ArrowRight className="size-3.5" />
+              <span className="flex items-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+                Continue <ArrowRight className="size-3" />
               </span>
             </button>
           )}

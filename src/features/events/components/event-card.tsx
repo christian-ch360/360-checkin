@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { PartyPopper, MapPin, Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EventLogo } from "@/features/events/components/event-logo";
 
 export type EventCardData = {
   id: string;
@@ -10,10 +11,11 @@ export type EventCardData = {
   location: string | null;
   space: { name: string } | null;
   imageUrl: string | null;
+  logoUrl: string | null;
   rsvps: { status: string }[];
 };
 
-export function EventCard({ event }: { event: EventCardData }) {
+export function EventCard({ event, organizationLogoUrl }: { event: EventCardData; organizationLogoUrl?: string | null }) {
   const goingCount = event.rsvps.filter((r) => r.status === "GOING").length;
   const place = event.location ?? event.space?.name ?? null;
 
@@ -22,8 +24,8 @@ export function EventCard({ event }: { event: EventCardData }) {
       href={`/events/${event.id}`}
       className="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5"
     >
-      <div className="flex aspect-video w-full items-center justify-center rounded-xl border bg-primary/5 text-primary">
-        <PartyPopper className="size-10 opacity-80" />
+      <div className="flex aspect-video w-full items-center justify-center rounded-xl border bg-primary/5 p-6">
+        <EventLogo logoUrl={event.logoUrl} organizationLogoUrl={organizationLogoUrl} alt={`${event.title} logo`} size={72} />
       </div>
 
       <div>

@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { Loader2, User, Mail, Phone, Users2, Link2 } from "lucide-react";
 import { submitApplicationAction, type SubmitApplicationState } from "@/features/applications/services/actions";
 import { APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
 import { AuthInput } from "@/features/auth/components/auth-input";
 import { AuthSelect } from "@/features/auth/components/auth-select";
-import { AuthCheckbox } from "@/features/auth/components/auth-checkbox";
 import { LegalConsentField } from "@/features/legal/components/legal-consent-field";
+import ch360Logo from "../../../../images/Ch360 Logo 3.PNG";
 
 const NO_REFERRAL = "No Referral";
 
@@ -17,8 +18,10 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
     submitApplicationAction,
     null
   );
-  const [noReferral, setNoReferral] = useState(false);
-  const [referredBy, setReferredBy] = useState("");
+  // Referred By — disabled for now (see the commented-out field below).
+  // Keeping this state for future re-enable.
+  // const [noReferral, setNoReferral] = useState(false);
+  // const [referredBy, setReferredBy] = useState("");
 
   useEffect(() => {
     if (state?.success) onSubmitted();
@@ -37,23 +40,18 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="flex w-full max-w-xl flex-col gap-8 rounded-[32px] border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_50px_-20px_rgba(0,0,0,0.1)] sm:p-8"
     >
-      <form action={formAction} className="space-y-8 overflow-y-auto">
-        <div className="space-y-8 text-center">
-          <div className="space-y-3">
-            <h1 className="text-4xl font-semibold tracking-tight text-balance text-black">Welcome to CreatorHub360</h1>
-            <p className="text-lg text-black/50 text-balance">
-              CreatorHub360 membership gives you a home base to work, collaborate, and grow — reviewed and approved
-              by our team so the community stays high quality.
-            </p>
-          </div>
-        </div>
+      <form action={formAction} className="space-y-6 overflow-y-auto">
+        <Image
+          src={ch360Logo}
+          alt="CreatorHub360 Logo"
+          width={120}
+          height={120}
+          className="mx-auto h-[80px] w-[80px] rounded-2xl object-contain sm:h-[96px] sm:w-[96px] lg:h-[120px] lg:w-[120px]"
+        />
+
+        <h1 className="text-4xl font-semibold tracking-tight text-balance text-center text-black">Welcome to CreatorHub360</h1>
 
         <div className="space-y-4">
-          <div className="space-y-1 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-black">About You</h2>
-            <p className="text-black/50">Tell us who you are.</p>
-          </div>
-
           <AuthInput
             variant="light"
             label="Full Name"
@@ -108,11 +106,6 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-1 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-black">A Few More Details</h2>
-            <p className="text-black/50">All optional — but it helps us review faster.</p>
-          </div>
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <AuthInput
               variant="light"
@@ -142,6 +135,9 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             />
           </div>
 
+          {/* Referred By
+              Disabled for now.
+              Keep this component for future referral functionality.
           <AuthInput
             variant="light"
             label="Who Referred You?"
@@ -162,6 +158,8 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             checked={noReferral}
             onChange={(e) => setNoReferral(e.target.checked)}
           />
+          */}
+          <input type="hidden" name="referredBy" value={NO_REFERRAL} />
 
           <div className="space-y-3 rounded-2xl border border-black/10 bg-black/[0.02] p-4">
             <LegalConsentField
@@ -182,17 +180,6 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
               required
             />
             {fieldErrors?.privacyAccepted && <p className="text-sm text-destructive">{fieldErrors.privacyAccepted}</p>}
-            <LegalConsentField
-              variant="light"
-              id="dataProcessingAccepted"
-              name="dataProcessingAccepted"
-              text="I consent to the collection and processing of my personal data as described in the"
-              links={[{ href: "/legal/privacy#data-processing", label: "Privacy Policy" }]}
-              required
-            />
-            {fieldErrors?.dataProcessingAccepted && (
-              <p className="text-sm text-destructive">{fieldErrors.dataProcessingAccepted}</p>
-            )}
             <LegalConsentField
               variant="light"
               id="mediaReleaseAccepted"

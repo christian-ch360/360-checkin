@@ -278,14 +278,6 @@ export function ApplyForm({ plan, message, defaultFullName, defaultEmail, referr
           />
           <LegalConsentField
             variant="light"
-            id="dataProcessingAccepted"
-            name="dataProcessingAccepted"
-            text="I consent to the collection and processing of my personal data as described in the"
-            links={[{ href: "/legal/privacy#data-processing", label: "Privacy Policy" }]}
-            required
-          />
-          <LegalConsentField
-            variant="light"
             id="mediaReleaseAccepted"
             name="mediaReleaseAccepted"
             text="I agree to the"
@@ -707,14 +699,6 @@ export function ApplyFormLegacy({ plan, message, defaultFullName, defaultEmail, 
             name="privacyAccepted"
             text="I have read and agree to the"
             links={[{ href: "/legal/privacy", label: "Privacy Policy" }]}
-            required
-          />
-          <LegalConsentField
-            variant="light"
-            id="dataProcessingAccepted"
-            name="dataProcessingAccepted"
-            text="I consent to the collection and processing of my personal data as described in the"
-            links={[{ href: "/legal/privacy#data-processing", label: "Privacy Policy" }]}
             required
           />
           <LegalConsentField

@@ -1,4 +1,11 @@
-import type { KioskAnimationStyle, KioskButtonStyle, KioskDecorativeElement, KioskLogoVariant, KioskRecurrence } from "@prisma/client";
+import type {
+  KioskAnimationStyle,
+  KioskButtonStyle,
+  KioskDecorativeElement,
+  KioskLogoVariant,
+  KioskRecurrence,
+  KioskThemeStatus,
+} from "@prisma/client";
 
 export type Sponsor = { name: string; logoUrl: string; message?: string; ctaLabel?: string; ctaLink?: string };
 export type ThemeColor = { name: string; hex: string };
@@ -8,10 +15,17 @@ export type FormState = {
   headline: string;
   subheadline: string;
   location: string;
+  parkingInfo: string;
   backgroundImageUrl: string;
   backgroundVideoUrl: string;
   logoOverrideUrl: string;
   logoVariant: KioskLogoVariant;
+  heroLogoSize: number;
+  heroTitleSize: number;
+  heroSubtitleSize: number;
+  heroDateTimeSize: number;
+  heroLocationSize: number;
+  heroCountdownSize: number;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -48,17 +62,24 @@ export type UpdateFormField = <K extends keyof FormState>(key: K, value: FormSta
 export type EditableThemeVersion = {
   id: string;
   version: number;
-  status: string;
+  status: KioskThemeStatus;
   isDefault: boolean;
   isPinnedLive: boolean;
   name: string;
   headline: string;
   subheadline: string | null;
   location: string | null;
+  parkingInfo: string | null;
   backgroundImageUrl: string | null;
   backgroundVideoUrl: string | null;
   logoOverrideUrl: string | null;
   logoVariant: KioskLogoVariant;
+  heroLogoSize: number | null;
+  heroTitleSize: number | null;
+  heroSubtitleSize: number | null;
+  heroDateTimeSize: number | null;
+  heroLocationSize: number | null;
+  heroCountdownSize: number | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;

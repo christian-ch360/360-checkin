@@ -6,6 +6,7 @@ import { PromotionSection } from "./sections/promotion-section";
 import { BrandingSection } from "./sections/branding-section";
 import { ColorsSection } from "./sections/colors-section";
 import { ThemePaletteSection } from "./sections/theme-palette-section";
+import { TypographySection } from "./sections/typography-section";
 import { EffectsSection } from "./sections/effects-section";
 import { SchedulingSection } from "./sections/scheduling-section";
 import { SponsorsSection } from "./sections/sponsors-section";
@@ -79,7 +80,7 @@ export const THEME_EDITOR_SECTIONS: ThemeEditorSectionDef[] = [
     groupLabel: "Appearance",
     label: "Branding",
     searchTerms: ["logo", "background", "image", "video"],
-    render: (ctx) => <BrandingSection form={ctx.form} update={ctx.update} />,
+    render: (ctx) => <BrandingSection form={ctx.form} update={ctx.update} themeKey={ctx.themeKey} />,
   },
   {
     id: "colors",
@@ -98,6 +99,14 @@ export const THEME_EDITOR_SECTIONS: ThemeEditorSectionDef[] = [
     render: (ctx) => (
       <ThemePaletteSection form={ctx.form} onAdd={ctx.addThemeColor} onUpdate={ctx.updateThemeColor} onRemove={ctx.removeThemeColor} />
     ),
+  },
+  {
+    id: "typography",
+    group: "typography",
+    groupLabel: "Typography",
+    label: "Hero Typography",
+    searchTerms: ["title", "subtitle", "font", "size", "text", "date", "time", "location", "countdown"],
+    render: (ctx) => <TypographySection form={ctx.form} update={ctx.update} />,
   },
   {
     id: "effects",

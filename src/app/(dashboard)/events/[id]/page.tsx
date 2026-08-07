@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
-import { getEventDetail } from "@/features/events/services/events.service";
+import { getEventDetail, getOrganizationLogoUrl } from "@/features/events/services/events.service";
 import { incrementEventView } from "@/features/events/services/event-analytics.service";
 import { EventDetail } from "@/features/events/components/event-detail";
 
@@ -26,12 +26,14 @@ export default async function EventDetailPage({
   }
 
   await incrementEventView(id);
+  const organizationLogoUrl = await getOrganizationLogoUrl(actor.organizationId);
 
   return (
     <EventDetail
       event={event}
       currentMemberId={actor.id}
       isManager={hasPermission(actor.systemRole, "events.manage")}
+      organizationLogoUrl={organizationLogoUrl}
     />
   );
 }

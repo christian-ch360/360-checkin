@@ -31,6 +31,15 @@ export function BasicInfoSection({
         <Label htmlFor="theme-location">Location</Label>
         <Input id="theme-location" value={form.location} onChange={(e) => update("location", e.target.value)} placeholder="Main Lounge" />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="theme-parking-info">Parking Info</Label>
+        <Input
+          id="theme-parking-info"
+          value={form.parkingInfo}
+          onChange={(e) => update("parkingInfo", e.target.value)}
+          placeholder="Uber Preferred, Valet and Street Parking available"
+        />
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="theme-cta-label">Button Label</Label>

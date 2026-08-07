@@ -27,27 +27,53 @@ import {
 } from "@/features/kiosk/services/kiosk-theme-actions";
 import type { KioskThemeInput } from "@/features/kiosk/services/kiosk-theme.service";
 import { DEVICE_SIZES } from "@/features/kiosk/components/admin/theme-editor/device-preview-switcher";
+import { KIOSK_HERO_SIZE_DEFAULTS } from "@/features/kiosk/config/kiosk-hero-sizing.config";
 import { ThemeEditorShell } from "@/features/kiosk/components/admin/theme-editor/theme-editor-shell";
 import type { ThemeEditorContext } from "@/features/kiosk/components/admin/theme-editor/section-registry";
 import type { EditableThemeVersion, FormState, Sponsor, ThemeColor } from "@/features/kiosk/components/admin/theme-editor/types";
 
 export type { EditableThemeVersion } from "@/features/kiosk/components/admin/theme-editor/types";
 
+// v.startDate/v.endDate are civil "calendar dates" (e.g. "August 8") stored as UTC midnight of
+// the chosen day — see kiosk-theme.service.ts. .toISOString() reads a Date's UTC components, so
+// this correctly recovers the exact day an admin picked when round-tripping an EXISTING stored
+// date back into the <input type="date"> string. It must NOT be used on a genuine "current
+// instant" like `new Date()` (see todayLocalDateInput below) — doing so reads UTC's current
+// calendar day rather than the operator's own, which can be a day ahead for any timezone behind
+// UTC in the evening.
 function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// For pre-filling a brand-new theme's date fields with "today", the operator's own local
+// calendar day is what they expect to see — not UTC's, which the toISOString-based toDateInput
+// above would give for a real Date() instant.
+function todayLocalDateInput(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function defaultForm(): FormState {
-  const today = toDateInput(new Date());
+  const today = todayLocalDateInput();
   return {
     name: "",
     headline: "",
     subheadline: "",
     location: "",
+    parkingInfo: "",
     backgroundImageUrl: "",
     backgroundVideoUrl: "",
     logoOverrideUrl: "",
     logoVariant: "DEFAULT",
+    heroLogoSize: KIOSK_HERO_SIZE_DEFAULTS.logoSize,
+    heroTitleSize: KIOSK_HERO_SIZE_DEFAULTS.titleSize,
+    heroSubtitleSize: KIOSK_HERO_SIZE_DEFAULTS.subtitleSize,
+    heroDateTimeSize: KIOSK_HERO_SIZE_DEFAULTS.dateTimeSize,
+    heroLocationSize: KIOSK_HERO_SIZE_DEFAULTS.locationSize,
+    heroCountdownSize: KIOSK_HERO_SIZE_DEFAULTS.countdownSize,
     primaryColor: "",
     secondaryColor: "",
     accentColor: "",
@@ -85,10 +111,17 @@ function fromVersion(v: EditableThemeVersion): FormState {
     headline: v.headline,
     subheadline: v.subheadline ?? "",
     location: v.location ?? "",
+    parkingInfo: v.parkingInfo ?? "",
     backgroundImageUrl: v.backgroundImageUrl ?? "",
     backgroundVideoUrl: v.backgroundVideoUrl ?? "",
     logoOverrideUrl: v.logoOverrideUrl ?? "",
     logoVariant: v.logoVariant,
+    heroLogoSize: v.heroLogoSize ?? KIOSK_HERO_SIZE_DEFAULTS.logoSize,
+    heroTitleSize: v.heroTitleSize ?? KIOSK_HERO_SIZE_DEFAULTS.titleSize,
+    heroSubtitleSize: v.heroSubtitleSize ?? KIOSK_HERO_SIZE_DEFAULTS.subtitleSize,
+    heroDateTimeSize: v.heroDateTimeSize ?? KIOSK_HERO_SIZE_DEFAULTS.dateTimeSize,
+    heroLocationSize: v.heroLocationSize ?? KIOSK_HERO_SIZE_DEFAULTS.locationSize,
+    heroCountdownSize: v.heroCountdownSize ?? KIOSK_HERO_SIZE_DEFAULTS.countdownSize,
     primaryColor: v.primaryColor ?? "",
     secondaryColor: v.secondaryColor ?? "",
     accentColor: v.accentColor ?? "",
@@ -156,10 +189,17 @@ export function KioskThemeEditor({
       headline: form.headline,
       subheadline: form.subheadline || null,
       location: form.location || null,
+      parkingInfo: form.parkingInfo || null,
       backgroundImageUrl: form.backgroundImageUrl || null,
       backgroundVideoUrl: form.backgroundVideoUrl || null,
       logoOverrideUrl: form.logoOverrideUrl || null,
       logoVariant: form.logoVariant,
+      heroLogoSize: form.heroLogoSize,
+      heroTitleSize: form.heroTitleSize,
+      heroSubtitleSize: form.heroSubtitleSize,
+      heroDateTimeSize: form.heroDateTimeSize,
+      heroLocationSize: form.heroLocationSize,
+      heroCountdownSize: form.heroCountdownSize,
       primaryColor: form.primaryColor || null,
       secondaryColor: form.secondaryColor || null,
       accentColor: form.accentColor || null,
@@ -344,10 +384,17 @@ export function KioskThemeEditor({
       headline: form.headline || "Your Headline Here",
       subheadline: form.subheadline || null,
       location: form.location || null,
+      parkingInfo: form.parkingInfo || null,
       backgroundImageUrl: form.backgroundImageUrl || null,
       backgroundVideoUrl: form.backgroundVideoUrl || null,
       logoOverrideUrl: form.logoOverrideUrl || null,
       logoVariant: form.logoVariant,
+      heroLogoSize: form.heroLogoSize,
+      heroTitleSize: form.heroTitleSize,
+      heroSubtitleSize: form.heroSubtitleSize,
+      heroDateTimeSize: form.heroDateTimeSize,
+      heroLocationSize: form.heroLocationSize,
+      heroCountdownSize: form.heroCountdownSize,
       primaryColor: form.primaryColor || null,
       secondaryColor: form.secondaryColor || null,
       accentColor: form.accentColor || null,

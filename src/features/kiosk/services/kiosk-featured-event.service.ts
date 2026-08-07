@@ -27,7 +27,10 @@ export async function getKioskFeaturedEvent(organizationId: string) {
 
   if (!event || event.endTime < now) return null;
 
-  const qrAsset = await ensureQRAsset({ type: "EVENT", eventId: event.id });
+  const [qrAsset, organization] = await Promise.all([
+    ensureQRAsset({ type: "EVENT", eventId: event.id }),
+    prisma.organization.findUnique({ where: { id: organizationId }, select: { logoUrl: true } }),
+  ]);
 
   return {
     id: event.id,
@@ -38,6 +41,8 @@ export async function getKioskFeaturedEvent(organizationId: string) {
     capacity: event.capacity,
     goingCount: event.rsvps.length,
     qrToken: qrAsset.token,
+    logoUrl: event.logoUrl,
+    organizationLogoUrl: organization?.logoUrl ?? null,
   };
 }
 

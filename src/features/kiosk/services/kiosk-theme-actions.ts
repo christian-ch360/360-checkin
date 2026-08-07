@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/db/audit-log";
+import { uploadKioskBackgroundImage } from "@/lib/supabase/storage";
 import {
   createTheme,
   saveThemeDraft,
@@ -17,6 +18,17 @@ import {
   type KioskThemeInput,
   type KioskThemeActionResult,
 } from "@/features/kiosk/services/kiosk-theme.service";
+
+const ALLOWED_BACKGROUND_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_BACKGROUND_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+export type UploadThemeImageResult = { success: true; url: string } | { success: false; error: string };
 
 /** "Only Super Admins may: Create themes, Edit themes, Publish themes, Delete themes, ...
  * Schedule themes." Every mutating action in this file starts with the same check. */
@@ -179,4 +191,35 @@ export async function setThemeDefaultAction(themeKey: string): Promise<KioskThem
     revalidateKioskSurfaces();
   }
   return result;
+}
+
+/**
+ * Uploads a theme background image to Storage and returns its public URL —
+ * it does NOT write to the theme record. The editor holds `backgroundImageUrl`
+ * in client form state like every other field, and only persists it when the
+ * admin clicks Save Draft/Publish, exactly like typing a URL by hand did before.
+ */
+export async function uploadThemeBackgroundImageAction(
+  themeKey: string | undefined,
+  formData: FormData
+): Promise<UploadThemeImageResult> {
+  const actor = await requireKioskManager();
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { success: false, error: "No file was uploaded." };
+  if (!ALLOWED_BACKGROUND_IMAGE_TYPES.includes(file.type)) {
+    return { success: false, error: "Images must be JPG, PNG, WEBP, or GIF." };
+  }
+  if (file.size > MAX_BACKGROUND_IMAGE_BYTES) {
+    return { success: false, error: "That image is larger than 10MB." };
+  }
+
+  try {
+    const ext = EXTENSION_BY_MIME[file.type] ?? "jpg";
+    const path = `${actor.organizationId}/${themeKey ?? "drafts"}/${crypto.randomUUID()}.${ext}`;
+    const url = await uploadKioskBackgroundImage(path, file);
+    return { success: true, url };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Upload failed. Please try again." };
+  }
 }

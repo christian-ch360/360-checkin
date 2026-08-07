@@ -7,21 +7,29 @@ import type {
   KioskDecorativeElement,
   KioskLogoVariant,
   KioskRecurrence,
-  KioskThemeStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { isThemeScheduledNow } from "@/features/kiosk/services/kiosk-theme-resolution.service";
 import { KIOSK_THEME_PRESETS, resolvePresetSchedule } from "@/features/kiosk/config/kiosk-theme-presets.config";
+import { computeDisplayStatus, type KioskThemeDisplayStatus } from "@/features/kiosk/config/kiosk-schedule";
+
+export { computeDisplayStatus, type KioskThemeDisplayStatus };
 
 export type KioskThemeInput = {
   name: string;
   headline: string;
   subheadline?: string | null;
   location?: string | null;
+  parkingInfo?: string | null;
   backgroundImageUrl?: string | null;
   backgroundVideoUrl?: string | null;
   logoOverrideUrl?: string | null;
   logoVariant?: KioskLogoVariant;
+  heroLogoSize?: number | null;
+  heroTitleSize?: number | null;
+  heroSubtitleSize?: number | null;
+  heroDateTimeSize?: number | null;
+  heroLocationSize?: number | null;
+  heroCountdownSize?: number | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
   accentColor?: string | null;
@@ -51,21 +59,6 @@ export type KioskThemeInput = {
   eventId?: string | null;
   sponsors?: { name: string; logoUrl: string; message?: string; ctaLabel?: string; ctaLink?: string }[] | null;
 };
-
-/** "Theme Status (Live / Scheduled / Draft)" — the dashboard-facing label, distinct from the
- * stored KioskThemeStatus enum (PUBLISHED can mean either "Live" or "Scheduled" depending on
- * whether its own window has arrived yet). */
-export type KioskThemeDisplayStatus = "LIVE" | "SCHEDULED" | "DRAFT" | "ARCHIVED";
-
-export function computeDisplayStatus(
-  theme: { status: KioskThemeStatus; isPinnedLive: boolean } & Parameters<typeof isThemeScheduledNow>[0],
-  now: Date = new Date()
-): KioskThemeDisplayStatus {
-  if (theme.status === "DRAFT") return "DRAFT";
-  if (theme.status === "ARCHIVED") return "ARCHIVED";
-  if (theme.isPinnedLive || isThemeScheduledNow(theme, now)) return "LIVE";
-  return "SCHEDULED";
-}
 
 /**
  * Self-healing seed, same convention as ensureQRAsset/ensureReferralCode — a
@@ -260,10 +253,17 @@ export async function duplicateTheme(organizationId: string, sourceThemeKey: str
       headline: source.headline,
       subheadline: source.subheadline,
       location: source.location,
+      parkingInfo: source.parkingInfo,
       backgroundImageUrl: source.backgroundImageUrl,
       backgroundVideoUrl: source.backgroundVideoUrl,
       logoOverrideUrl: source.logoOverrideUrl,
       logoVariant: source.logoVariant,
+      heroLogoSize: source.heroLogoSize,
+      heroTitleSize: source.heroTitleSize,
+      heroSubtitleSize: source.heroSubtitleSize,
+      heroDateTimeSize: source.heroDateTimeSize,
+      heroLocationSize: source.heroLocationSize,
+      heroCountdownSize: source.heroCountdownSize,
       primaryColor: source.primaryColor,
       secondaryColor: source.secondaryColor,
       accentColor: source.accentColor,
@@ -325,10 +325,17 @@ export async function rollbackTheme(
       headline: target.headline,
       subheadline: target.subheadline,
       location: target.location,
+      parkingInfo: target.parkingInfo,
       backgroundImageUrl: target.backgroundImageUrl,
       backgroundVideoUrl: target.backgroundVideoUrl,
       logoOverrideUrl: target.logoOverrideUrl,
       logoVariant: target.logoVariant,
+      heroLogoSize: target.heroLogoSize,
+      heroTitleSize: target.heroTitleSize,
+      heroSubtitleSize: target.heroSubtitleSize,
+      heroDateTimeSize: target.heroDateTimeSize,
+      heroLocationSize: target.heroLocationSize,
+      heroCountdownSize: target.heroCountdownSize,
       primaryColor: target.primaryColor,
       secondaryColor: target.secondaryColor,
       accentColor: target.accentColor,
@@ -416,10 +423,17 @@ function toWriteData(input: KioskThemeInput) {
     headline: input.headline,
     subheadline: input.subheadline ?? null,
     location: input.location ?? null,
+    parkingInfo: input.parkingInfo ?? null,
     backgroundImageUrl: input.backgroundImageUrl ?? null,
     backgroundVideoUrl: input.backgroundVideoUrl ?? null,
     logoOverrideUrl: input.logoOverrideUrl ?? null,
     logoVariant: input.logoVariant ?? "DEFAULT",
+    heroLogoSize: input.heroLogoSize ?? null,
+    heroTitleSize: input.heroTitleSize ?? null,
+    heroSubtitleSize: input.heroSubtitleSize ?? null,
+    heroDateTimeSize: input.heroDateTimeSize ?? null,
+    heroLocationSize: input.heroLocationSize ?? null,
+    heroCountdownSize: input.heroCountdownSize ?? null,
     primaryColor: input.primaryColor ?? null,
     secondaryColor: input.secondaryColor ?? null,
     accentColor: input.accentColor ?? null,

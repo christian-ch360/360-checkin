@@ -1,27 +1,36 @@
+import Image from "next/image";
+import ch360Logo from "../../../../images/Ch360 Logo 3.PNG";
+
+const SIZES = {
+  xs: { className: "size-7", px: 28 },
+  sm: { className: "size-9", px: 36 },
+  md: { className: "size-11", px: 44 },
+  lg: { className: "size-14", px: 56 },
+  xl: { className: "size-24", px: 96 },
+} as const;
+
 export function LogoMark({
   size = "md",
-  variant = "dark",
+  style,
 }: {
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: keyof typeof SIZES;
+  /** Accepted for backward compatibility with existing call sites — the logo is a
+   * self-contained image with its own fixed color scheme, so it no longer needs
+   * a separate light/dark treatment. */
   variant?: "dark" | "light";
+  /** Overrides the rendered width/height beyond the fixed `size` tiers — used
+   * where the logo's size is itself theme-configurable (e.g. the Kiosk Hero). */
+  style?: React.CSSProperties;
 }) {
-  const dims = {
-    sm: "size-9 text-sm",
-    md: "size-11 text-base",
-    lg: "size-14 text-xl",
-    xl: "size-24 text-4xl",
-  }[size];
-  const skin =
-    variant === "light"
-      ? "border-black/10 bg-gradient-to-br from-black/[0.06] to-black/[0.01] text-black shadow-none"
-      : "border-white/15 bg-gradient-to-br from-white/[0.12] to-white/[0.02] text-white shadow-[0_1px_0_0_rgba(255,255,255,0.15)_inset]";
-
+  const { className, px } = SIZES[size];
   return (
-    <div
-      className={`flex ${dims} shrink-0 items-center justify-center rounded-2xl border font-semibold tracking-tight ${skin}`}
-      aria-hidden="true"
-    >
-      CH
-    </div>
+    <Image
+      src={ch360Logo}
+      alt="CreatorHub360"
+      width={px}
+      height={px}
+      className={`${className} shrink-0 rounded-2xl object-cover`}
+      style={style}
+    />
   );
 }

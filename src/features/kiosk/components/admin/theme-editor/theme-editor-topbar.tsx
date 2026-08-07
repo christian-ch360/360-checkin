@@ -4,24 +4,12 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { Copy, Eye, Loader2, Menu, Rocket, Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { isThemeScheduledNow } from "@/features/kiosk/config/kiosk-schedule";
+import { computeDisplayStatus, type KioskThemeDisplayStatus } from "@/features/kiosk/config/kiosk-schedule";
 import { cn } from "@/lib/utils";
 import type { EditableThemeVersion } from "./types";
 import { THEME_PREVIEW_PANEL_ID } from "./theme-editor-preview-panel";
 
-type DisplayStatus = "LIVE" | "SCHEDULED" | "DRAFT" | "ARCHIVED";
-
-/** Mirrors kiosk-theme.service.ts's computeDisplayStatus — reproduced locally
- * since that file is server-only and this bar renders client-side. Same
- * inputs (status/isPinnedLive/schedule), same 4-line rule. */
-function computeDisplayStatus(latest: EditableThemeVersion): DisplayStatus {
-  if (latest.status === "DRAFT") return "DRAFT";
-  if (latest.status === "ARCHIVED") return "ARCHIVED";
-  if (latest.isPinnedLive || isThemeScheduledNow(latest, new Date())) return "LIVE";
-  return "SCHEDULED";
-}
-
-const STATUS_TONE: Record<DisplayStatus, string> = {
+const STATUS_TONE: Record<KioskThemeDisplayStatus, string> = {
   LIVE: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   SCHEDULED: "bg-blue-500/10 text-blue-600 border-blue-500/20",
   DRAFT: "bg-muted text-muted-foreground",
