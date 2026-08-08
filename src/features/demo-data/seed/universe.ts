@@ -321,9 +321,11 @@ function buildSpaces(rng: ReturnType<typeof createRng>, members: DemoMember[]): 
       type: types[i % types.length],
       capacity: rng.int(1, 12),
       location: `Floor ${rng.int(1, 3)}`,
+      description: null,
       equipment: rng.pickMany(["Ring light", "Tripod", "Mic", "Green screen", "Backdrop"], rng.int(1, 3)),
       imageUrl: null,
       isActive: true,
+      displayOrder: i,
       status,
       activeSession: isOccupied
         ? {

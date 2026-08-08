@@ -8,6 +8,7 @@ import { ProjectCard } from "@/features/projects/components/project-card";
 import { ProjectForm } from "@/features/projects/components/project-form";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { ExportReportButton } from "@/features/reports/components/export-report-button";
 import { cn } from "@/lib/utils";
 import { isDemoModeActive, demoListProjects } from "@/features/demo-data";
 
@@ -49,7 +50,14 @@ export default async function ProjectsPage({
       <PageHeader
         title="Projects"
         description={`${allProjects.length} project${allProjects.length === 1 ? "" : "s"} across your organization.`}
-        actions={canManage && <ProjectForm brands={brands} companies={companies} members={members} />}
+        actions={
+          <div className="flex items-center gap-2">
+            {hasPermission(actor.systemRole, "reports.export") && (
+              <ExportReportButton type="projects" label="Export Projects" />
+            )}
+            {canManage && <ProjectForm brands={brands} companies={companies} members={members} />}
+          </div>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-1.5 border-b">

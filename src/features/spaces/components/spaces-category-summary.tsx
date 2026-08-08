@@ -16,12 +16,14 @@ export function SpacesCategorySummary({
   members,
   currentActorId,
   canManage,
+  canDelete = false,
 }: {
   spaces: SpaceDashboardItem[];
   projects: { id: string; name: string }[];
   members: { id: string; fullName: string }[];
   currentActorId: string;
   canManage: boolean;
+  canDelete?: boolean;
 }) {
   const [expanded, setExpanded] = useState<SpaceCategory | null>(null);
 
@@ -41,6 +43,7 @@ export function SpacesCategorySummary({
           members={members}
           currentActorId={currentActorId}
           canManage={canManage}
+          canDelete={canDelete}
           initialStatusFilter={null}
           initialSpaceId={null}
           initialCategory={expanded}
@@ -49,8 +52,12 @@ export function SpacesCategorySummary({
     );
   }
 
+  // Tile counts reflect active inventory only — this view has no "Show
+  // Archived" toggle of its own; that lives inside the expanded
+  // SpacesDashboard above, which still receives the full unfiltered list.
+  const activeSpaces = spaces.filter((s) => s.isActive);
   const byCategory = CATEGORY_ORDER.map((category) => {
-    const inCategory = spaces.filter((s) => getSpaceCategory(s.type) === category);
+    const inCategory = activeSpaces.filter((s) => getSpaceCategory(s.type) === category);
     const occupied = inCategory.filter((s) => s.status === "OCCUPIED").length;
     return { category, spaces: inCategory, occupied, total: inCategory.length };
   }).filter((c) => c.total > 0);

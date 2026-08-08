@@ -102,7 +102,7 @@ export default async function AdminPage() {
             </CardHeader>
             <CardContent>
               <Button variant="outline" asChild>
-                <a href="/api/reports/payroll?format=xlsx" download>
+                <a href="/api/reports/members?format=xlsx" download>
                   <FileDown /> Export members (Excel)
                 </a>
               </Button>

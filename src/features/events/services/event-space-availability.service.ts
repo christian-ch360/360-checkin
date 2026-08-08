@@ -81,7 +81,7 @@ export async function getSpaceAvailability(
   endTime: Date
 ): Promise<SpaceAvailabilitySummary | null> {
   const space = await prisma.space.findFirst({
-    where: { id: spaceId, organizationId },
+    where: { id: spaceId, organizationId, isActive: true },
     select: { id: true, name: true, capacity: true, equipment: true },
   });
   if (!space) return null;

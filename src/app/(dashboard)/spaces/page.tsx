@@ -19,6 +19,7 @@ export default async function SpacesPage({
 }) {
   const actor = await requireCurrentMember();
   const canManage = hasPermission(actor.systemRole, "spaces.manage");
+  const canDelete = hasPermission(actor.systemRole, "spaces.delete");
   const { filter, space: initialSpaceId, category } = await searchParams;
   const initialStatusFilter =
     filter === "available" || filter === "occupied" || filter === "my-bookings" || filter === "favorites"
@@ -54,6 +55,7 @@ export default async function SpacesPage({
         members={members}
         currentActorId={actor.id}
         canManage={canManage}
+        canDelete={canDelete}
         initialStatusFilter={initialStatusFilter}
         initialSpaceId={initialSpaceId ?? null}
         initialCategory={initialCategory}

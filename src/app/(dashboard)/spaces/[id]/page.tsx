@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { getSpaceDetail } from "@/features/spaces/services/spaces.service";
+import { hasPermission } from "@/lib/permissions";
 import { QRCodeDisplay } from "@/features/qr/components/qr-code-display";
 import { ActiveSessionCard } from "@/features/spaces/components/active-session-card";
 import { SpaceSessionHistoryTable } from "@/features/spaces/components/space-session-history-table";
@@ -22,8 +23,13 @@ export default async function SpaceDetailPage({
 }) {
   const { id } = await params;
   const actor = await requireCurrentMember();
+  const canManage = hasPermission(actor.systemRole, "spaces.manage");
   const detail = await getSpaceDetail(actor.organizationId, id);
   if (!detail) notFound();
+  // Archived spaces "disappear from... public availability" — only admins
+  // who can manage spaces get to view one directly by URL/QR after it's
+  // been archived; everyone else gets the same 404 as a space that never existed.
+  if (!detail.space.isActive && !canManage) notFound();
 
   const { space, activeSession, history } = detail;
   const typeMeta = SPACE_TYPE_META[space.type];
@@ -46,11 +52,19 @@ export default async function SpaceDetailPage({
           <Badge variant="outline" className="bg-background/70">
             {SPACE_CATEGORY_LABELS[category]}
           </Badge>
-          <SpaceStatusBadge status={status} />
+          {space.isActive ? (
+            <SpaceStatusBadge status={status} />
+          ) : (
+            <Badge variant="outline" className="bg-background/70 text-muted-foreground">
+              Archived
+            </Badge>
+          )}
         </div>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{space.name}</h1>
-          <p className="mt-1 max-w-xl text-sm text-foreground/80">{SPACE_CATEGORY_COPY[category]}</p>
+          <p className="mt-1 max-w-xl text-sm text-foreground/80">
+            {space.description || SPACE_CATEGORY_COPY[category]}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="inline-flex items-center gap-1">
@@ -67,11 +81,17 @@ export default async function SpaceDetailPage({
             ))}
           </div>
         )}
-        <Button asChild className="w-fit">
-          <Link href={`/spaces?space=${space.id}`}>
-            <CalendarPlus className="size-4" /> Book this space
-          </Link>
-        </Button>
+        {space.isActive ? (
+          <Button asChild className="w-fit">
+            <Link href={`/spaces?space=${space.id}`}>
+              <CalendarPlus className="size-4" /> Book this space
+            </Link>
+          </Button>
+        ) : (
+          <p className="text-sm text-foreground/70">
+            This space is archived and isn&apos;t available for booking.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

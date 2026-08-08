@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { formatDuration } from "@/lib/utils/format";
 
 export const REPORT_TYPES = [
-  "payroll",
+  "members",
   "commission",
   "attendance",
   "hours",
@@ -24,8 +24,8 @@ export type ReportTable = {
 
 export async function buildReport(organizationId: string, type: ReportType): Promise<ReportTable> {
   switch (type) {
-    case "payroll":
-      return buildPayrollReport(organizationId);
+    case "members":
+      return buildMembersReport(organizationId);
     case "commission":
       return buildCommissionReport(organizationId);
     case "attendance":
@@ -39,7 +39,7 @@ export async function buildReport(organizationId: string, type: ReportType): Pro
   }
 }
 
-async function buildPayrollReport(organizationId: string): Promise<ReportTable> {
+async function buildMembersReport(organizationId: string): Promise<ReportTable> {
   const members = await prisma.member.findMany({
     where: { organizationId },
     orderBy: { fullName: "asc" },
@@ -47,7 +47,7 @@ async function buildPayrollReport(organizationId: string): Promise<ReportTable> 
   });
 
   return {
-    title: "Payroll Report",
+    title: "Members Report",
     columns: [
       { key: "memberNumber", label: "Member #" },
       { key: "fullName", label: "Name" },
@@ -135,7 +135,7 @@ async function buildHoursReport(organizationId: string): Promise<ReportTable> {
   });
 
   return {
-    title: "Hours Report",
+    title: "Hours Worked Report",
     columns: [
       { key: "memberNumber", label: "Member #" },
       { key: "fullName", label: "Name" },

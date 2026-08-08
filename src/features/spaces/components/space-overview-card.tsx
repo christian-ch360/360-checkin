@@ -7,6 +7,7 @@ import { CalendarPlus, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SPACE_TYPE_META, SPACE_CATEGORY_META } from "@/features/spaces/components/space-card";
 import { SpaceStatusBadge } from "@/features/spaces/components/space-status-badge";
+import { SpaceActionsMenu } from "@/features/spaces/components/space-actions-menu";
 import { getSpaceCategory } from "@/lib/utils/space-category";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,15 @@ export function SpaceOverviewCard({
   onQuickBook,
   isFavorite,
   onToggleFavorite,
+  canManage = false,
+  canDelete = false,
 }: {
   space: SpaceDashboardItem;
   onQuickBook: (id: string) => void;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
+  canManage?: boolean;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const meta = SPACE_TYPE_META[space.type];
@@ -51,7 +56,10 @@ export function SpaceOverviewCard({
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: "spring", stiffness: 400, damping: 28 }}
-      className="group flex cursor-pointer flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm outline-none transition-shadow hover:shadow-lg hover:shadow-black/5 focus-visible:ring-2 focus-visible:ring-ring sm:gap-3.5 sm:p-5"
+      className={cn(
+        "group flex cursor-pointer flex-col items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm outline-none transition-shadow hover:shadow-lg hover:shadow-black/5 focus-visible:ring-2 focus-visible:ring-ring sm:gap-3.5 sm:p-5",
+        !space.isActive && "opacity-60"
+      )}
     >
       <div className={cn("relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl border", !space.imageUrl && categoryMeta.accent)}>
         {space.imageUrl ? (
@@ -60,20 +68,29 @@ export function SpaceOverviewCard({
         ) : (
           <Icon className="size-10 opacity-80 sm:size-12" />
         )}
-        <button
-          type="button"
-          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          aria-pressed={isFavorite}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(space.id);
-          }}
-          className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
-        >
-          <Heart className={cn("size-3.5", isFavorite && "fill-destructive text-destructive")} />
-        </button>
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          <button
+            type="button"
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={isFavorite}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(space.id);
+            }}
+            className="flex size-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
+          >
+            <Heart className={cn("size-3.5", isFavorite && "fill-destructive text-destructive")} />
+          </button>
+          {(canManage || canDelete) && <SpaceActionsMenu space={space} canManage={canManage} canDelete={canDelete} />}
+        </div>
         <div className="absolute top-2 left-2">
-          <SpaceStatusBadge status={space.status} />
+          {space.isActive ? (
+            <SpaceStatusBadge status={space.status} />
+          ) : (
+            <Badge variant="outline" className="bg-background/80 text-muted-foreground backdrop-blur">
+              Archived
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -99,18 +116,22 @@ export function SpaceOverviewCard({
         )}
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={(e) => {
-          e.stopPropagation();
-          onQuickBook(space.id);
-        }}
-      >
-        <CalendarPlus className="size-3.5" /> Book
-      </Button>
+      {space.isActive ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={(e) => {
+            e.stopPropagation();
+            onQuickBook(space.id);
+          }}
+        >
+          <CalendarPlus className="size-3.5" /> Book
+        </Button>
+      ) : (
+        <p className="w-full text-center text-xs text-muted-foreground">Not available for booking</p>
+      )}
     </motion.div>
   );
 }

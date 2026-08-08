@@ -16,6 +16,7 @@ import {
   Plus,
   History,
   PartyPopper,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -44,6 +45,7 @@ const QUICK_LINKS = [
   { title: "GMV", href: "/gmv", icon: TrendingUp },
   { title: "Commissions", href: "/commissions", icon: Percent },
   { title: "Events", href: "/events", icon: PartyPopper },
+  { title: "Reports", href: "/reports", icon: FileSpreadsheet },
 ];
 
 const CREATE_COMMANDS = [

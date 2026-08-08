@@ -6,6 +6,7 @@ import { MembersMobileList } from "@/features/members/components/members-mobile-
 import { MembersFilters } from "@/features/members/components/members-filters";
 import { Pagination } from "@/components/shared/pagination";
 import { PageHeader } from "@/components/shared/page-header";
+import { ExportReportButton } from "@/features/reports/components/export-report-button";
 import { hasPermission } from "@/lib/permissions";
 import { isDemoModeActive, demoListMembers } from "@/features/demo-data";
 import type { MemberRole, MemberStatus } from "@prisma/client";
@@ -64,7 +65,15 @@ export default async function MembersPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Members" description={`${total} member${total === 1 ? "" : "s"} across your organization.`} />
+      <PageHeader
+        title="Members"
+        description={`${total} member${total === 1 ? "" : "s"} across your organization.`}
+        actions={
+          hasPermission(actor.systemRole, "reports.export") && (
+            <ExportReportButton type="members" label="Export Members" />
+          )
+        }
+      />
 
       <MembersFilters
         companies={companies}

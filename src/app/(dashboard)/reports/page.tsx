@@ -13,12 +13,12 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Reports" };
 
 const REPORT_META: Record<ReportType, { title: string; description: string }> = {
-  payroll: { title: "Payroll", description: "Hours worked and commission owed per member." },
-  commission: { title: "Commission", description: "Every commission transaction with tier and status." },
+  members: { title: "Members", description: "Member roster with hours worked and commission owed." },
+  commission: { title: "Commissions", description: "Every commission transaction with tier and status." },
   attendance: { title: "Attendance", description: "Full check-in and check-out history." },
-  hours: { title: "Hours", description: "Total hours logged per member." },
+  hours: { title: "Hours Worked", description: "Total hours logged per member." },
   gmv: { title: "GMV", description: "Every GMV transaction with attribution." },
-  projects: { title: "Project summaries", description: "Budget, GMV, and commission pool per project." },
+  projects: { title: "Projects", description: "Budget, GMV, and commission pool per project." },
 };
 
 export default async function ReportsPage() {

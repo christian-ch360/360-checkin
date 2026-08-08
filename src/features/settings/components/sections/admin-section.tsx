@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, FolderKanban, Percent, DoorOpen, MonitorSmartphone, Building2, ScrollText, Mail, FileText, ArrowRight, CreditCard, Scale, Palette, PartyPopper, ShieldAlert } from "lucide-react";
+import { Users, FolderKanban, Percent, DoorOpen, MonitorSmartphone, Building2, ScrollText, Mail, FileText, ArrowRight, CreditCard, Scale, Palette, PartyPopper, ShieldAlert, FileSpreadsheet } from "lucide-react";
 import { SettingsSectionCard } from "@/features/settings/components/settings-section-card";
 
 const LINKS = [
@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/projects", label: "Project Management", description: "Projects, assignments, and tasks.", icon: FolderKanban },
   { href: "/admin/events", label: "Event Manager", description: "Approve proposals, feature events, and track attendance.", icon: PartyPopper },
   { href: "/commissions", label: "Commission Settings", description: "Tiers, transactions, and payouts.", icon: Percent },
+  { href: "/reports", label: "Reports", description: "Export members, attendance, GMV, commissions, and more.", icon: FileSpreadsheet },
   { href: "/admin/membership-plans", label: "Membership Plans", description: "Manage plans, pricing, and benefits.", icon: CreditCard },
   { href: "/admin/membership-management", label: "Membership Management", description: "Search, filter, and override member billing status.", icon: CreditCard },
   { href: "/admin/legal", label: "Legal", description: "Manage legal documents, versions, and compliance.", icon: Scale },

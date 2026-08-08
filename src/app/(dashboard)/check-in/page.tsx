@@ -8,6 +8,8 @@ import { OccupancyList } from "@/features/checkin/components/occupancy-list";
 import { AttendanceHistoryTable } from "@/features/checkin/components/attendance-history-table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExportReportButton } from "@/features/reports/components/export-report-button";
+import { hasPermission } from "@/lib/permissions";
 import { formatDuration } from "@/lib/utils/format";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +25,15 @@ export default async function CheckInPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Facility check-in" description="Scan a badge to check members in or out." />
+      <PageHeader
+        title="Facility check-in"
+        description="Scan a badge to check members in or out."
+        actions={
+          hasPermission(actor.systemRole, "reports.export") && (
+            <ExportReportButton type="attendance" label="Export Attendance" />
+          )
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Today's Check Ins" value={String(overview.todayCheckIns)} icon={LogIn} />

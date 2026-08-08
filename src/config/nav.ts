@@ -17,6 +17,7 @@ import {
   Scale,
   Megaphone,
   Palette,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import type { AccentName } from "@/config/nav-colors";
@@ -42,9 +43,9 @@ export type NavSection = {
 // filtered permission-by-permission — creators get a workspace focused on
 // booking/collaborating/messaging, admins get an operations-focused one.
 // Neither list deletes any route: pages not listed here (Brands, Companies,
-// Events, Feedback, GMV, Commissions, Reports, Pending Members, /admin) stay
-// fully reachable by URL, from within the pages above, and via the command
-// palette (⌘K) — only the primary sidebar listing is scoped down.
+// Events, Feedback, GMV, Commissions, Pending Members, /admin) stay fully
+// reachable by URL, from within the pages above, and via the command palette
+// (⌘K) — only the primary sidebar listing is scoped down.
 
 export const CREATOR_NAV_SECTIONS: NavSection[] = [
   {
@@ -71,6 +72,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
       { title: "Applications", href: "/admin/applications", icon: FileCheck2, accent: "amber", permission: "members.approve" },
       { title: "Operations", href: "/check-in", icon: QrCode, accent: "emerald", permission: "checkin.manage" },
       { title: "Analytics", href: "/analytics", icon: BarChart3, accent: "emerald", permission: "reports.view" },
+      { title: "Reports", href: "/reports", icon: FileSpreadsheet, accent: "teal", permission: "reports.view" },
       { title: "Profile", href: "/profile", icon: CircleUserRound, accent: "gray" },
       { title: "Settings", href: "/settings", icon: Settings, accent: "gray" },
     ],

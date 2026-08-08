@@ -52,7 +52,7 @@ export async function globalSearch(
       select: { id: true, name: true },
     }),
     prisma.space.findMany({
-      where: { organizationId, name: { contains: q, mode: "insensitive" } },
+      where: { organizationId, isActive: true, name: { contains: q, mode: "insensitive" } },
       take: 5,
       select: { id: true, name: true, type: true },
     }),

@@ -30,6 +30,7 @@ const ALL_PERMISSIONS = [
   "agencies.access_override",
   "kiosk.manage",
   "events.manage",
+  "spaces.delete",
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];

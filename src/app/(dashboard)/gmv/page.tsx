@@ -17,6 +17,7 @@ import { GMVTransactionsTable } from "@/features/gmv/components/gmv-transactions
 import { Pagination } from "@/components/shared/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
+import { ExportReportButton } from "@/features/reports/components/export-report-button";
 import { formatCompactCurrency, formatPercent } from "@/lib/utils/format";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,12 @@ export default async function GMVPage({
       <PageHeader
         title="GMV"
         description="Gross merchandise value across the campus."
-        actions={canManage && <GMVEntryForm members={members} projects={projects} companies={companies} brands={brands} />}
+        actions={
+          <div className="flex items-center gap-2">
+            {hasPermission(actor.systemRole, "reports.export") && <ExportReportButton type="gmv" label="Export GMV" />}
+            {canManage && <GMVEntryForm members={members} projects={projects} companies={companies} brands={brands} />}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

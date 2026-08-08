@@ -87,6 +87,19 @@ export async function endSpaceSession(
   return { session: updated };
 }
 
+/**
+ * "Warn if bookings exist" before a permanent delete — reservations and
+ * sessions both cascade-delete with the space (see schema), so this count
+ * is what the confirmation dialog shows before that becomes irreversible.
+ */
+export async function getSpaceBookingImpact(organizationId: string, spaceId: string) {
+  const [reservationCount, sessionCount] = await Promise.all([
+    prisma.reservation.count({ where: { spaceId, organizationId } }),
+    prisma.spaceSession.count({ where: { spaceId, space: { organizationId } } }),
+  ]);
+  return { reservationCount, sessionCount };
+}
+
 export type SpaceStatus = "AVAILABLE" | "OCCUPIED" | "RESERVED";
 
 /**
@@ -121,7 +134,7 @@ export async function getSpacesDashboardData(organizationId: string) {
         },
       },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
   });
 
   return spaces.map((s) => {
@@ -161,9 +174,11 @@ export async function getSpacesDashboardData(organizationId: string) {
       type: s.type,
       capacity: s.capacity,
       location: s.location,
+      description: s.description,
       equipment: s.equipment,
       imageUrl: s.imageUrl,
       isActive: s.isActive,
+      displayOrder: s.displayOrder,
       status,
       activeSession: activeSession
         ? {

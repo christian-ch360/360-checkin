@@ -5,7 +5,10 @@ import { z } from "zod";
 import { SpaceType } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { ensureQRAsset } from "@/features/qr/services/qr-asset.service";
-import { endSpaceSession as endSpaceSessionService } from "@/features/spaces/services/spaces.service";
+import {
+  endSpaceSession as endSpaceSessionService,
+  getSpaceBookingImpact,
+} from "@/features/spaces/services/spaces.service";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
 import { requireActiveMembership } from "@/lib/permissions/membership-gate";
@@ -39,10 +42,25 @@ const spaceSchema = z.object({
   type: z.nativeEnum(SpaceType),
   capacity: z.string().optional().or(z.literal("")),
   location: z.string().optional().or(z.literal("")),
+  description: z.string().optional().or(z.literal("")),
+  // Comma-separated free text in the form (e.g. "Ring light, Tripod, Mic") —
+  // split/trimmed into the schema's String[] here rather than building a
+  // dedicated tag-picker component for a field this simple.
+  equipment: z.string().optional().or(z.literal("")),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  isActive: z.boolean().optional(),
+  displayOrder: z.string().optional().or(z.literal("")),
 });
 
 export type CreateSpaceInput = z.infer<typeof spaceSchema>;
+
+function parseEquipment(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+}
 
 export async function createSpace(input: CreateSpaceInput): Promise<SpaceActionResult> {
   const actor = await requireCurrentMember();
@@ -55,6 +73,19 @@ export async function createSpace(input: CreateSpaceInput): Promise<SpaceActionR
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
+  // New spaces default to the end of the list unless the admin picks a
+  // specific position, so they don't silently jump ahead of everything else.
+  let displayOrder: number;
+  if (parsed.data.displayOrder) {
+    displayOrder = Number(parsed.data.displayOrder);
+  } else {
+    const maxOrder = await prisma.space.aggregate({
+      where: { organizationId: actor.organizationId },
+      _max: { displayOrder: true },
+    });
+    displayOrder = (maxOrder._max.displayOrder ?? -1) + 1;
+  }
+
   const space = await prisma.space.create({
     data: {
       organizationId: actor.organizationId,
@@ -62,14 +93,196 @@ export async function createSpace(input: CreateSpaceInput): Promise<SpaceActionR
       type: parsed.data.type,
       capacity: parsed.data.capacity ? Number(parsed.data.capacity) : null,
       location: parsed.data.location || null,
+      description: parsed.data.description || null,
+      equipment: parseEquipment(parsed.data.equipment),
       imageUrl: parsed.data.imageUrl || null,
+      isActive: parsed.data.isActive ?? true,
+      displayOrder,
     },
   });
 
   await ensureQRAsset({ type: "SPACE", spaceId: space.id });
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "space.created",
+    entityType: "space",
+    entityId: space.id,
+    after: { name: space.name, type: space.type },
+  });
   revalidatePath("/spaces");
   revalidateTag("spaces");
   return { success: true, spaceName: space.name };
+}
+
+export async function updateSpace(spaceId: string, input: CreateSpaceInput): Promise<SpaceActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "spaces.manage")) {
+    return { success: false, error: "You don't have permission to manage spaces." };
+  }
+
+  const existing = await prisma.space.findFirst({ where: { id: spaceId, organizationId: actor.organizationId } });
+  if (!existing) return { success: false, error: "Space not found." };
+
+  const parsed = spaceSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const space = await prisma.space.update({
+    where: { id: spaceId },
+    data: {
+      name: parsed.data.name,
+      type: parsed.data.type,
+      capacity: parsed.data.capacity ? Number(parsed.data.capacity) : null,
+      location: parsed.data.location || null,
+      description: parsed.data.description || null,
+      equipment: parseEquipment(parsed.data.equipment),
+      imageUrl: parsed.data.imageUrl || null,
+      isActive: parsed.data.isActive ?? existing.isActive,
+      displayOrder: parsed.data.displayOrder ? Number(parsed.data.displayOrder) : existing.displayOrder,
+    },
+  });
+
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "space.updated",
+    entityType: "space",
+    entityId: space.id,
+    before: { name: existing.name, type: existing.type, isActive: existing.isActive },
+    after: { name: space.name, type: space.type, isActive: space.isActive },
+  });
+  revalidatePath("/spaces");
+  revalidatePath(`/spaces/${spaceId}`);
+  revalidateTag("spaces");
+  return { success: true, spaceName: space.name };
+}
+
+export async function archiveSpaceAction(spaceId: string): Promise<SpaceActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "spaces.manage")) {
+    return { success: false, error: "You don't have permission to manage spaces." };
+  }
+
+  const existing = await prisma.space.findFirst({ where: { id: spaceId, organizationId: actor.organizationId } });
+  if (!existing) return { success: false, error: "Space not found." };
+  if (!existing.isActive) return { success: false, error: "This space is already archived." };
+
+  await prisma.space.update({ where: { id: spaceId }, data: { isActive: false } });
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "space.archived",
+    entityType: "space",
+    entityId: spaceId,
+    before: { isActive: true },
+    after: { isActive: false },
+  });
+
+  revalidatePath("/spaces");
+  revalidatePath(`/spaces/${spaceId}`);
+  revalidateTag("spaces");
+  return { success: true, spaceName: existing.name };
+}
+
+export async function restoreSpaceAction(spaceId: string): Promise<SpaceActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "spaces.manage")) {
+    return { success: false, error: "You don't have permission to manage spaces." };
+  }
+
+  const existing = await prisma.space.findFirst({ where: { id: spaceId, organizationId: actor.organizationId } });
+  if (!existing) return { success: false, error: "Space not found." };
+  if (existing.isActive) return { success: false, error: "This space isn't archived." };
+
+  await prisma.space.update({ where: { id: spaceId }, data: { isActive: true } });
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "space.restored",
+    entityType: "space",
+    entityId: spaceId,
+    before: { isActive: false },
+    after: { isActive: true },
+  });
+
+  revalidatePath("/spaces");
+  revalidatePath(`/spaces/${spaceId}`);
+  revalidateTag("spaces");
+  return { success: true, spaceName: existing.name };
+}
+
+export type SpaceBookingImpactResult =
+  | { success: true; reservationCount: number; sessionCount: number }
+  | { success: false; error: string };
+
+export async function getSpaceBookingImpactAction(spaceId: string): Promise<SpaceBookingImpactResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "spaces.delete")) {
+    return { success: false, error: "You don't have permission to delete spaces." };
+  }
+
+  const existing = await prisma.space.findFirst({ where: { id: spaceId, organizationId: actor.organizationId } });
+  if (!existing) return { success: false, error: "Space not found." };
+
+  const impact = await getSpaceBookingImpact(actor.organizationId, spaceId);
+  return { success: true, ...impact };
+}
+
+/** Permanent, cascade-deletes reservations/sessions/QR asset — Super Admin only. */
+export async function deleteSpaceAction(spaceId: string): Promise<SpaceActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "spaces.delete")) {
+    return { success: false, error: "Only Super Admins can permanently delete a space." };
+  }
+
+  const existing = await prisma.space.findFirst({ where: { id: spaceId, organizationId: actor.organizationId } });
+  if (!existing) return { success: false, error: "Space not found." };
+
+  const impact = await getSpaceBookingImpact(actor.organizationId, spaceId);
+
+  await prisma.space.delete({ where: { id: spaceId } });
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "space.deleted",
+    entityType: "space",
+    entityId: spaceId,
+    before: { name: existing.name, type: existing.type, ...impact },
+  });
+
+  revalidatePath("/spaces");
+  revalidateTag("spaces");
+  return { success: true, spaceName: existing.name };
+}
+
+export async function reorderSpacesAction(orderedIds: string[]): Promise<SpaceActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "spaces.manage")) {
+    return { success: false, error: "You don't have permission to manage spaces." };
+  }
+
+  const rows = await prisma.space.findMany({ where: { organizationId: actor.organizationId, id: { in: orderedIds } } });
+  if (rows.length !== orderedIds.length) {
+    return { success: false, error: "One or more spaces were not found." };
+  }
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) => prisma.space.update({ where: { id }, data: { displayOrder: index } }))
+  );
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "space.reordered",
+    entityType: "space",
+    entityId: actor.organizationId,
+    after: { orderedIds },
+  });
+
+  revalidatePath("/spaces");
+  revalidateTag("spaces");
+  return { success: true };
 }
 
 const reservationSchema = z
@@ -115,6 +328,7 @@ export async function bookSpace(input: BookSpaceInput): Promise<BookSpaceResult>
     where: { id: parsed.data.spaceId, organizationId: actor.organizationId },
   });
   if (!space) return { success: false, error: "Space not found." };
+  if (!space.isActive) return { success: false, error: "This space is archived and unavailable for booking." };
 
   const spaceAccess = await requireSpaceTypeAccess(actor.id, space.type);
   if (!spaceAccess.allowed) return { success: false, error: spaceAccess.reason };

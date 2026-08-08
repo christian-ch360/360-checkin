@@ -19,6 +19,7 @@ export default async function DashboardSpacesPage({
 }) {
   const actor = await requireCurrentMember();
   const canManage = hasPermission(actor.systemRole, "spaces.manage");
+  const canDelete = hasPermission(actor.systemRole, "spaces.delete");
   const isAdminTier = hasPermission(actor.systemRole, "admin.access");
   const { filter, space: initialSpaceId, category } = await searchParams;
   const initialStatusFilter =
@@ -44,8 +45,11 @@ export default async function DashboardSpacesPage({
     }),
   ]);
 
-  const availableSpaces = spaces.filter((s) => s.status === "AVAILABLE").length;
-  const occupiedSpaces = spaces.filter((s) => s.status === "OCCUPIED").length;
+  // Archived spaces aren't part of live inventory anymore — excluded from
+  // both counts so an archived-but-empty space doesn't inflate "Available."
+  const activeSpaces = spaces.filter((s) => s.isActive);
+  const availableSpaces = activeSpaces.filter((s) => s.status === "AVAILABLE").length;
+  const occupiedSpaces = activeSpaces.filter((s) => s.status === "OCCUPIED").length;
 
   return (
     <div className="space-y-8">
@@ -65,6 +69,7 @@ export default async function DashboardSpacesPage({
           members={members}
           currentActorId={actor.id}
           canManage={canManage}
+          canDelete={canDelete}
         />
       ) : (
         <SpacesDashboard
@@ -73,6 +78,7 @@ export default async function DashboardSpacesPage({
           members={members}
           currentActorId={actor.id}
           canManage={canManage}
+          canDelete={canDelete}
           initialStatusFilter={initialStatusFilter}
           initialSpaceId={initialSpaceId ?? null}
           initialCategory={initialCategory}
