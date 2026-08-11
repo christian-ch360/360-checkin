@@ -19,6 +19,20 @@ export function exportToXLSX(table: ReportTable): Buffer {
       Object.fromEntries(table.columns.map((c) => [c.label, row[c.key] ?? ""]))
     )
   );
+
+  // json_to_sheet only writes the display string — a "url" column's cell
+  // needs its `l.Target` property set too, or Excel renders the URL as
+  // plain text instead of a clickable hyperlink.
+  table.columns.forEach((column, colIndex) => {
+    if (column.type !== "url") return;
+    table.rows.forEach((row, rowIndex) => {
+      const value = row[column.key];
+      if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return;
+      const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex })];
+      if (cell) cell.l = { Target: value };
+    });
+  });
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, table.title.slice(0, 31));
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;

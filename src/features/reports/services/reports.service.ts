@@ -8,7 +8,7 @@ import { formatDuration } from "@/lib/utils/format";
 import { ROLE_LABELS } from "@/features/members/role-labels";
 import { buildApplicationWhere } from "@/features/applications/services/applications.service";
 import { formatLocation } from "@/features/applications/utils/location";
-import { socialAccountLabel } from "@/lib/utils/social-links";
+import { socialAccountExportUrl, parseInstagramInput, parseTiktokInput } from "@/lib/utils/social-links";
 
 export const REPORT_TYPES = [
   "members",
@@ -22,9 +22,18 @@ export const REPORT_TYPES = [
 
 export type ReportType = (typeof REPORT_TYPES)[number];
 
+export type ReportColumn = {
+  key: string;
+  label: string;
+  /** "url" columns get flagged as real hyperlink cells in the XLSX export
+   * (see exportToXLSX) so Excel treats a full profile URL as clickable
+   * rather than plain text. */
+  type?: "url";
+};
+
 export type ReportTable = {
   title: string;
-  columns: { key: string; label: string }[];
+  columns: ReportColumn[];
   rows: Record<string, string | number>[];
 };
 
@@ -287,8 +296,8 @@ async function buildApplicationsReport(organizationId: string, filters?: ReportF
       { key: "phone", label: "Phone Number" },
       { key: "memberType", label: "Member Type" },
       { key: "company", label: "Company" },
-      { key: "instagram", label: "Instagram" },
-      { key: "tiktok", label: "TikTok" },
+      { key: "instagram", label: "Instagram", type: "url" },
+      { key: "tiktok", label: "TikTok", type: "url" },
       { key: "youtube", label: "YouTube" },
       { key: "status", label: "Application Status" },
       { key: "submittedDate", label: "Submitted Date" },
@@ -313,8 +322,8 @@ async function buildApplicationsReport(organizationId: string, filters?: ReportF
       phone: a.phone,
       memberType: ROLE_LABELS[a.role],
       company: a.company ?? "—",
-      instagram: socialAccountLabel(a.instagram, "Instagram"),
-      tiktok: socialAccountLabel(a.tiktok, "TikTok"),
+      instagram: socialAccountExportUrl(a.instagram, parseInstagramInput),
+      tiktok: socialAccountExportUrl(a.tiktok, parseTiktokInput),
       youtube: a.youtube ?? "—",
       status: titleCase(a.status),
       submittedDate: format(a.createdAt, DATE_FORMAT),

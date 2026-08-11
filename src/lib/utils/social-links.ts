@@ -55,6 +55,25 @@ export function socialAccountLabel(value: string | null | undefined, platform: s
   return value.trim();
 }
 
+/**
+ * The exportable cell value for a social field (Applications CSV/XLSX
+ * export, or anywhere else a raw stored value needs to become the same
+ * full profile URL a live render site would link to) — reuses
+ * parseInstagramInput/parseTiktokInput/etc. so the export path never
+ * duplicates URL-building logic. "No Account Provided" for N/A-family
+ * input, the full canonical URL for a real handle or an already-complete
+ * URL, or the raw trimmed value as a last-resort fallback for anything
+ * that doesn't parse (never silently dropped).
+ */
+export function socialAccountExportUrl(
+  value: string | null | undefined,
+  parseInput: (value: string | null | undefined) => ParsedSocialInput | null
+): string {
+  if (!value?.trim()) return "";
+  if (isNoAccountValue(value)) return "No Account Provided";
+  return parseInput(value)?.url ?? value.trim();
+}
+
 /** Strips protocol, a known domain prefix, a leading "@", and anything after the handle (path/query/hash). */
 function extractHandle(value: string, domainRe: RegExp): string {
   let v = value.trim().replace(PROTOCOL_RE, "");
@@ -80,7 +99,7 @@ const TIKTOK_DOMAIN_RE = /^(www\.)?tiktok\.com\//i;
 const LINKEDIN_DOMAIN_RE = /^(www\.)?linkedin\.com\/(in\/)?/i;
 
 export function parseInstagramInput(value: string | null | undefined): ParsedSocialInput | null {
-  return parse(value, INSTAGRAM_DOMAIN_RE, (handle) => `https://instagram.com/${handle}`);
+  return parse(value, INSTAGRAM_DOMAIN_RE, (handle) => `https://www.instagram.com/${handle}`);
 }
 
 export function parseTiktokInput(value: string | null | undefined): ParsedSocialInput | null {
