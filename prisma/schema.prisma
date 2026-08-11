@@ -192,6 +192,15 @@ enum NotificationType {
   EVENT_WAITLIST_PROMOTED
   ADMIN_ACCESS_GRANTED
   SUPER_ADMIN_ACCESS_GRANTED
+  COMMUNITY_REPLY
+  COMMUNITY_REACTION
+  COMMUNITY_ANNOUNCEMENT_POSTED
+  COMMUNITY_POST_REPORTED
+  CAMPAIGN_APPROVAL_NEEDED
+  CONTRACT_SIGNED
+  CONTRACT_EXPIRING
+  TASK_ASSIGNED
+  INVOICE_OVERDUE
 }
 
 enum FeedbackCategory {
@@ -304,6 +313,14 @@ model Organization {
   kioskInteractionEvents    KioskInteractionEvent[]
   membershipFeatures        MembershipFeature[]
   membershipLifecycleEvents MembershipLifecycleEvent[]
+  communityPosts            CommunityPost[]
+  hashtags                  Hashtag[]
+  reactions                 Reaction[]
+  campaigns                 Campaign[]
+  contracts                 Contract[]
+  invoices                  Invoice[]
+  folders                   Folder[]
+  brandInvitations          BrandInvitation[]
 
   @@map("organizations")
 }
@@ -361,6 +378,17 @@ model Member {
   // own referralCode. agencyRole is only meaningful when agencyId is set.
   agencyId   String?           @db.Uuid
   agencyRole AgencyMemberRole?
+
+  // Brand Contact portal — set only for role=BRAND members representing one
+  // brand's portal access (parallel to agencyId, but a distinct connection:
+  // a Brand Contact isn't agency staff and has no agencyRole).
+  brandId String? @db.Uuid
+
+  // Agency CRM "Rate Card" — simple platform-to-rate structure (e.g.
+  // {"instagram_post": 500, "tiktok_video": 800}); intentionally a Json blob
+  // rather than a dedicated pricing-table model, matching the spec's single
+  // "Rate Card" field.
+  rateCard Json?
 
   commissionTierId String? @db.Uuid
 
@@ -422,6 +450,11 @@ model Member {
   notifyComments        Boolean @default(true)
   notifyMentions        Boolean @default(true)
 
+  // Community moderation — set by an admin with community.suspend; enforced
+  // in createCommunityPost/addCommunityComment, not just hidden in the UI.
+  communityPostingSuspendedAt     DateTime?
+  communityPostingSuspendedReason String?
+
   // Super Admin only — Settings > Developer Tools toggle. Swaps the UI's
   // data source to a purely in-memory demo dataset; never affects any row
   // other than this one.
@@ -437,6 +470,7 @@ model Member {
   rejectedBy     Member?         @relation("MemberRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
   referredBy     Member?         @relation("MemberReferrals", fields: [referredByMemberId], references: [id], onDelete: SetNull)
   agency         Member?         @relation("AgencyTeam", fields: [agencyId], references: [id], onDelete: SetNull)
+  brand          Brand?          @relation("BrandContacts", fields: [brandId], references: [id], onDelete: SetNull)
 
   approvedMembers                   Member[]                        @relation("MemberApprovedBy")
   rejectedMembers                   Member[]                        @relation("MemberRejectedBy")
@@ -453,7 +487,7 @@ model Member {
   qrAsset                           QRAsset?
   activityLogs                      ActivityLog[]
   notifications                     Notification[]
-  files                             File[]
+  files                             File[]                          @relation("FileUploadedBy")
   invitedInvitations                Invitation[]                    @relation("InvitedBy")
   comments                          Comment[]
   feedback                          Feedback[]
@@ -511,6 +545,28 @@ model Member {
   membershipUsageCounters           MembershipUsageCounter[]
   membershipLifecycleEvents         MembershipLifecycleEvent[]      @relation("MembershipLifecycleEventMember")
   membershipPricingSchedulesCreated MembershipPricingSchedule[]     @relation("MembershipPricingScheduleCreatedBy")
+  communityPosts                    CommunityPost[]
+  communityComments                 CommunityComment[]
+  communityPostMentions             CommunityPostMention[]          @relation("CommunityPostMentionMember")
+  communityPostReportsFiled         CommunityPostReport[]           @relation("CommunityPostReportReporter")
+  communityPostReportsReviewed      CommunityPostReport[]           @relation("CommunityPostReportReviewedBy")
+  reactions                         Reaction[]
+  campaignsAsAgency                 Campaign[]                      @relation("CampaignAgency")
+  campaignsCreated                  Campaign[]                      @relation("CampaignCreatedBy")
+  campaignCreatorEntries            CampaignCreator[]
+  campaignDeliverablesAssigned      CampaignDeliverable[]
+  contractsAsAgency                 Contract[]                      @relation("ContractAgency")
+  contractsAsCreator                Contract[]                      @relation("ContractCreator")
+  contractsCreated                  Contract[]                      @relation("ContractCreatedBy")
+  contractVersionsUploaded          ContractVersion[]
+  invoicesAsAgency                  Invoice[]                       @relation("InvoiceAgency")
+  invoicesCreated                   Invoice[]                       @relation("InvoiceCreatedBy")
+  foldersAsAgency                   Folder[]                        @relation("FolderAgency")
+  foldersCreated                    Folder[]                        @relation("FolderCreatedBy")
+  agencyFiles                       File[]                          @relation("AgencyFiles")
+  brandInvitationsAsAgency          BrandInvitation[]                @relation("BrandInvitationAgency")
+  brandInvitationsSent              BrandInvitation[]                @relation("BrandInvitationInvitedBy")
+  brandInvitationsAccepted          BrandInvitation[]                @relation("BrandInvitationAcceptedBy")
 
   @@index([organizationId])
   @@index([companyId])
@@ -518,6 +574,7 @@ model Member {
   @@index([role])
   @@index([referredByMemberId])
   @@index([agencyId])
+  @@index([brandId])
   @@map("members")
 }
 
@@ -600,15 +657,24 @@ model Company {
   @@map("companies")
 }
 
+enum BrandStatus {
+  PROSPECT
+  ACTIVE
+  INACTIVE
+}
+
 model Brand {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @db.Uuid
-  companyId      String?  @db.Uuid
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @db.Uuid
+  companyId      String?     @db.Uuid
   name           String
   logoUrl        String?
   description    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  industry       String?
+  status         BrandStatus @default(ACTIVE)
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company            Company?            @relation(fields: [companyId], references: [id])
@@ -617,6 +683,11 @@ model Brand {
   spaceSessions      SpaceSession[]
   qrAsset            QRAsset?
   projectInvitations ProjectInvitation[]
+  campaigns          Campaign[]
+  contracts          Contract[]
+  invoices           Invoice[]
+  brandContacts      Member[]            @relation("BrandContacts")
+  brandInvitations   BrandInvitation[]
 
   @@index([organizationId])
   @@index([companyId])
@@ -760,20 +831,35 @@ model ProjectCollaborationRequest {
   @@map("project_collaboration_requests")
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Exactly one of projectId/campaignId is set — enforced in the service layer
+// (same dual-nullable-FK convention as Comment) — an operational project
+// task or an agency campaign task, never both.
 model Task {
-  id          String    @id @default(uuid()) @db.Uuid
-  projectId   String    @db.Uuid
+  id          String       @id @default(uuid()) @db.Uuid
+  projectId   String?      @db.Uuid
+  campaignId  String?      @db.Uuid
   title       String
   description String?
-  status      String    @default("todo") // todo | in_progress | done
-  assigneeId  String?   @db.Uuid
+  status      String       @default("todo") // todo | in_progress | done
+  priority    TaskPriority @default(MEDIUM)
+  assigneeId  String?      @db.Uuid
   dueDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  comments Comment[]
 
   @@index([projectId])
+  @@index([campaignId])
   @@map("tasks")
 }
 
@@ -797,6 +883,7 @@ model Comment {
   id           String   @id @default(uuid()) @db.Uuid
   projectId    String?  @db.Uuid
   collabPostId String?  @db.Uuid
+  taskId       String?  @db.Uuid
   memberId     String   @db.Uuid
   body         String
   mentions     String[] @default([])
@@ -804,10 +891,12 @@ model Comment {
 
   project    Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   collabPost CollabPost? @relation(fields: [collabPostId], references: [id], onDelete: Cascade)
+  task       Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   member     Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([collabPostId])
+  @@index([taskId])
   // Supports the "member's own comment" branch of comments' RLS policy
   // (`"memberId" = rls.member_id()`), evaluated on every read.
   @@index([memberId])
@@ -1006,6 +1095,7 @@ model GMVTransaction {
   id              String         @id @default(uuid()) @db.Uuid
   memberId        String         @db.Uuid
   projectId       String?        @db.Uuid
+  campaignId      String?        @db.Uuid
   companyId       String?        @db.Uuid
   brandId         String?        @db.Uuid
   amount          Decimal        @db.Decimal(14, 2)
@@ -1020,6 +1110,7 @@ model GMVTransaction {
 
   member                Member                 @relation(fields: [memberId], references: [id], onDelete: Cascade)
   project               Project?               @relation(fields: [projectId], references: [id])
+  campaign              Campaign?              @relation(fields: [campaignId], references: [id])
   company               Company?               @relation(fields: [companyId], references: [id])
   brand                 Brand?                 @relation(fields: [brandId], references: [id])
   commissionTransaction CommissionTransaction?
@@ -1027,6 +1118,7 @@ model GMVTransaction {
   @@unique([syncSource, externalId])
   @@index([memberId])
   @@index([projectId])
+  @@index([campaignId])
   @@index([companyId])
   @@index([brandId])
   @@index([transactionDate])
@@ -1170,6 +1262,9 @@ model File {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @db.Uuid
   projectId      String?  @db.Uuid
+  campaignId     String?  @db.Uuid
+  agencyId       String?  @db.Uuid
+  folderId       String?  @db.Uuid
   uploadedById   String?  @db.Uuid
   name           String
   url            String
@@ -1179,10 +1274,16 @@ model File {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  uploadedBy   Member?      @relation(fields: [uploadedById], references: [id])
+  campaign     Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  agency       Member?      @relation("AgencyFiles", fields: [agencyId], references: [id], onDelete: Cascade)
+  folder       Folder?      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploadedBy   Member?      @relation("FileUploadedBy", fields: [uploadedById], references: [id])
 
   @@index([organizationId])
   @@index([projectId])
+  @@index([campaignId])
+  @@index([agencyId])
+  @@index([folderId])
   @@map("files")
 }
 
@@ -1390,6 +1491,9 @@ model DirectMessage {
   type           DirectMessageType @default(TEXT)
   body           String?
   attachmentUrl  String?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  isPinned       Boolean           @default(false)
   createdAt      DateTime          @default(now())
 
   conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -1398,6 +1502,194 @@ model DirectMessage {
   @@index([conversationId, createdAt])
   @@index([senderId])
   @@map("direct_messages")
+}
+
+// =============================================================================
+// COMMUNITY FEED
+// =============================================================================
+
+enum CommunityPostType {
+  UPDATE
+  QUESTION
+  OPPORTUNITY
+  WIN
+  COLLABORATION
+  ANNOUNCEMENT
+}
+
+enum CommunityAttachmentType {
+  IMAGE
+  VIDEO
+  PDF
+  DOCUMENT
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum ReactionTargetType {
+  POST
+  MESSAGE
+}
+
+enum ReactionEmoji {
+  LIKE
+  LOVE
+  FIRE
+  CLAP
+  LAUGH
+  CELEBRATE
+}
+
+model CommunityPost {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  authorId       String            @db.Uuid
+  type           CommunityPostType
+  body           String
+  isPinned       Boolean           @default(false)
+  isLocked       Boolean           @default(false)
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       Member                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  attachments  CommunityAttachment[]
+  comments     CommunityComment[]
+  hashtags     CommunityPostHashtag[]
+  mentions     CommunityPostMention[]
+  reports      CommunityPostReport[]
+
+  @@index([organizationId])
+  @@index([authorId])
+  @@index([type])
+  @@map("community_posts")
+}
+
+model CommunityAttachment {
+  id        String                  @id @default(uuid()) @db.Uuid
+  postId    String                  @db.Uuid
+  type      CommunityAttachmentType
+  url       String
+  fileName  String
+  mimeType  String?
+  sizeBytes Int?
+  createdAt DateTime                @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("community_attachments")
+}
+
+// A parentId-less comment is top-level; a comment with parentId is a nested
+// reply. Soft-deleted (not hard-deleted) so a "[deleted]" placeholder can
+// render mid-thread without orphaning any replies under it — same reasoning
+// as Member.deletedAt.
+model CommunityComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @db.Uuid
+  authorId  String    @db.Uuid
+  parentId  String?   @db.Uuid
+  body      String
+  editedAt  DateTime?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  post    CommunityPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  Member             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  CommunityComment?  @relation("CommunityCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies CommunityComment[] @relation("CommunityCommentReplies")
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("community_comments")
+}
+
+model Hashtag {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  tag            String
+  createdAt      DateTime @default(now())
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  posts        CommunityPostHashtag[]
+
+  @@unique([organizationId, tag])
+  @@map("hashtags")
+}
+
+model CommunityPostHashtag {
+  postId    String   @db.Uuid
+  hashtagId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  post    CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag Hashtag       @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, hashtagId])
+  @@index([hashtagId])
+  @@map("community_post_hashtags")
+}
+
+model CommunityPostMention {
+  postId    String   @db.Uuid
+  memberId  String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  post   CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  member Member        @relation("CommunityPostMentionMember", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([postId, memberId])
+  @@index([memberId])
+  @@map("community_post_mentions")
+}
+
+model CommunityPostReport {
+  id           String       @id @default(uuid()) @db.Uuid
+  postId       String       @db.Uuid
+  reporterId   String       @db.Uuid
+  reason       String
+  status       ReportStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?      @db.Uuid
+
+  post       CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter   Member        @relation("CommunityPostReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewedBy Member?       @relation("CommunityPostReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([postId])
+  @@index([status])
+  @@map("community_post_reports")
+}
+
+// Shared/polymorphic across CommunityPost and DirectMessage (targetType +
+// targetId, no DB-level FK — same "enforced in service layer" convention as
+// Comment's dual-nullable-FK). A member can add several *different* emoji to
+// the same target but not duplicate one, matching Slack-style reactions.
+model Reaction {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  targetType     ReactionTargetType
+  targetId       String             @db.Uuid
+  memberId       String             @db.Uuid
+  emoji          ReactionEmoji
+  createdAt      DateTime           @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([targetType, targetId, memberId, emoji])
+  @@index([targetType, targetId])
+  @@map("reactions")
 }
 
 // =============================================================================
@@ -1741,6 +2033,7 @@ enum ReferralStatus {
 
 enum AgencyMemberRole {
   OWNER
+  ADMIN
   MANAGER
   STAFF
 }
@@ -1845,6 +2138,12 @@ enum AgencyActivityType {
   FIRST_GMV
   GMV_MILESTONE
   PROFILE_UPDATED
+  CAMPAIGN_CREATED
+  CAMPAIGN_STATUS_CHANGED
+  CONTRACT_SENT
+  CONTRACT_SIGNED
+  INVOICE_PAID
+  TASK_ASSIGNED
 }
 
 // "Team Activity Feed" — a pre-rendered, human-readable narrative of events
@@ -1871,6 +2170,278 @@ model AgencyActivity {
 
   @@index([organizationId, agencyId, createdAt])
   @@map("agency_activities")
+}
+
+// =============================================================================
+// AGENCY CRM — Campaigns, Contracts (+ DocuSign), Invoices, Files/Folders,
+// Brand Contact portal. `agencyId` throughout points at the agency's
+// canonical Member row (id if they're the owner, or Member.agencyId if a
+// team member — same "agency = Member" pattern as everything above).
+// =============================================================================
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// Deliberately separate from Project — Project is this app's internal
+// space-booking/check-in/GMV-attribution container; a Campaign is a
+// brand-deal wrapper with its own approval workflow and creator roster.
+model Campaign {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  agencyId       String         @db.Uuid
+  brandId        String         @db.Uuid
+  title          String
+  description    String?
+  budget         Decimal        @default(0) @db.Decimal(14, 2)
+  status         CampaignStatus @default(DRAFT)
+  startDate      DateTime?
+  endDate        DateTime?
+  createdById    String         @db.Uuid
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("CampaignAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdBy    Member       @relation("CampaignCreatedBy", fields: [createdById], references: [id])
+
+  creators      CampaignCreator[]
+  deliverables  CampaignDeliverable[]
+  tasks         Task[]
+  files         File[]
+  gmvTransactions GMVTransaction[]
+  contracts     Contract[]
+  invoices      Invoice[]
+
+  @@index([organizationId, agencyId])
+  @@index([brandId])
+  @@index([status])
+  @@map("campaigns")
+}
+
+model CampaignCreator {
+  id         String   @id @default(uuid()) @db.Uuid
+  campaignId String   @db.Uuid
+  creatorId  String   @db.Uuid
+  addedAt    DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator  Member   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, creatorId])
+  @@index([creatorId])
+  @@map("campaign_creators")
+}
+
+enum DeliverableStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// Covers both "Deliverables" and "Approvals" as one status-transition model —
+// a Brand Contact's one write action is moving SUBMITTED -> APPROVED/REJECTED.
+model CampaignDeliverable {
+  id                 String            @id @default(uuid()) @db.Uuid
+  campaignId         String            @db.Uuid
+  title              String
+  description        String?
+  dueDate            DateTime?
+  status             DeliverableStatus @default(PENDING)
+  assignedCreatorId  String?           @db.Uuid
+  submittedUrl       String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  assignedCreator Member?  @relation(fields: [assignedCreatorId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([assignedCreatorId])
+  @@map("campaign_deliverables")
+}
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  SIGNED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+// At least one of campaignId/brandId/creatorMemberId is set — enforced in
+// the service layer, same dual-nullable-FK convention as Comment.
+// docusignEnvelopeId/sentAt/signedAt stay null until the (optional, only
+// configured once DOCUSIGN_* env vars are supplied) e-signature integration
+// is actually used — manual upload/version/status tracking works without it.
+model Contract {
+  id                 String         @id @default(uuid()) @db.Uuid
+  organizationId     String         @db.Uuid
+  agencyId           String         @db.Uuid
+  campaignId         String?        @db.Uuid
+  brandId            String?        @db.Uuid
+  creatorMemberId    String?        @db.Uuid
+  title              String
+  fileUrl            String
+  fileName           String
+  status             ContractStatus @default(DRAFT)
+  docusignEnvelopeId String?
+  sentAt             DateTime?
+  signedAt           DateTime?
+  expiresAt          DateTime?
+  createdById        String         @db.Uuid
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency        Member       @relation("ContractAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  campaign      Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  brand         Brand?       @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  creatorMember Member?      @relation("ContractCreator", fields: [creatorMemberId], references: [id], onDelete: SetNull)
+  createdBy     Member       @relation("ContractCreatedBy", fields: [createdById], references: [id])
+
+  versions ContractVersion[]
+
+  @@index([organizationId, agencyId])
+  @@index([campaignId])
+  @@index([brandId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("contracts")
+}
+
+model ContractVersion {
+  id             String   @id @default(uuid()) @db.Uuid
+  contractId     String   @db.Uuid
+  versionNumber  Int
+  fileUrl        String
+  fileName       String
+  uploadedById   String   @db.Uuid
+  note           String?
+  createdAt      DateTime @default(now())
+
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uploadedBy Member   @relation(fields: [uploadedById], references: [id])
+
+  @@index([contractId])
+  @@map("contract_versions")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  agencyId       String        @db.Uuid
+  campaignId     String?       @db.Uuid
+  brandId        String?       @db.Uuid
+  invoiceNumber  String
+  amount         Decimal       @db.Decimal(14, 2)
+  status         InvoiceStatus @default(DRAFT)
+  issueDate      DateTime      @default(now())
+  dueDate        DateTime
+  paidAt         DateTime?
+  fileUrl        String?
+  notes          String?
+  createdById    String        @db.Uuid
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("InvoiceAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  campaign     Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  brand        Brand?       @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  createdBy    Member       @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([agencyId, invoiceNumber])
+  @@index([organizationId, agencyId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+enum FolderVisibility {
+  AGENCY_ONLY
+  SHARED_WITH_CREATORS
+  SHARED_WITH_BRAND
+}
+
+model Folder {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  agencyId       String            @db.Uuid
+  parentFolderId String?           @db.Uuid
+  name           String
+  visibility     FolderVisibility  @default(AGENCY_ONLY)
+  createdById    String            @db.Uuid
+  createdAt      DateTime          @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("FolderAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  parentFolder Folder?      @relation("FolderChildren", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  createdBy    Member       @relation("FolderCreatedBy", fields: [createdById], references: [id])
+
+  children Folder[] @relation("FolderChildren")
+  files    File[]
+
+  @@index([organizationId, agencyId])
+  @@index([parentFolderId])
+  @@map("folders")
+}
+
+enum BrandInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+}
+
+// An agency Owner/Admin/Manager inviting a named brand contact by email —
+// mirrors AgencyInvitation's shape exactly. Acceptance creates/links a
+// Member(role: BRAND, brandId) who can then log into the Brand Contact
+// portal scoped to that one brand.
+model BrandInvitation {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organizationId String                 @db.Uuid
+  brandId        String                 @db.Uuid
+  agencyId       String                 @db.Uuid
+  fullName       String
+  email          String
+  token          String                 @unique
+  status         BrandInvitationStatus  @default(PENDING)
+  invitedById    String                 @db.Uuid
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedById   String?                @db.Uuid
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  agency       Member       @relation("BrandInvitationAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  invitedBy    Member       @relation("BrandInvitationInvitedBy", fields: [invitedById], references: [id])
+  acceptedBy   Member?      @relation("BrandInvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, brandId])
+  @@index([agencyId])
+  @@index([email])
+  @@index([status])
+  @@map("brand_invitations")
 }
 
 // One entry per legal document a signup flow requires explicit consent for.

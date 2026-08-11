@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { Loader2, User, Mail, Phone, Users2, Link2 } from "lucide-react";
 import { submitApplicationAction, type SubmitApplicationState } from "@/features/applications/services/actions";
-import { APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
+import { PUBLIC_APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
 import { AuthInput } from "@/features/auth/components/auth-input";
 import { AuthSelect } from "@/features/auth/components/auth-select";
 import { LegalConsentField } from "@/features/legal/components/legal-consent-field";
@@ -97,7 +97,7 @@ export function ApplyFormScreen({ onSubmitted, onCancel }: { onSubmitted: () => 
             error={fieldErrors?.role}
             required
           >
-            {APPLICANT_ROLE_VALUES.map((role) => (
+            {PUBLIC_APPLICANT_ROLE_VALUES.map((role) => (
               <option key={role} value={role} className="text-black">
                 {ROLE_LABELS[role]}
               </option>

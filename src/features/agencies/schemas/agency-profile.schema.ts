@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput } from "@/lib/utils/social-links";
+import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput, isNoAccountValue } from "@/lib/utils/social-links";
 
 /** "Agency Settings" — the fields an Owner/Manager can edit for their agency's public profile.
  * Agency ID, QR code, and referral link are read-only and rendered separately (AgencyReferralCard). */
@@ -15,13 +15,13 @@ export const agencyProfileSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
   tiktokUrl: z
     .string()
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
   youtubeUrl: z
     .string()
     .trim()
@@ -33,7 +33,7 @@ export const agencyProfileSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
 });
 
 export type AgencyProfileInput = z.infer<typeof agencyProfileSchema>;

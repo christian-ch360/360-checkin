@@ -437,7 +437,7 @@ function belongsToAgency(actor: { id: string; agencyId: string | null }, agencyI
  * canonical member who transferred ownership away is correctly no longer an admin. */
 export function isAgencyAdmin(actor: { id: string; agencyId: string | null; agencyRole: AgencyMemberRole | null }, agencyId: string): boolean {
   if (!belongsToAgency(actor, agencyId)) return false;
-  return actor.agencyRole === "OWNER" || actor.agencyRole === "MANAGER";
+  return actor.agencyRole === "OWNER" || actor.agencyRole === "ADMIN" || actor.agencyRole === "MANAGER";
 }
 
 /** True if `actor` holds OWNER for `agencyId` — gates ownership transfer specifically. */

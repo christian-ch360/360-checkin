@@ -22,3 +22,21 @@ export async function searchMembersForDm(organizationId: string, query: string, 
     take: 8,
   });
 }
+
+/** For @mention autocomplete (post/comment/DM composers) — matches on username, since that's what gets typed after "@". */
+export async function searchMembersForMention(organizationId: string, query: string, excludeMemberId: string) {
+  const trimmed = query.trim();
+
+  return prisma.member.findMany({
+    where: {
+      organizationId,
+      status: "ACTIVE",
+      deletedAt: null,
+      id: { not: excludeMemberId },
+      username: { not: null, contains: trimmed, mode: "insensitive" },
+    },
+    select: { id: true, username: true, fullName: true, profilePhotoUrl: true },
+    orderBy: { fullName: "asc" },
+    take: 6,
+  });
+}

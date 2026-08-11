@@ -8,11 +8,14 @@ import { notifyMembers } from "@/lib/notifications";
 import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/db/audit-log";
 import { ROLE_LABELS } from "@/features/members/role-labels";
+import { normalizeSocialHandleInput } from "@/lib/utils/social-links";
 import type { ApplicationInput } from "@/features/applications/schemas/application.schema";
 import { buildAcceptanceInputsFromRequest, recordApplicationLegalAcceptances } from "@/features/legal/services/legal.service";
 import { createReferralLinkForApplication } from "@/features/referrals/services/referral.service";
 import { checkAgencyDuplicate, AgencyDuplicateError } from "@/features/agencies/services/agency-duplicate.service";
 import { getValidAgencyInvitation } from "@/features/agencies/services/agency-invitations.service";
+import { findEmailConflict, applicationConflictMessage, EmailConflictError } from "@/features/members/services/email-lookup.service";
+import { normalizeEmail } from "@/lib/utils/email";
 
 /**
  * Creates the MembershipApplication row only — no Supabase auth user, no
@@ -29,6 +32,16 @@ export async function submitApplication(input: ApplicationInput) {
   // nothing to fuzzy-match by name/website for. Skips Agency Uniqueness
   // entirely when present and still valid.
   const invitation = input.agencyInviteToken ? await getValidAgencyInvitation(input.agencyInviteToken) : null;
+
+  // "One email address can only belong to one CreatorHub360 account" —
+  // checked before anything is created. Never exposes which case it is to
+  // the caller directly; submitApplicationAction maps `conflict.kind` to
+  // one of the three applicant-facing messages (in progress / already a
+  // member / already used).
+  const emailConflict = await findEmailConflict(organization.id, input.email);
+  if (emailConflict) {
+    throw new EmailConflictError(applicationConflictMessage(emailConflict), emailConflict);
+  }
 
   let claimedMatch: { existingAgency: { id: string; fullName: string } } | undefined;
   if (!invitation) {
@@ -60,14 +73,18 @@ export async function submitApplication(input: ApplicationInput) {
   const applicationData: Prisma.MembershipApplicationUncheckedCreateInput = {
     organizationId: organization.id,
     fullName: input.fullName,
-    email: input.email,
+    email: normalizeEmail(input.email),
     phone: input.phone,
     role: input.role,
     company: input.company || null,
     website: input.website || null,
     businessRegistrationNumber: input.businessRegistrationNumber || null,
-    instagram: input.instagram || null,
-    tiktok: input.tiktok || null,
+    // "N/A"/"NA"/"n/a"/"na" satisfy the required-field validation (the
+    // applicant explicitly has no account) but must never be stored as the
+    // literal typed text — normalized to the shared NO_ACCOUNT sentinel so
+    // no render site ever mistakes it for a real handle.
+    instagram: normalizeSocialHandleInput(input.instagram),
+    tiktok: normalizeSocialHandleInput(input.tiktok),
     youtube: input.youtube || null,
     city: input.city || null,
     state: input.state || null,
@@ -79,7 +96,6 @@ export async function submitApplication(input: ApplicationInput) {
     claimRequestNote: !invitation && claimedMatch ? input.claimRequestNote || null : null,
     agencyInviteToken: invitation ? input.agencyInviteToken : null,
   };
-  console.log("[submitApplication] PRISMA DATA", applicationData);
   const application = await prisma.membershipApplication.create({ data: applicationData });
 
   // Re-validates server-side regardless of what the client already checked —
@@ -153,7 +169,7 @@ export type ApplicationListFilters = {
   sort?: "newest" | "role";
 };
 
-function buildApplicationWhere(organizationId: string, filters: ApplicationListFilters): Prisma.MembershipApplicationWhereInput {
+export function buildApplicationWhere(organizationId: string, filters: ApplicationListFilters): Prisma.MembershipApplicationWhereInput {
   return {
     organizationId,
     ...(filters.status ? { status: filters.status } : {}),

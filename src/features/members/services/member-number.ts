@@ -21,3 +21,18 @@ export function isUniqueConstraintError(error: unknown): boolean {
     error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"
   );
 }
+
+/**
+ * Same P2002 check as `isUniqueConstraintError`, but also confirms the
+ * violated constraint actually covers `field` (via Prisma's `meta.target`,
+ * which for the Postgres provider is the list of column names involved) —
+ * so callers that retry on a generic constraint clash (e.g. memberNumber)
+ * can tell that apart from a genuine email collision instead of guessing.
+ */
+export function isUniqueConstraintErrorOnField(error: unknown, field: string): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") return false;
+  const target = error.meta?.target;
+  if (Array.isArray(target)) return target.includes(field);
+  if (typeof target === "string") return target.includes(field);
+  return false;
+}

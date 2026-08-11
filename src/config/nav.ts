@@ -18,6 +18,8 @@ import {
   Megaphone,
   Palette,
   FileSpreadsheet,
+  Sparkles,
+  Copy,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import type { AccentName } from "@/config/nav-colors";
@@ -54,9 +56,10 @@ export const CREATOR_NAV_SECTIONS: NavSection[] = [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, accent: "blue" },
       { title: "Spaces", href: "/spaces", icon: DoorOpen, accent: "cyan" },
       { title: "Messages", href: "/messages", icon: MessageSquare, accent: "purple" },
-      { title: "Community", href: "/collab-hub", icon: Handshake, accent: "violet" },
+      { title: "Community", href: "/community", icon: Sparkles, accent: "violet" },
+      { title: "Marketplace", href: "/collab-hub", icon: Handshake, accent: "indigo" },
       { title: "Projects", href: "/projects", icon: FolderKanban, accent: "indigo", permission: "projects.view" },
-      { title: "Agency", href: "/agency", icon: Megaphone, accent: "amber", memberRoles: ["AGENCY"] },
+      { title: "Agency", href: "/agency", icon: Megaphone, accent: "amber", memberRoles: ["AGENCY", "BRAND"] },
       { title: "Profile", href: "/profile", icon: CircleUserRound, accent: "gray" },
     ],
   },
@@ -68,8 +71,10 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, accent: "blue" },
       { title: "Members", href: "/members", icon: Users, accent: "blue", permission: "members.view" },
-      { title: "Community", href: "/collab-hub", icon: Handshake, accent: "violet" },
+      { title: "Community", href: "/community", icon: Sparkles, accent: "violet" },
+      { title: "Marketplace", href: "/collab-hub", icon: Handshake, accent: "indigo" },
       { title: "Applications", href: "/admin/applications", icon: FileCheck2, accent: "amber", permission: "members.approve" },
+      { title: "Duplicate Emails", href: "/admin/duplicate-emails", icon: Copy, accent: "pink", permission: "members.manage" },
       { title: "Operations", href: "/check-in", icon: QrCode, accent: "emerald", permission: "checkin.manage" },
       { title: "Analytics", href: "/analytics", icon: BarChart3, accent: "emerald", permission: "reports.view" },
       { title: "Reports", href: "/reports", icon: FileSpreadsheet, accent: "teal", permission: "reports.view" },

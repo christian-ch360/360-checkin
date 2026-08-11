@@ -3,6 +3,7 @@
 import { applicationSchema } from "@/features/applications/schemas/application.schema";
 import { submitApplication } from "@/features/applications/services/applications.service";
 import { AgencyDuplicateError } from "@/features/agencies/services/agency-duplicate.service";
+import { EmailConflictError } from "@/features/members/services/email-lookup.service";
 import { Prisma } from "@prisma/client";
 
 export type FieldErrors = Record<string, string>;
@@ -93,6 +94,10 @@ export async function submitApplicationAction(
     if (err instanceof AgencyDuplicateError) {
       console.log("[submitApplicationAction] AGENCY DUPLICATE", err.message);
       return { error: err.message, existingAgencyId: err.existingAgencyId, existingAgencyName: err.existingAgencyName };
+    }
+
+    if (err instanceof EmailConflictError) {
+      return { error: err.message, fieldErrors: { email: err.message } };
     }
 
     console.error("[submitApplicationAction] DATABASE ERROR", err);

@@ -24,7 +24,7 @@ import {
 import { submitApplicationAction, type SubmitApplicationState } from "@/features/applications/services/actions";
 import { agencyMemberRoleValues } from "@/features/applications/schemas/application.schema";
 import { validateReferralCodeAction } from "@/features/referrals/services/referral-actions";
-import { APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
+import { PUBLIC_APPLICANT_ROLE_VALUES, ROLE_LABELS } from "@/features/members/role-labels";
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { AuthInput } from "@/features/auth/components/auth-input";
 import { AuthSelect } from "@/features/auth/components/auth-select";
@@ -102,7 +102,7 @@ export function ApplyForm({ plan, message, defaultFullName, defaultEmail, referr
     null
   );
   const [socialHandle, setSocialHandle] = useState("");
-  const role: (typeof APPLICANT_ROLE_VALUES)[number] = agencyInvite ? "AGENCY" : "CREATOR";
+  const role: (typeof PUBLIC_APPLICANT_ROLE_VALUES)[number] = agencyInvite ? "AGENCY" : "CREATOR";
 
   if (state?.success) {
     return (
@@ -311,7 +311,7 @@ export function ApplyFormLegacy({ plan, message, defaultFullName, defaultEmail, 
     submitApplicationAction,
     null
   );
-  const [role, setRole] = useState<(typeof APPLICANT_ROLE_VALUES)[number]>(agencyInvite ? "AGENCY" : "CREATOR");
+  const [role, setRole] = useState<(typeof PUBLIC_APPLICANT_ROLE_VALUES)[number]>(agencyInvite ? "AGENCY" : "CREATOR");
   const [claimIntent, setClaimIntent] = useState(false);
   const [claimRole, setClaimRole] = useState<(typeof agencyMemberRoleValues)[number]>("STAFF");
   const [claimRequestNote, setClaimRequestNote] = useState("");
@@ -520,11 +520,11 @@ export function ApplyFormLegacy({ plan, message, defaultFullName, defaultEmail, 
           id="role"
           icon={<Users2 className="size-[18px]" />}
           value={role}
-          onChange={(e) => setRole(e.target.value as (typeof APPLICANT_ROLE_VALUES)[number])}
+          onChange={(e) => setRole(e.target.value as (typeof PUBLIC_APPLICANT_ROLE_VALUES)[number])}
           disabled={Boolean(agencyInvite)}
           required
         >
-          {APPLICANT_ROLE_VALUES.map((r) => (
+          {PUBLIC_APPLICANT_ROLE_VALUES.map((r) => (
             <option key={r} value={r} className="text-black">
               {ROLE_LABELS[r]}
             </option>

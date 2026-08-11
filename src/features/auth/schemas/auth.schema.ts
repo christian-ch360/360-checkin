@@ -1,22 +1,24 @@
 import { z } from "zod";
-import { APPLICANT_ROLE_VALUES } from "@/features/members/role-labels";
-import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput } from "@/lib/utils/social-links";
+import { PUBLIC_APPLICANT_ROLE_VALUES } from "@/features/members/role-labels";
+import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput, isNoAccountValue } from "@/lib/utils/social-links";
 
 export const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
-// The applicant-selectable roles — single source of truth is
-// features/members/role-labels.ts's APPLICANT_ROLE_VALUES.
-export const appliedRoleValues = APPLICANT_ROLE_VALUES;
+// The applicant-selectable roles for this public/invited self-service form —
+// single source of truth is features/members/role-labels.ts's
+// PUBLIC_APPLICANT_ROLE_VALUES. Excludes STAFF: that role can only be
+// assigned by an admin from the Admin Dashboard, never through signup.
+export const appliedRoleValues = PUBLIC_APPLICANT_ROLE_VALUES;
 
 export const signupSchema = z
   .object({
     fullName: z.string().min(2, "Enter your full name"),
-    email: z.string().email("Enter a valid email address"),
+    email: z.string().trim().toLowerCase().email("Enter a valid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
     phone: z.string().optional().or(z.literal("")),
@@ -28,13 +30,13 @@ export const signupSchema = z
       .trim()
       .optional()
       .or(z.literal(""))
-      .refine((v) => !v || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
+      .refine((v) => !v || isNoAccountValue(v) || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
     tiktokUrl: z
       .string()
       .trim()
       .optional()
       .or(z.literal(""))
-      .refine((v) => !v || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
+      .refine((v) => !v || isNoAccountValue(v) || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
     youtubeUrl: z
       .string()
       .trim()
@@ -46,7 +48,7 @@ export const signupSchema = z
       .trim()
       .optional()
       .or(z.literal(""))
-      .refine((v) => !v || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
+      .refine((v) => !v || isNoAccountValue(v) || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
     followerCount: z.string().optional().or(z.literal("")),
     platforms: z.string().optional().or(z.literal("")),
     agencyCode: z.string().optional().or(z.literal("")),
@@ -92,7 +94,7 @@ export const resetPasswordSchema = z
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
 });
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

@@ -1,7 +1,22 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Users, Clock, DollarSign, TrendingUp, Trophy, Users2, Settings2 } from "lucide-react";
+import {
+  Users,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  Trophy,
+  Users2,
+  Settings2,
+  Briefcase,
+  Megaphone,
+  FileSignature,
+  Receipt,
+  ListChecks,
+  FolderOpen,
+  ArrowRight,
+} from "lucide-react";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { prisma } from "@/lib/db/prisma";
 import { PageHeader } from "@/components/shared/page-header";
@@ -24,6 +39,14 @@ import { PendingRequestsCard } from "@/features/referrals/components/pending-req
 import { getAgencyTeam, getPendingAccessRequestsForAgency, isAgencyAdmin } from "@/features/agencies/services/agency-access.service";
 import { AgencyTeamCard } from "@/features/agencies/components/agency-team-card";
 import { PendingAccessRequestsCard } from "@/features/agencies/components/pending-access-requests-card";
+import { listBrandsForAgency } from "@/features/brands/services/brands.service";
+import { getCampaignStatusCounts } from "@/features/agencies/services/campaign.service";
+import { getExpiringContracts, listContracts } from "@/features/agencies/services/contract.service";
+import { getInvoiceSummary } from "@/features/agencies/services/invoice.service";
+import { listAgencyTasksDueSoon } from "@/features/agencies/services/agency-task.service";
+import { getBrandPortalOverview } from "@/features/agencies/services/brand-portal.service";
+import { BrandPortalView } from "@/features/agencies/components/brand-portal-view";
+import { TaskPriorityBadge } from "@/features/agencies/components/crm-status-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +65,15 @@ function initials(name: string) {
 
 export default async function AgencyDashboardPage() {
   const actor = await requireCurrentMember();
+
+  // Brand Contacts get a completely different, read-mostly view scoped to
+  // their one brand — not the agency's own operational dashboard below.
+  if (actor.role === "BRAND") {
+    if (!actor.brandId) redirect("/dashboard");
+    const overview = await getBrandPortalOverview(actor.organizationId, actor.brandId);
+    if (!overview.brand) redirect("/dashboard");
+    return <BrandPortalView overview={overview} />;
+  }
 
   // Self-service only for now — an agency (or a team member who joined an
   // existing one via the Existing Agency Claim Workflow) sees their own
@@ -96,16 +128,39 @@ export default async function AgencyDashboardPage() {
 
   const canManageAgency = isAgencyAdmin(actor, effectiveAgencyId);
 
-  const [data, referrals, requestStats, pendingRequests, team, pendingAccessRequests] = await Promise.all([
+  const [
+    data,
+    referrals,
+    requestStats,
+    pendingRequests,
+    team,
+    pendingAccessRequests,
+    brands,
+    campaignStatusCounts,
+    expiringContracts,
+    allContracts,
+    invoiceSummary,
+    dueSoonTasks,
+  ] = await Promise.all([
     getAgencyDashboardData(actor.organizationId, effectiveAgencyId),
     listReferralsForAgency(actor.organizationId, effectiveAgencyId),
     getAgencyRequestStats(actor.organizationId, effectiveAgencyId),
     getPendingRequestsForAgency(actor.organizationId, effectiveAgencyId),
     getAgencyTeam(actor.organizationId, effectiveAgencyId),
     canManageAgency ? getPendingAccessRequestsForAgency(actor.organizationId, effectiveAgencyId) : Promise.resolve([]),
+    listBrandsForAgency(actor.organizationId, effectiveAgencyId),
+    getCampaignStatusCounts(actor.organizationId, effectiveAgencyId),
+    getExpiringContracts(actor.organizationId, effectiveAgencyId),
+    listContracts(actor.organizationId, effectiveAgencyId),
+    getInvoiceSummary(actor.organizationId, effectiveAgencyId),
+    listAgencyTasksDueSoon(actor.organizationId, effectiveAgencyId),
   ]);
 
   if (!data) redirect("/dashboard");
+
+  const activeCampaigns = campaignStatusCounts.ACTIVE ?? 0;
+  const pendingCampaigns = campaignStatusCounts.PENDING_APPROVAL ?? 0;
+  const contractsSigned = allContracts.filter((c) => c.status === "SIGNED").length;
 
   return (
     <div className="space-y-8">
@@ -133,6 +188,28 @@ export default async function AgencyDashboardPage() {
           </div>
         }
       />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {[
+          { href: "/agency/creators", label: "Creators", icon: Users, value: String(data.connectedCreators.length) },
+          { href: "/agency/brands", label: "Brands", icon: Briefcase, value: String(brands.length) },
+          { href: "/agency/campaigns", label: "Campaigns", icon: Megaphone, value: String(activeCampaigns) },
+          { href: "/agency/contracts", label: "Contracts", icon: FileSignature, value: String(contractsSigned) },
+          { href: "/agency/files", label: "Files", icon: FolderOpen, value: "" },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex items-center justify-between gap-3 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:bg-muted/40"
+          >
+            <div className="flex items-center gap-2.5">
+              <item.icon className="size-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{item.label}</span>
+            </div>
+            {item.value && <span className="text-sm font-semibold tabular-nums text-muted-foreground">{item.value}</span>}
+          </Link>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-1">
@@ -188,6 +265,102 @@ export default async function AgencyDashboardPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Receipt className="size-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Revenue</CardTitle>
+            </div>
+            <span className="text-xs text-muted-foreground">{pendingCampaigns} campaign(s) pending approval</span>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <StatCard label="Invoiced (Paid)" value={formatCompactCurrency(invoiceSummary.paidTotal)} icon={DollarSign} accent="success" />
+            <StatCard
+              label="Outstanding"
+              value={formatCompactCurrency(invoiceSummary.outstandingTotal)}
+              icon={Clock}
+              accent={invoiceSummary.outstandingTotal > 0 ? "warning" : "default"}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <FileSignature className="size-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Contracts Expiring Soon</CardTitle>
+            </div>
+            <Link href="/agency/contracts" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              View all <ArrowRight className="size-3" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {expiringContracts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No contracts expiring in the next 30 days.</p>
+            ) : (
+              <ul className="space-y-2">
+                {expiringContracts.slice(0, 5).map((c) => (
+                  <li key={c.id} className="flex items-center justify-between gap-3 rounded-lg border p-2.5 text-sm">
+                    <span className="font-medium">{c.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {c.expiresAt ? format(c.expiresAt, "MMM d, yyyy") : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold tracking-tight">Open Tasks</h2>
+          <Link href="/agency/campaigns" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            View campaigns <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        {dueSoonTasks.length === 0 ? (
+          <EmptyState icon={ListChecks} title="No open tasks" description="Tasks created inside a campaign will show up here, soonest due date first." />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Task</TableHead>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead className="text-right">Due</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dueSoonTasks.map((task) => (
+                  <TableRow key={task.id}>
+                    <TableCell className="text-sm font-medium">{task.title}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {task.campaign ? (
+                        <Link href={`/agency/campaigns/${task.campaign.id}`} className="hover:underline">
+                          {task.campaign.title}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <TaskPriorityBadge priority={task.priority} />
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {task.dueDate ? format(task.dueDate, "MMM d, yyyy") : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
       {canManageAgency && (

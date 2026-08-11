@@ -36,6 +36,13 @@ import {
   Users,
   ShieldCheck,
   ShieldPlus,
+  Reply,
+  Sparkles,
+  Megaphone,
+  Flag,
+  FileSignature,
+  ListChecks,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
@@ -84,4 +91,13 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, { icon: LucideIcon
   EVENT_WAITLIST_PROMOTED: { icon: CalendarCheck2 },
   ADMIN_ACCESS_GRANTED: { icon: ShieldCheck },
   SUPER_ADMIN_ACCESS_GRANTED: { icon: ShieldPlus },
+  COMMUNITY_REPLY: { icon: Reply },
+  COMMUNITY_REACTION: { icon: Sparkles },
+  COMMUNITY_ANNOUNCEMENT_POSTED: { icon: Megaphone },
+  COMMUNITY_POST_REPORTED: { icon: Flag },
+  CAMPAIGN_APPROVAL_NEEDED: { icon: Megaphone },
+  CONTRACT_SIGNED: { icon: FileSignature },
+  CONTRACT_EXPIRING: { icon: FileSignature },
+  TASK_ASSIGNED: { icon: ListChecks },
+  INVOICE_OVERDUE: { icon: Receipt },
 };

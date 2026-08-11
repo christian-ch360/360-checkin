@@ -1,9 +1,14 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
+import type { MemberRole, MembershipApplicationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { formatDuration } from "@/lib/utils/format";
+import { ROLE_LABELS } from "@/features/members/role-labels";
+import { buildApplicationWhere } from "@/features/applications/services/applications.service";
+import { formatLocation } from "@/features/applications/utils/location";
+import { socialAccountLabel } from "@/lib/utils/social-links";
 
 export const REPORT_TYPES = [
   "members",
@@ -12,6 +17,7 @@ export const REPORT_TYPES = [
   "hours",
   "gmv",
   "projects",
+  "applications",
 ] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -22,7 +28,22 @@ export type ReportTable = {
   rows: Record<string, string | number>[];
 };
 
-export async function buildReport(organizationId: string, type: ReportType): Promise<ReportTable> {
+/**
+ * Only "applications" reads any of these today — every other report is a
+ * full org-scoped dump with no filter support. Kept generic (raw strings,
+ * not the enum types) because it's populated straight from untrusted
+ * /api/reports/[type] query params; buildApplicationsReport is responsible
+ * for validating each value before it reaches Prisma.
+ */
+export type ReportFilters = {
+  status?: string;
+  search?: string;
+  role?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export async function buildReport(organizationId: string, type: ReportType, filters?: ReportFilters): Promise<ReportTable> {
   switch (type) {
     case "members":
       return buildMembersReport(organizationId);
@@ -36,6 +57,8 @@ export async function buildReport(organizationId: string, type: ReportType): Pro
       return buildGMVReport(organizationId);
     case "projects":
       return buildProjectSummaryReport(organizationId);
+    case "applications":
+      return buildApplicationsReport(organizationId, filters);
   }
 }
 
@@ -212,6 +235,98 @@ async function buildProjectSummaryReport(organizationId: string): Promise<Report
       budget: Number(p.budget),
       gmv: Number(p.gmv),
       commissionPool: Number(p.commissionPool),
+    })),
+  };
+}
+
+const APPLICATION_STATUS_VALUES: readonly MembershipApplicationStatus[] = ["PENDING", "APPROVED", "REJECTED"];
+const APPLICATION_ROLE_VALUES = Object.keys(ROLE_LABELS) as MemberRole[];
+
+function titleCase(value: string): string {
+  return value.charAt(0) + value.slice(1).toLowerCase();
+}
+
+async function buildApplicationsReport(organizationId: string, filters?: ReportFilters): Promise<ReportTable> {
+  const status = filters?.status && (APPLICATION_STATUS_VALUES as string[]).includes(filters.status)
+    ? (filters.status as MembershipApplicationStatus)
+    : undefined;
+  const role = filters?.role && (APPLICATION_ROLE_VALUES as string[]).includes(filters.role)
+    ? (filters.role as MemberRole)
+    : undefined;
+
+  const where = buildApplicationWhere(organizationId, { status, role, search: filters?.search });
+
+  // "Custom Date Range" filter — applied on top of buildApplicationWhere's
+  // existing status/role/search logic rather than duplicating it, since date
+  // range isn't a filter any other application surface needs today.
+  const fromDate = filters?.dateFrom ? new Date(filters.dateFrom) : undefined;
+  const toDate = filters?.dateTo ? new Date(filters.dateTo) : undefined;
+  const validFrom = fromDate && !Number.isNaN(fromDate.getTime()) ? fromDate : undefined;
+  const validTo = toDate && !Number.isNaN(toDate.getTime()) ? toDate : undefined;
+  if (validFrom || validTo) {
+    where.createdAt = {
+      ...(validFrom ? { gte: startOfDay(validFrom) } : {}),
+      ...(validTo ? { lte: endOfDay(validTo) } : {}),
+    };
+  }
+
+  const applications = await prisma.membershipApplication.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: { reviewedBy: { select: { fullName: true } } },
+  });
+
+  const DATE_FORMAT = "MMM d, yyyy h:mm a";
+
+  return {
+    title: "Applications Report",
+    columns: [
+      { key: "id", label: "Application ID" },
+      { key: "fullName", label: "Full Name" },
+      { key: "email", label: "Email" },
+      { key: "phone", label: "Phone Number" },
+      { key: "memberType", label: "Member Type" },
+      { key: "company", label: "Company" },
+      { key: "instagram", label: "Instagram" },
+      { key: "tiktok", label: "TikTok" },
+      { key: "youtube", label: "YouTube" },
+      { key: "status", label: "Application Status" },
+      { key: "submittedDate", label: "Submitted Date" },
+      { key: "reviewedDate", label: "Reviewed Date" },
+      { key: "reviewedBy", label: "Reviewed By" },
+      { key: "approvalDate", label: "Approval Date" },
+      { key: "rejectionReason", label: "Rejection Reason" },
+      { key: "notes", label: "Internal Notes" },
+      { key: "location", label: "Location" },
+      { key: "website", label: "Website" },
+      { key: "businessRegistrationNumber", label: "Business Registration #" },
+      { key: "referredBy", label: "Referred By" },
+    ],
+    // Rejection Reason and Internal Notes both read the same underlying
+    // `notes` column — MembershipApplication has no dedicated rejection-
+    // reason field; rejectApplicationAction persists the admin's typed
+    // reason directly into `notes` (see review-actions.ts).
+    rows: applications.map((a) => ({
+      id: a.id,
+      fullName: a.fullName,
+      email: a.email,
+      phone: a.phone,
+      memberType: ROLE_LABELS[a.role],
+      company: a.company ?? "—",
+      instagram: socialAccountLabel(a.instagram, "Instagram"),
+      tiktok: socialAccountLabel(a.tiktok, "TikTok"),
+      youtube: a.youtube ?? "—",
+      status: titleCase(a.status),
+      submittedDate: format(a.createdAt, DATE_FORMAT),
+      reviewedDate: a.reviewedAt ? format(a.reviewedAt, DATE_FORMAT) : "—",
+      reviewedBy: a.reviewedBy?.fullName ?? "—",
+      approvalDate: a.status === "APPROVED" && a.reviewedAt ? format(a.reviewedAt, DATE_FORMAT) : "—",
+      rejectionReason: a.status === "REJECTED" ? (a.notes ?? "—") : "—",
+      notes: a.notes ?? "—",
+      location: formatLocation(a.city, a.state, a.country) ?? "—",
+      website: a.website ?? "—",
+      businessRegistrationNumber: a.businessRegistrationNumber ?? "—",
+      referredBy: a.referredBy ?? "—",
     })),
   };
 }

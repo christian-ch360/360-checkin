@@ -1,10 +1,14 @@
 "use server";
 
+import { z } from "zod";
 import { directMessageSchema, type DirectMessageInput } from "@/features/messaging/schemas/direct-message.schema";
 import { prisma } from "@/lib/db/prisma";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { createNotification } from "@/lib/notifications";
 import { EmailService } from "@/lib/email/email-service";
+import { toggleReaction } from "@/features/reactions/services/reaction-actions";
+import { uploadMessagingAttachment } from "@/lib/supabase/storage";
+import type { ReactionEmoji } from "@prisma/client";
 
 export type ConversationActionResult =
   | { success: true; conversationId: string }
@@ -176,6 +180,22 @@ export async function sendDirectMessage(
   return { success: true, message };
 }
 
+/** Uploads a real file/image to Storage, then sends it the same way sendDirectMessage does — replaces the old URL-paste flow. */
+export async function sendDirectMessageAttachment(conversationId: string, formData: FormData): Promise<SendDirectMessageResult> {
+  const actor = await requireCurrentMember();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { success: false, error: "No file selected." };
+  }
+
+  const path = `${actor.organizationId}/${conversationId}/${crypto.randomUUID()}-${file.name}`;
+  const url = await uploadMessagingAttachment(path, file);
+  const type = file.type.startsWith("image/") ? "IMAGE" : "FILE";
+
+  return sendDirectMessage(conversationId, { type, attachmentUrl: url, body: file.name });
+}
+
 export async function markDirectConversationRead(conversationId: string): Promise<{ success: boolean }> {
   const actor = await requireCurrentMember();
   const participant = await prisma.directConversationParticipant.findFirst({
@@ -202,4 +222,109 @@ export async function setDirectTyping(conversationId: string): Promise<{ success
     data: { typingAt: new Date() },
   });
   return { success: true };
+}
+
+export type DirectMessageActionResult = { success: true } | { success: false; error: string };
+
+const editMessageSchema = z.object({ body: z.string().trim().min(1, "Message can't be empty").max(2000) });
+
+export async function editDirectMessage(messageId: string, body: string): Promise<DirectMessageActionResult> {
+  const actor = await requireCurrentMember();
+
+  const parsed = editMessageSchema.safeParse({ body });
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const message = await prisma.directMessage.findFirst({
+    where: { id: messageId, conversation: { organizationId: actor.organizationId } },
+  });
+  if (!message || message.deletedAt) return { success: false, error: "Message not found." };
+  if (message.senderId !== actor.id) return { success: false, error: "You can only edit your own messages." };
+  if (message.type !== "TEXT") return { success: false, error: "Only text messages can be edited." };
+
+  await prisma.directMessage.update({
+    where: { id: messageId },
+    data: { body: parsed.data.body, editedAt: new Date() },
+  });
+
+  return { success: true };
+}
+
+export async function deleteDirectMessage(messageId: string): Promise<DirectMessageActionResult> {
+  const actor = await requireCurrentMember();
+
+  const message = await prisma.directMessage.findFirst({
+    where: { id: messageId, conversation: { organizationId: actor.organizationId } },
+  });
+  if (!message) return { success: false, error: "Message not found." };
+  if (message.senderId !== actor.id) return { success: false, error: "You can only delete your own messages." };
+
+  await prisma.directMessage.update({
+    where: { id: messageId },
+    data: { deletedAt: new Date(), isPinned: false },
+  });
+
+  return { success: true };
+}
+
+async function setMessagePinned(messageId: string, isPinned: boolean): Promise<DirectMessageActionResult> {
+  const actor = await requireCurrentMember();
+
+  const message = await prisma.directMessage.findFirst({
+    where: { id: messageId, conversation: { organizationId: actor.organizationId } },
+    include: { conversation: { include: { participants: true } } },
+  });
+  if (!message || message.deletedAt) return { success: false, error: "Message not found." };
+
+  const isParticipant = message.conversation.participants.some((p) => p.memberId === actor.id);
+  if (!isParticipant) return { success: false, error: "You're not part of this conversation." };
+
+  await prisma.directMessage.update({ where: { id: messageId }, data: { isPinned } });
+  return { success: true };
+}
+
+export async function pinDirectMessage(messageId: string) {
+  return setMessagePinned(messageId, true);
+}
+export async function unpinDirectMessage(messageId: string) {
+  return setMessagePinned(messageId, false);
+}
+
+export async function toggleMessageReaction(messageId: string, emoji: ReactionEmoji) {
+  return toggleReaction("MESSAGE", messageId, emoji);
+}
+
+export async function searchDirectMessages(query: string) {
+  const actor = await requireCurrentMember();
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  return prisma.directMessage.findMany({
+    where: {
+      deletedAt: null,
+      type: "TEXT",
+      body: { contains: trimmed, mode: "insensitive" },
+      conversation: { organizationId: actor.organizationId, participants: { some: { memberId: actor.id } } },
+    },
+    include: {
+      sender: { select: { id: true, fullName: true, profilePhotoUrl: true } },
+      conversation: { select: { id: true, isGroup: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 30,
+  });
+}
+
+export async function listPinnedMessages(conversationId: string) {
+  const actor = await requireCurrentMember();
+
+  const participant = await prisma.directConversationParticipant.findFirst({
+    where: { conversationId, memberId: actor.id },
+  });
+  if (!participant) return [];
+
+  return prisma.directMessage.findMany({
+    where: { conversationId, isPinned: true, deletedAt: null },
+    include: { sender: { select: { id: true, fullName: true, profilePhotoUrl: true } } },
+    orderBy: { createdAt: "desc" },
+  });
 }

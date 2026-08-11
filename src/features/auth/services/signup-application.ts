@@ -2,7 +2,8 @@ import "server-only";
 
 import type { Invitation } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { generateMemberNumber, isUniqueConstraintError } from "@/features/members/services/member-number";
+import { generateMemberNumber, isUniqueConstraintError, isUniqueConstraintErrorOnField } from "@/features/members/services/member-number";
+import { normalizeEmail } from "@/lib/utils/email";
 import { ensureQRAsset } from "@/features/qr/services/qr-asset.service";
 import { EmailService } from "@/lib/email/email-service";
 import type { SignupInput } from "@/features/auth/schemas/auth.schema";
@@ -79,7 +80,7 @@ export async function createMemberFromSignup(authUserId: string, input: SignupIn
           memberNumber: await generateMemberNumber(),
           authUserId,
           fullName: input.fullName,
-          email: input.email,
+          email: normalizeEmail(input.email),
           phone: input.phone || null,
           companyId,
           role: input.appliedRole,
@@ -102,6 +103,11 @@ export async function createMemberFromSignup(authUserId: string, input: SignupIn
       });
       break;
     } catch (err) {
+      // An email collision is never a memberNumber race — retrying just
+      // burns attempts before rethrowing the same error, so bail out
+      // immediately and let the caller (signupAction) turn it into the
+      // friendly "already registered" message.
+      if (isUniqueConstraintErrorOnField(err, "email")) throw err;
       if (isUniqueConstraintError(err) && attempt < MAX_MEMBER_NUMBER_RETRIES - 1) continue;
       throw err;
     }

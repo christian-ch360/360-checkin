@@ -13,7 +13,7 @@ import {
 } from "@/features/applications/services/review-actions";
 import { ApplicationStatusBadge } from "@/features/applications/components/application-status-badge";
 import { ApplicationHistory, type ApplicationHistoryEntry } from "@/features/applications/components/application-history";
-import { instagramUrl, tiktokUrl, youtubeUrl } from "@/lib/utils/social-links";
+import { instagramUrl, tiktokUrl, youtubeUrl, isNoAccountValue } from "@/lib/utils/social-links";
 import { formatLocation } from "@/features/applications/utils/location";
 import { ROLE_LABELS } from "@/features/members/role-labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +81,8 @@ function SocialField({ label, url, rawValue }: { label: string; url: string | nu
           <span className="break-words">{label}</span>
           <ExternalLink className="size-3 shrink-0" />
         </a>
+      ) : isNoAccountValue(rawValue) ? (
+        <p className="text-sm text-muted-foreground">No {label} Account</p>
       ) : rawValue ? (
         <p className="text-sm break-words">{rawValue}</p>
       ) : (

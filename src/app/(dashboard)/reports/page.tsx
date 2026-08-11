@@ -19,6 +19,7 @@ const REPORT_META: Record<ReportType, { title: string; description: string }> = 
   hours: { title: "Hours Worked", description: "Total hours logged per member." },
   gmv: { title: "GMV", description: "Every GMV transaction with attribution." },
   projects: { title: "Projects", description: "Budget, GMV, and commission pool per project." },
+  applications: { title: "Applications", description: "Every membership application with status, review, and applicant details." },
 };
 
 export default async function ReportsPage() {

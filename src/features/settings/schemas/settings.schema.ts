@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { contentCategoryValues } from "@/features/members/constants/content-categories";
-import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput } from "@/lib/utils/social-links";
+import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput, isNoAccountValue } from "@/lib/utils/social-links";
 
 export const profileSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -29,13 +29,13 @@ export const collabProfileSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
   tiktokUrl: z
     .string()
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
   youtubeUrl: z
     .string()
     .trim()
@@ -47,7 +47,7 @@ export const collabProfileSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
   availableForCollab: z.boolean(),
   visibleInDirectory: z.boolean(),
 });
@@ -77,13 +77,13 @@ export const settingsProfileSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
   tiktokUrl: z
     .string()
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
   youtubeUrl: z
     .string()
     .trim()
@@ -95,7 +95,7 @@ export const settingsProfileSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
   availableForCollab: z.boolean(),
   visibleInDirectory: z.boolean(),
   // Round-trip only — see doc comment above.

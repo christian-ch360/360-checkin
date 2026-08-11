@@ -7,6 +7,7 @@ import { listApplications, getApplicationCounts } from "@/features/applications/
 import { ApplicationsFilters } from "@/features/applications/components/applications-filters";
 import { ApplicationsTable, type ApplicationRow } from "@/features/applications/components/applications-table";
 import { StatCard } from "@/components/shared/stat-card";
+import { ExportReportButton } from "@/features/reports/components/export-report-button";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,18 @@ export default async function ApplicationsPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Applications</h1>
-        <p className="text-sm text-muted-foreground">Review and act on membership applications submitted at /apply.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Applications</h1>
+          <p className="text-sm text-muted-foreground">Review and act on membership applications submitted at /apply.</p>
+        </div>
+        {hasPermission(actor.systemRole, "reports.export") && (
+          <ExportReportButton
+            type="applications"
+            label="Export Applications"
+            queryParams={{ status, search: params.search, role: params.role }}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

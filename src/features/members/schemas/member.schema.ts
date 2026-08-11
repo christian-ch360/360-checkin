@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput } from "@/lib/utils/social-links";
+import { parseInstagramInput, parseTiktokInput, parseYoutubeInput, parseLinkedinInput, isNoAccountValue } from "@/lib/utils/social-links";
 
 export const memberRoleValues = [
   "BRAND",
@@ -33,7 +33,7 @@ export const memberStatusValues = [
 
 export const memberSchema = z.object({
   fullName: z.string().min(2, "Enter a full name"),
-  email: z.string().email("Enter a valid email address"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone: z.string().optional().or(z.literal("")),
   role: z.enum([...memberRoleValues, ...adminAssignableRoleValues]),
   status: z.enum(memberStatusValues),
@@ -45,13 +45,13 @@ export const memberSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseInstagramInput(v) !== null, "Enter a valid Instagram username or URL"),
   tiktokUrl: z
     .string()
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseTiktokInput(v) !== null, "Enter a valid TikTok username or URL"),
   youtubeUrl: z
     .string()
     .trim()
@@ -63,7 +63,7 @@ export const memberSchema = z.object({
     .trim()
     .optional()
     .or(z.literal(""))
-    .refine((v) => !v || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
+    .refine((v) => !v || isNoAccountValue(v) || parseLinkedinInput(v) !== null, "Enter a valid LinkedIn username or URL"),
   // "Agency Uniqueness" — only meaningful for referral-eligible roles
   // (Agency today); checked server-side before creation. See
   // checkAgencyDuplicate.

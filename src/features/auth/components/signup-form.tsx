@@ -27,7 +27,7 @@ export function SignupForm({ invitation }: { invitation: Invitation }) {
     signupAction,
     null
   );
-  const [appliedRole, setAppliedRole] = useState<(typeof appliedRoleValues)[number]>("STAFF");
+  const [appliedRole, setAppliedRole] = useState<(typeof appliedRoleValues)[number]>("CREATOR");
   const [claimIntent, setClaimIntent] = useState(false);
   const [claimRole, setClaimRole] = useState<(typeof agencyMemberRoleValues)[number]>("STAFF");
   const [claimRequestNote, setClaimRequestNote] = useState("");

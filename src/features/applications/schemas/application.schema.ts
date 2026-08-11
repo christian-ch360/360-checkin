@@ -1,13 +1,15 @@
 import { z } from "zod";
-import { APPLICANT_ROLE_VALUES } from "@/features/members/role-labels";
+import { PUBLIC_APPLICANT_ROLE_VALUES } from "@/features/members/role-labels";
 
 export const agencyMemberRoleValues = ["OWNER", "MANAGER", "STAFF"] as const;
 
 export const applicationSchema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name"),
-  email: z.string().trim().email("Enter a valid email address"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone: z.string().trim().min(7, "Enter a valid phone number"),
-  role: z.enum(APPLICANT_ROLE_VALUES),
+  // Public submission (apply page + kiosk) — STAFF is deliberately excluded;
+  // it can only be assigned by an admin from the Admin Dashboard.
+  role: z.enum(PUBLIC_APPLICANT_ROLE_VALUES),
   company: z.string().trim().optional().or(z.literal("")),
   // "Agency Uniqueness" — only meaningful for referral-eligible roles (Agency
   // today); checked server-side against every other referral-eligible

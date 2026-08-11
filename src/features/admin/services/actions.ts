@@ -19,6 +19,7 @@ import { createNotification } from "@/lib/notifications";
 import type { SystemRole } from "@prisma/client";
 import { generateInvitationToken, defaultInvitationExpiry } from "@/features/admin/services/invitations.service";
 import { generateMemberNumber, isUniqueConstraintError } from "@/features/members/services/member-number";
+import { findEmailConflict, GENERIC_EMAIL_TAKEN_MESSAGE } from "@/features/members/services/email-lookup.service";
 import { memberRoleValues } from "@/features/members/schemas/member.schema";
 import { ensureQRAsset } from "@/features/qr/services/qr-asset.service";
 import { EmailService } from "@/lib/email/email-service";
@@ -26,7 +27,7 @@ import { EmailService } from "@/lib/email/email-service";
 export type AdminActionResult = { success: true } | { success: false; error: string };
 
 const inviteSchema = z.object({
-  email: z.string().email("Enter a valid email"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
   role: z.enum(systemRoleValues),
 });
 
@@ -62,6 +63,14 @@ export async function inviteMember(input: z.infer<typeof inviteSchema>): Promise
   const invitePermission = canInviteWithRole(actor.systemRole, parsed.data.role);
   if (!invitePermission.allowed) {
     return { success: false, error: invitePermission.reason! };
+  }
+
+  // Catches the problem at invite time rather than letting the invitee fill
+  // out the whole signup form only to be blocked by signupAction's own
+  // check — same shared lookup, same generic message.
+  const emailConflict = await findEmailConflict(actor.organizationId, parsed.data.email);
+  if (emailConflict) {
+    return { success: false, error: GENERIC_EMAIL_TAKEN_MESSAGE };
   }
 
   console.log("[invite] creating invitation", { email: parsed.data.email, role: parsed.data.role, invitedBy: actor.id });

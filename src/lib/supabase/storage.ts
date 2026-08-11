@@ -104,3 +104,97 @@ export async function uploadKioskBackgroundImage(path: string, blob: Blob): Prom
   const { data } = admin.storage.from(KIOSK_ASSETS_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
+
+// Mixed image/video/document mime allowlist, shared by every "post/message
+// attachment" style bucket below — same idempotent-bucket pattern as
+// ensureAvatarBucket/ensureKioskAssetsBucket.
+const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024; // 25MB
+const ATTACHMENT_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+];
+
+async function ensureAttachmentBucket(bucket: string, bucketEnsuredMap: Set<string>): Promise<boolean> {
+  if (bucketEnsuredMap.has(bucket)) return true;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { data: existing } = await admin.storage.getBucket(bucket);
+  if (!existing) {
+    const { error } = await admin.storage.createBucket(bucket, {
+      public: true,
+      fileSizeLimit: ATTACHMENT_MAX_BYTES,
+      allowedMimeTypes: ATTACHMENT_MIME_TYPES,
+    });
+    if (error && !/already exists/i.test(error.message)) {
+      throw error;
+    }
+  }
+
+  bucketEnsuredMap.add(bucket);
+  return true;
+}
+
+async function uploadAttachment(bucket: string, bucketEnsuredMap: Set<string>, path: string, blob: Blob): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) throw new Error("File storage is not configured (SUPABASE_SERVICE_ROLE_KEY missing).");
+
+  await ensureAttachmentBucket(bucket, bucketEnsuredMap);
+
+  const { error } = await admin.storage.from(bucket).upload(path, blob, {
+    contentType: blob.type || "application/octet-stream",
+    upsert: true,
+  });
+  if (error) throw error;
+
+  const { data } = admin.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+const COMMUNITY_ATTACHMENTS_BUCKET = "community-attachments";
+const communityBucketEnsured = new Set<string>();
+
+export async function ensureCommunityAttachmentsBucket(): Promise<boolean> {
+  return ensureAttachmentBucket(COMMUNITY_ATTACHMENTS_BUCKET, communityBucketEnsured);
+}
+
+/** Uploads a community post attachment (image/video/pdf/document) and returns its public URL. */
+export async function uploadCommunityAttachment(path: string, blob: Blob): Promise<string> {
+  return uploadAttachment(COMMUNITY_ATTACHMENTS_BUCKET, communityBucketEnsured, path, blob);
+}
+
+const MESSAGING_ATTACHMENTS_BUCKET = "messaging-attachments";
+const messagingBucketEnsured = new Set<string>();
+
+export async function ensureMessagingAttachmentsBucket(): Promise<boolean> {
+  return ensureAttachmentBucket(MESSAGING_ATTACHMENTS_BUCKET, messagingBucketEnsured);
+}
+
+/** Uploads a direct-message attachment (image/video/pdf/document) and returns its public URL. */
+export async function uploadMessagingAttachment(path: string, blob: Blob): Promise<string> {
+  return uploadAttachment(MESSAGING_ATTACHMENTS_BUCKET, messagingBucketEnsured, path, blob);
+}
+
+const AGENCY_FILES_BUCKET = "agency-files";
+const agencyFilesBucketEnsured = new Set<string>();
+
+export async function ensureAgencyFilesBucket(): Promise<boolean> {
+  return ensureAttachmentBucket(AGENCY_FILES_BUCKET, agencyFilesBucketEnsured);
+}
+
+/** Uploads an agency file (contract/invoice/campaign attachment/shared file) and returns its public URL. */
+export async function uploadAgencyFile(path: string, blob: Blob): Promise<string> {
+  return uploadAttachment(AGENCY_FILES_BUCKET, agencyFilesBucketEnsured, path, blob);
+}

@@ -6,7 +6,8 @@ import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/db/audit-log";
 import { EmailService } from "@/lib/email/email-service";
-import { generateMemberNumber, isUniqueConstraintError } from "@/features/members/services/member-number";
+import { generateMemberNumber, isUniqueConstraintError, isUniqueConstraintErrorOnField } from "@/features/members/services/member-number";
+import { normalizeEmail } from "@/lib/utils/email";
 import { provisionMemberOnboarding } from "@/features/members/services/onboarding";
 import { formatLocation } from "@/features/applications/utils/location";
 import { instagramUrl, tiktokUrl, youtubeUrl } from "@/lib/utils/social-links";
@@ -98,7 +99,7 @@ export async function approveApplicationAction(applicationId: string): Promise<A
             organizationId: actor.organizationId,
             memberNumber: await generateMemberNumber(),
             fullName: application.fullName,
-            email: application.email,
+            email: normalizeEmail(application.email),
             phone: application.phone,
             role: application.role,
             status: "ACTIVE",
@@ -119,6 +120,9 @@ export async function approveApplicationAction(applicationId: string): Promise<A
         });
         break;
       } catch (error) {
+        if (isUniqueConstraintErrorOnField(error, "email")) {
+          return { success: false, error: "A member with this email already exists." };
+        }
         if (isUniqueConstraintError(error) && attempt < 2) continue;
         if (isUniqueConstraintError(error)) {
           return { success: false, error: "A member with this email already exists." };

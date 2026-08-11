@@ -65,10 +65,12 @@ export default async function ConversationPage({
         <DirectMessageThread
           conversationId={id}
           currentMemberId={actor.id}
+          isGroup={conversation.isGroup}
           initialMessages={conversation.messages}
           initialOtherLastReadAt={
             conversation.participants.find((p) => p.memberId !== actor.id)?.lastReadAt ?? null
           }
+          initialReactionsByMessageId={conversation.reactionsByMessageId}
         />
       </div>
     );

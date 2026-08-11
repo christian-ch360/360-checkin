@@ -31,6 +31,8 @@ const ALL_PERMISSIONS = [
   "kiosk.manage",
   "events.manage",
   "spaces.delete",
+  "community.moderate",
+  "community.suspend",
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];
@@ -59,6 +61,8 @@ const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     "billing.manage",
     "legal.manage",
     "events.manage",
+    "community.moderate",
+    "community.suspend",
   ],
   MANAGER: [
     "members.view",
@@ -73,6 +77,8 @@ const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     "reports.view",
     "reports.export",
     "feedback.manage",
+    "community.moderate",
+    "community.suspend",
   ],
   PROJECT_LEADER: [
     "members.view",

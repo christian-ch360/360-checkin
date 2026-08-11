@@ -12,7 +12,12 @@ import type { CreatorAgencyStatus, AgencyDashboardData } from "@/features/referr
 import type { AgencyTeamMember } from "@/features/agencies/services/agency-access.service";
 import type { AgencyMemberRole } from "@prisma/client";
 
-const AGENCY_ROLE_LABELS: Record<AgencyMemberRole, string> = { OWNER: "Owner", MANAGER: "Manager", STAFF: "Staff" };
+const AGENCY_ROLE_LABELS: Record<AgencyMemberRole, string> = {
+  OWNER: "Owner",
+  ADMIN: "Admin",
+  MANAGER: "Manager",
+  STAFF: "Staff",
+};
 
 /**
  * Role-adaptive: a Creator sees the existing "connect to an agency"

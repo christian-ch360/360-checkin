@@ -13,7 +13,7 @@ import type { MemberRole, ContentCategory, SocialPlatform } from "@prisma/client
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Community" };
+export const metadata = { title: "Marketplace" };
 
 export default async function CollabHubPage({
   searchParams,
@@ -42,7 +42,7 @@ export default async function CollabHubPage({
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Community</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Marketplace</h1>
           <p className="text-sm text-muted-foreground">
             Post what you&apos;re looking to create, or find creators to team up with.
           </p>

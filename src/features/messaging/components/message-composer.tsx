@@ -2,22 +2,23 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, Paperclip, Mic, Image as ImageIcon, FileText } from "lucide-react";
+import { Send, Paperclip, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmojiPopover } from "@/features/collab-hub/components/emoji-popover";
-import { sendDirectMessage, setDirectTyping } from "@/features/messaging/services/conversation-actions";
-
-type AttachMode = "image" | "file" | null;
+import { FileDropzone, type DroppedFile } from "@/components/shared/file-dropzone";
+import {
+  sendDirectMessage,
+  sendDirectMessageAttachment,
+  setDirectTyping,
+} from "@/features/messaging/services/conversation-actions";
 
 export function MessageComposer({ conversationId, onSent }: { conversationId: string; onSent: () => void }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
-  const [attachMode, setAttachMode] = useState<AttachMode>(null);
-  const [attachUrl, setAttachUrl] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<DroppedFile[]>([]);
   const lastTypingRef = useRef(0);
 
   function handleTextChange(v: string) {
@@ -42,71 +43,53 @@ export function MessageComposer({ conversationId, onSent }: { conversationId: st
     onSent();
   }
 
-  async function sendAttachment() {
-    if (!attachMode || !attachUrl.trim()) return;
+  async function sendAttachments() {
+    if (pendingFiles.length === 0) return;
     setSending(true);
-    const result = await sendDirectMessage(conversationId, {
-      type: attachMode === "image" ? "IMAGE" : "FILE",
-      attachmentUrl: attachUrl.trim(),
-    });
-    setSending(false);
-    if (!result.success) {
-      toast.error(result.error);
-      return;
+    for (const { file } of pendingFiles) {
+      const formData = new FormData();
+      formData.set("file", file);
+      const result = await sendDirectMessageAttachment(conversationId, formData);
+      if (!result.success) toast.error(result.error);
     }
-    setAttachMode(null);
-    setAttachUrl("");
+    setSending(false);
+    setPendingFiles([]);
     setAttachOpen(false);
     onSent();
   }
 
   return (
     <div className="border-t p-3">
-      {attachMode && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted/30 p-2">
-          <Input
-            placeholder={attachMode === "image" ? "Paste image URL" : "Paste file URL"}
-            value={attachUrl}
-            onChange={(e) => setAttachUrl(e.target.value)}
-            className="h-8"
+      {attachOpen && (
+        <div className="mb-2 space-y-2 rounded-lg border bg-muted/30 p-2">
+          <FileDropzone
+            files={pendingFiles}
+            onFilesChange={setPendingFiles}
+            accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+            maxFiles={4}
+            disabled={sending}
           />
-          <Button size="sm" onClick={sendAttachment} disabled={sending}>
-            Send
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setAttachMode(null)}>
-            Cancel
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setAttachOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={sendAttachments} disabled={sending || pendingFiles.length === 0}>
+              Send
+            </Button>
+          </div>
         </div>
       )}
 
       <div className="flex items-center gap-1">
-        <Popover open={attachOpen} onOpenChange={setAttachOpen}>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="shrink-0">
-              <Paperclip className="size-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-48 p-1" align="start">
-            <button
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-              onClick={() => {
-                setAttachMode("image");
-                setAttachOpen(false);
-              }}
-            >
-              <ImageIcon className="size-4" /> Image URL
-            </button>
-            <button
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-              onClick={() => {
-                setAttachMode("file");
-                setAttachOpen(false);
-              }}
-            >
-              <FileText className="size-4" /> File URL
-            </button>
-          </PopoverContent>
-        </Popover>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="shrink-0"
+          onClick={() => setAttachOpen((v) => !v)}
+        >
+          <Paperclip className="size-4" />
+        </Button>
 
         <EmojiPopover onSelect={(e) => handleTextChange(text + e)} />
 

@@ -11,14 +11,22 @@ export function ExportReportButton({
   type,
   label,
   format = "xlsx",
+  queryParams,
 }: {
   type: ReportType;
   label: string;
   format?: "csv" | "xlsx" | "pdf";
+  /** Extra filters (e.g. the Applications page's current status/search/role) forwarded as-is to /api/reports/[type]. */
+  queryParams?: Record<string, string | undefined>;
 }) {
+  const params = new URLSearchParams({ format });
+  for (const [key, value] of Object.entries(queryParams ?? {})) {
+    if (value) params.set(key, value);
+  }
+
   return (
     <Button variant="outline" asChild>
-      <a href={`/api/reports/${type}?format=${format}`} download>
+      <a href={`/api/reports/${type}?${params.toString()}`} download>
         <FileDown /> {label}
       </a>
     </Button>

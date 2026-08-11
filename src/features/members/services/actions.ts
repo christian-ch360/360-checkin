@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import type { MemberRole, SystemRole } from "@prisma/client";
 import { memberSchema, adminAssignableRoleValues, type MemberInput } from "@/features/members/schemas/member.schema";
-import { generateMemberNumber, isUniqueConstraintError } from "@/features/members/services/member-number";
+import { generateMemberNumber, isUniqueConstraintError, isUniqueConstraintErrorOnField } from "@/features/members/services/member-number";
+import { findEmailConflict } from "@/features/members/services/email-lookup.service";
+import { normalizeEmail } from "@/lib/utils/email";
 import { prisma } from "@/lib/db/prisma";
 import { logActivity } from "@/lib/db/activity-log";
 import { logAudit } from "@/lib/db/audit-log";
@@ -58,6 +60,14 @@ export async function createMember(input: MemberInput): Promise<MemberActionResu
   const memberRole: MemberRole = isAdminAssignableRole(data.role) ? "STAFF" : data.role;
   const systemRole: SystemRole | undefined = isAdminAssignableRole(data.role) ? data.role : undefined;
 
+  // "Prevent using an email address that already belongs to another
+  // member" — checked before any Member row is created, same shared lookup
+  // every other account-creating path uses.
+  const emailConflict = await findEmailConflict(actor.organizationId, data.email);
+  if (emailConflict) {
+    return { success: false, error: "That email is already registered." };
+  }
+
   // "Agency Uniqueness" — checked before any Member row is created. No-ops
   // for non-referral-eligible roles.
   const duplicateCheck = await checkAgencyDuplicate(actor.organizationId, memberRole, {
@@ -81,7 +91,7 @@ export async function createMember(input: MemberInput): Promise<MemberActionResu
           organizationId: actor.organizationId,
           memberNumber,
           fullName: data.fullName,
-          email: data.email,
+          email: normalizeEmail(data.email),
           phone: data.phone || null,
           role: memberRole,
           systemRole,
@@ -125,6 +135,12 @@ export async function createMember(input: MemberInput): Promise<MemberActionResu
       revalidatePath("/members");
       return { success: true, memberId: member.id, onboardingNote };
     } catch (error) {
+      // Race-condition backstop — the proactive check above already covers
+      // the normal case, so this only fires if two creates for the same
+      // email landed at nearly the same instant.
+      if (isUniqueConstraintErrorOnField(error, "email")) {
+        return { success: false, error: "That email is already registered." };
+      }
       if (isUniqueConstraintError(error) && attempt < 2) continue;
       if (isUniqueConstraintError(error)) {
         return { success: false, error: "That email is already registered." };
@@ -166,12 +182,22 @@ export async function updateMember(
     return { success: false, error: "Use the Permissions section to change a member's system role." };
   }
 
+  // "Allow editing an existing member without triggering a duplicate error
+  // if the email hasn't changed. Only reject the save if the new email
+  // already belongs to a different member." — excludes this member's own
+  // row from the conflict check, so keeping (or case/whitespace-only
+  // changes to) the current email never false-positives.
+  const emailConflict = await findEmailConflict(actor.organizationId, data.email, { excludeMemberId: memberId });
+  if (emailConflict) {
+    return { success: false, error: "That email is already registered." };
+  }
+
   try {
     await prisma.member.update({
       where: { id: memberId, organizationId: actor.organizationId },
       data: {
         fullName: data.fullName,
-        email: data.email,
+        email: normalizeEmail(data.email),
         phone: data.phone || null,
         role: data.role,
         status: data.status,

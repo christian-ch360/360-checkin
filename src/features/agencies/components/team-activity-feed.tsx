@@ -15,6 +15,10 @@ import {
   XCircle,
   DollarSign,
   Loader2,
+  Megaphone,
+  FileSignature,
+  Receipt,
+  ListChecks,
 } from "lucide-react";
 import type { AgencyActivityType } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +42,12 @@ const TYPE_ICONS: Record<AgencyActivityType, typeof Activity> = {
   FIRST_GMV: DollarSign,
   GMV_MILESTONE: Trophy,
   PROFILE_UPDATED: Activity,
+  CAMPAIGN_CREATED: Megaphone,
+  CAMPAIGN_STATUS_CHANGED: Megaphone,
+  CONTRACT_SENT: FileSignature,
+  CONTRACT_SIGNED: FileSignature,
+  INVOICE_PAID: Receipt,
+  TASK_ASSIGNED: ListChecks,
 };
 
 const FILTERS: { value: AgencyActivityFilter; label: string }[] = [

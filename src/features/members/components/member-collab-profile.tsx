@@ -1,7 +1,7 @@
 import { Camera, Music2, Video, Briefcase, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { instagramUrl, tiktokUrl, youtubeUrl, linkedinUrl } from "@/lib/utils/social-links";
+import { instagramUrl, tiktokUrl, youtubeUrl, linkedinUrl, isNoAccountValue } from "@/lib/utils/social-links";
 
 type OptionalSocialLink = { href: string; icon: typeof Camera; label: string };
 
@@ -76,7 +76,7 @@ export function MemberCollabProfile({
             </a>
           ) : (
             <span className="inline-flex cursor-not-allowed items-center gap-1.5 text-sm text-muted-foreground/50">
-              <Camera className="size-4" /> Not Connected
+              <Camera className="size-4" /> {isNoAccountValue(member.instagramUrl) ? "No Instagram Account" : "Not Connected"}
             </span>
           )}
 
@@ -91,7 +91,7 @@ export function MemberCollabProfile({
             </a>
           ) : (
             <span className="inline-flex cursor-not-allowed items-center gap-1.5 text-sm text-muted-foreground/50">
-              <Music2 className="size-4" /> Not Connected
+              <Music2 className="size-4" /> {isNoAccountValue(member.tiktokUrl) ? "No TikTok Account" : "Not Connected"}
             </span>
           )}
 

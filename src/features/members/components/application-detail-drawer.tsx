@@ -21,7 +21,7 @@ import {
   addInternalNoteAction,
 } from "@/features/members/services/approval-actions";
 import { ROLE_LABELS, APPLICANT_ROLE_VALUES } from "@/features/members/role-labels";
-import { instagramUrl, tiktokUrl, youtubeUrl, linkedinUrl } from "@/lib/utils/social-links";
+import { instagramUrl, tiktokUrl, youtubeUrl, linkedinUrl, isNoAccountValue } from "@/lib/utils/social-links";
 
 type ApplicationDetail = Awaited<ReturnType<typeof fetchApplicationDetail>>;
 
@@ -219,10 +219,10 @@ export function ApplicationDetailDrawer({
                   <div className="mt-1 flex flex-wrap gap-2">
                     {(
                       [
-                        { label: "Instagram", href: instagramUrl(member.instagramUrl) },
-                        { label: "TikTok", href: tiktokUrl(member.tiktokUrl) },
-                        { label: "YouTube", href: youtubeUrl(member.youtubeUrl) },
-                        { label: "LinkedIn", href: linkedinUrl(member.linkedinUrl) },
+                        { label: "Instagram", href: instagramUrl(member.instagramUrl), raw: member.instagramUrl },
+                        { label: "TikTok", href: tiktokUrl(member.tiktokUrl), raw: member.tiktokUrl },
+                        { label: "YouTube", href: youtubeUrl(member.youtubeUrl), raw: member.youtubeUrl },
+                        { label: "LinkedIn", href: linkedinUrl(member.linkedinUrl), raw: member.linkedinUrl },
                       ] as const
                     ).map((link) =>
                       link.href ? (
@@ -240,7 +240,8 @@ export function ApplicationDetailDrawer({
                           key={link.label}
                           className="flex cursor-not-allowed items-center gap-1 rounded-full border px-2.5 py-1 text-xs text-muted-foreground/50"
                         >
-                          <Link2 className="size-3" /> {link.label} — Not Connected
+                          <Link2 className="size-3" />{" "}
+                          {isNoAccountValue(link.raw) ? `No ${link.label} Account` : `${link.label} — Not Connected`}
                         </span>
                       ) : null
                     )}

@@ -29,7 +29,15 @@ export async function GET(
     return NextResponse.json({ error: "Unknown format" }, { status: 400 });
   }
 
-  const table = await buildReport(member.organizationId, type as ReportType);
+  // Only the "applications" report reads any of these today (see
+  // buildApplicationsReport) — harmless no-ops for every other report type.
+  const table = await buildReport(member.organizationId, type as ReportType, {
+    status: request.nextUrl.searchParams.get("status") ?? undefined,
+    search: request.nextUrl.searchParams.get("search") ?? undefined,
+    role: request.nextUrl.searchParams.get("role") ?? undefined,
+    dateFrom: request.nextUrl.searchParams.get("dateFrom") ?? undefined,
+    dateTo: request.nextUrl.searchParams.get("dateTo") ?? undefined,
+  });
 
   let body: string | Buffer;
   if (format === "csv") body = exportToCSV(table);

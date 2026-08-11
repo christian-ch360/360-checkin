@@ -17,6 +17,7 @@ import {
   History,
   PartyPopper,
   FileSpreadsheet,
+  Sparkles,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -41,6 +42,7 @@ const TYPE_ICON: Record<SearchResult["type"], typeof Users> = {
 
 const QUICK_LINKS = [
   { title: "Open Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Community", href: "/community", icon: Sparkles },
   { title: "Check In", href: "/check-in", icon: QrCode },
   { title: "GMV", href: "/gmv", icon: TrendingUp },
   { title: "Commissions", href: "/commissions", icon: Percent },

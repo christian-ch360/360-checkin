@@ -5,6 +5,7 @@ import {
   listConversationsForMember as listCollabConversationsForMember,
   getUnreadCollabMessageCount,
 } from "@/features/collab-hub/services/conversation.service";
+import type { ReactionEmoji } from "@prisma/client";
 
 const MESSAGE_INCLUDE = {
   sender: { select: { id: true, fullName: true, profilePhotoUrl: true } },
@@ -146,6 +147,31 @@ export async function listAllConversationsForMember(memberId: string): Promise<C
   return [...dmSummaries, ...collabSummaries].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 }
 
+/** Reaction summary (emoji -> count + reactedByMe) for a batch of messages, keyed by messageId. */
+async function getReactionsByMessageId(messageIds: string[], actorId: string) {
+  if (messageIds.length === 0) return {} as Record<string, { emoji: ReactionEmoji; count: number; reactedByMe: boolean }[]>;
+
+  const reactions = await prisma.reaction.findMany({
+    where: { targetType: "MESSAGE", targetId: { in: messageIds } },
+    select: { targetId: true, emoji: true, memberId: true },
+  });
+
+  const byMessage: Record<string, Map<ReactionEmoji, { count: number; reactedByMe: boolean }>> = {};
+  for (const r of reactions) {
+    const forMessage = (byMessage[r.targetId] ??= new Map());
+    const entry = forMessage.get(r.emoji) ?? { count: 0, reactedByMe: false };
+    entry.count += 1;
+    if (r.memberId === actorId) entry.reactedByMe = true;
+    forMessage.set(r.emoji, entry);
+  }
+
+  const result: Record<string, { emoji: ReactionEmoji; count: number; reactedByMe: boolean }[]> = {};
+  for (const [messageId, map] of Object.entries(byMessage)) {
+    result[messageId] = Array.from(map.entries()).map(([emoji, v]) => ({ emoji, ...v }));
+  }
+  return result;
+}
+
 export async function getDirectConversationWithMessages(conversationId: string, actorId: string) {
   const conversation = await prisma.directConversation.findUnique({
     where: { id: conversationId },
@@ -160,8 +186,12 @@ export async function getDirectConversationWithMessages(conversationId: string, 
   if (!actorParticipant) return null;
 
   const other = conversation.participants.find((p) => p.memberId !== actorId)?.member ?? null;
+  const reactionsByMessageId = await getReactionsByMessageId(
+    conversation.messages.map((m) => m.id),
+    actorId
+  );
 
-  return { ...conversation, other, myLastReadAt: actorParticipant.lastReadAt };
+  return { ...conversation, other, myLastReadAt: actorParticipant.lastReadAt, reactionsByMessageId };
 }
 
 export async function getDirectConversationPollData(
@@ -171,13 +201,13 @@ export async function getDirectConversationPollData(
 ) {
   const conversation = await prisma.directConversation.findUnique({
     where: { id: conversationId },
-    include: { participants: true },
+    include: { participants: { include: { member: { select: { id: true, fullName: true } } } } },
   });
   if (!conversation) return null;
 
   const actorParticipant = conversation.participants.find((p) => p.memberId === actorId);
   if (!actorParticipant) return null;
-  const otherParticipant = conversation.participants.find((p) => p.memberId !== actorId);
+  const otherParticipants = conversation.participants.filter((p) => p.memberId !== actorId);
 
   let afterCreatedAt: Date | undefined;
   if (afterMessageId) {
@@ -194,9 +224,37 @@ export async function getDirectConversationPollData(
     include: MESSAGE_INCLUDE,
   });
 
-  const otherTyping = Boolean(
-    otherParticipant?.typingAt && Date.now() - otherParticipant.typingAt.getTime() < 5000
+  // Reactions can land on any recently-loaded message, not just brand-new
+  // ones — refresh the last 50 messages' reaction summaries every poll tick
+  // so a reaction from the other participant shows up without a full reload.
+  const recentMessages = await prisma.directMessage.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: { id: true },
+  });
+  const reactionsByMessageId = await getReactionsByMessageId(
+    recentMessages.map((m) => m.id),
+    actorId
   );
 
-  return { newMessages, otherTyping, otherLastReadAt: otherParticipant?.lastReadAt ?? null };
+  const typingParticipants = otherParticipants
+    .filter((p) => p.typingAt && Date.now() - p.typingAt.getTime() < 5000)
+    .map((p) => p.member.fullName);
+
+  const readReceipts = otherParticipants.map((p) => ({
+    memberId: p.memberId,
+    name: p.member.fullName,
+    lastReadAt: p.lastReadAt ? p.lastReadAt.toISOString() : null,
+  }));
+
+  return {
+    newMessages,
+    reactionsByMessageId,
+    typingParticipants,
+    // Kept for the existing 1:1 UI codepath (otherTyping/otherLastReadAt).
+    otherTyping: typingParticipants.length > 0,
+    otherLastReadAt: otherParticipants[0]?.lastReadAt ?? null,
+    readReceipts,
+  };
 }

@@ -14,7 +14,9 @@ import { prisma } from "@/lib/db/prisma";
 import { EmailService } from "@/lib/email/email-service";
 import { createMemberFromSignup } from "@/features/auth/services/signup-application";
 import { AgencyDuplicateError } from "@/features/agencies/services/agency-duplicate.service";
+import { findEmailConflict, GENERIC_EMAIL_TAKEN_MESSAGE } from "@/features/members/services/email-lookup.service";
 import { getValidInvitation } from "@/features/admin/services/invitations.service";
+import { isUniqueConstraintErrorOnField } from "@/features/members/services/member-number";
 import { sanitizeRedirectPath } from "@/lib/utils/safe-redirect";
 
 export type AuthActionState = {
@@ -105,6 +107,16 @@ export async function signupAction(
     return { error: "This invite link is invalid or has expired. Please request a new invitation, or apply at /apply." };
   }
 
+  // "Sign up should never create multiple accounts with the same email" —
+  // checked before the Supabase auth user is even created, so a collision
+  // never leaves behind an orphaned auth user with no Member row. Uses the
+  // generic Public Registration message (never reveals whether the email
+  // belongs to a member, a pending application, or a rejected one).
+  const emailConflict = await findEmailConflict(invitation.organizationId, parsed.data.email);
+  if (emailConflict) {
+    return { error: GENERIC_EMAIL_TAKEN_MESSAGE };
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabaseAdmin = getSupabaseAdmin();
 
@@ -149,6 +161,12 @@ export async function signupAction(
   } catch (err) {
     if (err instanceof AgencyDuplicateError) {
       return { error: err.message, existingAgencyId: err.existingAgencyId, existingAgencyName: err.existingAgencyName };
+    }
+    // Race-condition backstop — the proactive check above already catches
+    // this in the normal case, so this only fires if two signups for the
+    // same email landed at nearly the same instant.
+    if (isUniqueConstraintErrorOnField(err, "email")) {
+      return { error: GENERIC_EMAIL_TAKEN_MESSAGE };
     }
     console.error("signupAction: failed to create member record:", err);
     return {
