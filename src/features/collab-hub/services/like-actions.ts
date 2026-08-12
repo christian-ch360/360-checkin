@@ -24,8 +24,8 @@ export async function toggleCollabPostLike(postId: string): Promise<LikeActionRe
 
   if (existing) {
     await prisma.collabPostLike.delete({ where: { id: existing.id } });
-    revalidatePath(`/collab-hub/${postId}`);
-    revalidatePath("/collab-hub");
+    revalidatePath(`/community/collabs/${postId}`);
+    revalidatePath("/community/collabs");
     return { success: true, liked: false };
   }
 
@@ -41,7 +41,7 @@ export async function toggleCollabPostLike(postId: string): Promise<LikeActionRe
         type: "LIKE",
         title: `${actor.fullName} liked your post`,
         body: post.title,
-        link: `/collab-hub/${postId}`,
+        link: `/community/collabs/${postId}`,
       });
       if (owner.notifyLikes) {
         await EmailService.sendNewLikeEmail({
@@ -57,7 +57,7 @@ export async function toggleCollabPostLike(postId: string): Promise<LikeActionRe
     }
   }
 
-  revalidatePath(`/collab-hub/${postId}`);
-  revalidatePath("/collab-hub");
+  revalidatePath(`/community/collabs/${postId}`);
+  revalidatePath("/community/collabs");
   return { success: true, liked: true };
 }

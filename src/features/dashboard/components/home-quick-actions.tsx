@@ -9,7 +9,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { title: "Scanner", href: "/scan", icon: ScanLine },
   { title: "My QR Code", href: "/my-qr", icon: QrCode },
   { title: "Projects", href: "/projects", icon: FolderKanban },
-  { title: "Community", href: "/collab-hub", icon: Handshake },
+  { title: "Community", href: "/community", icon: Handshake },
 ];
 
 const TILE_CLASS =

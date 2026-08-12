@@ -22,8 +22,8 @@ export function HomeCommunityFeedPreview({ posts }: { posts: HomeCommunityPost[]
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">Community</CardTitle>
-        <Link href="/collab-hub" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+        <CardTitle className="text-base">Collabs</CardTitle>
+        <Link href="/community/collabs" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
           View all <ArrowRight className="size-3" />
         </Link>
       </CardHeader>
@@ -36,7 +36,7 @@ export function HomeCommunityFeedPreview({ posts }: { posts: HomeCommunityPost[]
           posts.map((post) => (
             <Link
               key={post.id}
-              href={`/collab-hub/${post.id}`}
+              href={`/community/collabs/${post.id}`}
               className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-muted/50"
             >
               <Avatar className="size-8">

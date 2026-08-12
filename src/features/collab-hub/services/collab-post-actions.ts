@@ -50,7 +50,7 @@ export async function createCollabPost(input: CollabPostInput): Promise<CollabAc
     metadata: { title: post.title },
   });
 
-  revalidatePath("/collab-hub");
+  revalidatePath("/community/collabs");
   return { success: true, postId: post.id };
 }
 
@@ -96,7 +96,7 @@ export async function updateCollabPostStatus(
           type: "COLLAB_POST_CLOSED",
           title: "A collaboration you applied to was closed",
           body: post.title,
-          link: `/collab-hub/${postId}`,
+          link: `/community/collabs/${postId}`,
         }
       );
     }
@@ -111,7 +111,7 @@ export async function updateCollabPostStatus(
     metadata: { status },
   });
 
-  revalidatePath("/collab-hub");
-  revalidatePath(`/collab-hub/${postId}`);
+  revalidatePath("/community/collabs");
+  revalidatePath(`/community/collabs/${postId}`);
   return { success: true };
 }

@@ -52,11 +52,11 @@ export async function applyToPost(postId: string, input: ApplicationInput): Prom
       type: "COLLAB_APPLICATION_RECEIVED",
       title: "New application received",
       body: `${actor.fullName} applied to "${post.title}"`,
-      link: `/collab-hub/${postId}`,
+      link: `/community/collabs/${postId}`,
     });
   }
 
-  revalidatePath(`/collab-hub/${postId}`);
+  revalidatePath(`/community/collabs/${postId}`);
   return { success: true };
 }
 
@@ -92,7 +92,7 @@ export async function updateApplicationStatus(
         type: "COLLAB_APPLICATION_ACCEPTED",
         title: "Your application was accepted",
         body: application.collabPost.title,
-        link: `/collab-hub/${application.collabPostId}`,
+        link: `/community/collabs/${application.collabPostId}`,
       });
     }
   }
@@ -106,6 +106,6 @@ export async function updateApplicationStatus(
     metadata: { status },
   });
 
-  revalidatePath(`/collab-hub/${application.collabPostId}`);
+  revalidatePath(`/community/collabs/${application.collabPostId}`);
   return { success: true };
 }

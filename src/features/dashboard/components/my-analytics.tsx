@@ -91,7 +91,7 @@ export function MyAnalytics({ data }: { data: MyAnalyticsData }) {
 
       {data.collaborationRequests > 0 && (
         <Card className="card-interactive border-community/20 bg-community/5 shadow-sm">
-          <Link href="/collab-hub" className="block">
+          <Link href="/community/collabs" className="block">
             <CardContent className="flex items-center gap-3 p-4">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-community/10 text-community">
                 <Handshake className="size-4.5" />

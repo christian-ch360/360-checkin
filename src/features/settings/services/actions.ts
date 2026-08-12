@@ -114,7 +114,7 @@ export async function updateSettingsProfile(input: SettingsProfileInput): Promis
 
   revalidatePath("/settings");
   revalidatePath("/profile");
-  revalidatePath("/collab-hub");
+  revalidatePath("/community/directory");
   revalidatePath("/", "layout");
   return { success: true };
 }
@@ -146,7 +146,7 @@ export async function updateCollabProfile(input: CollabProfileInput): Promise<Se
   });
 
   revalidatePath("/settings");
-  revalidatePath("/collab-hub");
+  revalidatePath("/community/directory");
   revalidatePath("/profile");
   return { success: true };
 }

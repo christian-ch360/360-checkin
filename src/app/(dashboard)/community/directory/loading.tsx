@@ -1,21 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function CollabHubLoading() {
+export default function CommunityDirectoryLoading() {
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Skeleton className="h-9 w-40" />
-          <Skeleton className="mt-2 h-4 w-72" />
-        </div>
-        <Skeleton className="h-9 w-32" />
-      </div>
-
-      <div className="flex items-center gap-4 border-b pb-2">
-        <Skeleton className="h-5 w-12" />
-        <Skeleton className="h-5 w-16" />
-      </div>
+      <Skeleton className="h-10 w-full" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (

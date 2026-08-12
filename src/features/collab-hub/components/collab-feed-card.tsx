@@ -84,7 +84,7 @@ export function CollabFeedCard({ post, currentMemberId }: { post: CollabFeedPost
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-      <Link href={`/collab-hub/${post.id}`} className="flex items-center gap-3">
+      <Link href={`/community/collabs/${post.id}`} className="flex items-center gap-3">
         <Avatar className="size-10">
           {post.member.profilePhotoUrl && <AvatarImage src={post.member.profilePhotoUrl} />}
           <AvatarFallback>{initials(post.member.fullName)}</AvatarFallback>
@@ -97,7 +97,7 @@ export function CollabFeedCard({ post, currentMemberId }: { post: CollabFeedPost
         </div>
       </Link>
 
-      <Link href={`/collab-hub/${post.id}`} className="block">
+      <Link href={`/community/collabs/${post.id}`} className="block">
         <p className="font-semibold">{post.title}</p>
         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{post.description}</p>
       </Link>

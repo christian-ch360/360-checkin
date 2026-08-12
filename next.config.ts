@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // Marketplace was folded into Community as the "Collabs" tab — old
+  // bookmarks/links to the standalone page still resolve.
+  async redirects() {
+    return [
+      { source: "/collab-hub", destination: "/community/collabs", permanent: true },
+      { source: "/collab-hub/:postId", destination: "/community/collabs/:postId", permanent: true },
+    ];
+  },
 };
 
 export default withBundleAnalyzer(nextConfig);

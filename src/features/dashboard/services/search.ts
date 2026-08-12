@@ -102,7 +102,7 @@ export async function globalSearch(
       type: "collabPost" as const,
       title: p.title,
       subtitle: p.category.replaceAll("_", " "),
-      href: `/collab-hub/${p.id}`,
+      href: `/community/collabs/${p.id}`,
     })),
   ];
 }

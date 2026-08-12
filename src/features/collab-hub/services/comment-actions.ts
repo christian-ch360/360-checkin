@@ -67,7 +67,7 @@ export async function addCollabPostComment(postId: string, input: { body: string
         type: "COMMENT",
         title: `${actor.fullName} commented on your post`,
         body: preview,
-        link: `/collab-hub/${postId}`,
+        link: `/community/collabs/${postId}`,
       });
       if (owner.notifyComments) {
         await EmailService.sendNewCommentEmail({
@@ -90,7 +90,7 @@ export async function addCollabPostComment(postId: string, input: { body: string
       type: "MENTION",
       title: `${actor.fullName} mentioned you`,
       body: preview,
-      link: `/collab-hub/${postId}`,
+      link: `/community/collabs/${postId}`,
     });
     if (mentioned.notifyMentions) {
       await EmailService.sendMentionEmail({
@@ -106,6 +106,6 @@ export async function addCollabPostComment(postId: string, input: { body: string
     }
   }
 
-  revalidatePath(`/collab-hub/${postId}`);
+  revalidatePath(`/community/collabs/${postId}`);
   return { success: true };
 }
