@@ -10,8 +10,9 @@ import type { resolveDuplicateGroup as ResolveDuplicateGroupFn } from "@/feature
 // duplicate-resolution.actions.ts directly (it transitively pulls in
 // requireCurrentMember -> "server-only", and audit-log.ts -> "server-only").
 // Stubbed here, for this script's process only, so resolveDuplicateGroup —
-// the exact same mutation resolveDuplicateGroupAction uses for the admin UI
-// — can be reused as-is instead of reimplemented. Touches nothing on disk.
+// the same mutation the (since-removed) Duplicate Emails admin page used to
+// call — can be reused as-is instead of reimplemented. Touches nothing on
+// disk.
 const nodeModule = Module as unknown as { _load: (request: string, parent: unknown, isMain: boolean) => unknown };
 const originalLoad = nodeModule._load.bind(nodeModule);
 nodeModule._load = (request: string, parent: unknown, isMain: boolean) => {
@@ -53,10 +54,9 @@ function normalizeName(fullName: string): string {
  * duplicate-email groups per the rule: "when there are exactly two pending
  * applications with the same normalized email and the same name, the most
  * recently submitted application is the legitimate one." Reuses
- * resolveDuplicateGroup — the exact same mutation/validation
- * resolveDuplicateGroupAction uses for the admin UI — rather than
- * reimplementing the write path (see
- * src/features/admin/services/duplicate-resolution.actions.ts).
+ * resolveDuplicateGroup — the same mutation/validation the (since-removed)
+ * Duplicate Emails admin page used — rather than reimplementing the write
+ * path (see src/features/admin/services/duplicate-resolution.actions.ts).
  *
  * Deliberately scoped to TARGET_EMAILS only — never touches
  * bigsiixstake@gmail.com (Case C, different names, needs manual review) or

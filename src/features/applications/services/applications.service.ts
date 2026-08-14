@@ -128,12 +128,14 @@ export async function submitApplication(input: ApplicationInput) {
     after: { fullName: application.fullName, role: application.role },
   });
 
-  // Notify every admin who can review applications — shows up in their
-  // existing notification bell with zero UI changes needed there. Clicking
-  // it opens the application's own review page, not just the list.
+  // Notify every admin who can review applications — in-app only (see
+  // notification bell), no email. An admin email per new application was
+  // judged too noisy for an internal, high-frequency event and was removed;
+  // this in-app Notification is the single source of truth for it now.
+  // Clicking it opens the application's own review page, not just the list.
   const approvers = await prisma.member.findMany({
     where: { organizationId: organization.id, status: "ACTIVE" },
-    select: { id: true, email: true, fullName: true, systemRole: true },
+    select: { id: true, systemRole: true },
   });
   const approverRecipients = approvers.filter((m) => hasPermission(m.systemRole, "members.approve"));
   await notifyMembers(
@@ -145,20 +147,6 @@ export async function submitApplication(input: ApplicationInput) {
       link: `/admin/applications/${application.id}`,
     }
   );
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  for (const approver of approverRecipients) {
-    await EmailService.sendNewMembershipApplicationAdminEmail({
-      to: approver.email,
-      fullName: approver.fullName,
-      applicantName: application.fullName,
-      applicantEmail: application.email,
-      role: ROLE_LABELS[application.role],
-      reviewUrl: `${appUrl}/admin/applications/${application.id}`,
-      organizationId: organization.id,
-      memberId: approver.id,
-    });
-  }
 
   return application;
 }

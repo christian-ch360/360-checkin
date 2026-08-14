@@ -18,16 +18,19 @@ function firstNameToken(fullName: string): string {
  * unambiguous: exactly one APPROVED application in the group and every
  * applicant's first name matches (Case A in the duplicate-cleanup spec —
  * e.g. "Katrell Platt" Approved + "Katrell Platt" Pending). Mirrors
- * classifyGroup()/resolveDuplicateGroupAction() in
- * src/features/admin/services/duplicate-resolution.{service,actions}.ts
- * exactly, duplicated here (not imported) since this script runs outside
- * Next's bundler and can't resolve "@/..." path aliases — same convention
- * as prisma/backfill-referral-codes.ts.
+ * classifyGroup() in
+ * src/features/admin/services/duplicate-resolution.service.ts exactly,
+ * duplicated here (not imported) since this script runs outside Next's
+ * bundler and can't resolve "@/..." path aliases — same convention as
+ * prisma/backfill-referral-codes.ts.
  *
  * Deliberately does NOT touch Case B (multiple pending, no clear keeper) or
- * Case C (different names sharing an email) groups — those require a real
+ * Case C (different names sharing an email) groups — those required a real
  * admin decision per the spec's own "do not automatically decide" rule, and
- * are left for the /admin/duplicate-emails resolution UI.
+ * were resolved separately (see backfill-duplicate-case-b.ts and
+ * backfill-duplicate-case-c.ts) — all 7 historical groups are now resolved
+ * and the admin resolution UI this comment used to point to has since been
+ * removed.
  *
  * Never deletes anything; only ever changes a non-APPROVED sibling's status
  * to DUPLICATE and stamps the duplicate* tracking fields. The APPROVED

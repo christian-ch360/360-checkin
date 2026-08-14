@@ -1,27 +1,8 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
-import { requireCurrentMember } from "@/features/auth/services/current-member";
-import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/db/audit-log";
 import { normalizeEmail } from "@/lib/utils/email";
 
 export type DuplicateResolutionResult = { success: true } | { success: false; error: string };
-
-async function requireDuplicateResolver() {
-  const actor = await requireCurrentMember();
-  if (!hasPermission(actor.systemRole, "members.manage")) {
-    throw new Error("You don't have permission to resolve duplicate applications.");
-  }
-  return actor;
-}
-
-function revalidateDuplicateSurfaces(applicationIds: string[]) {
-  revalidatePath("/admin/duplicate-emails");
-  revalidatePath("/admin/applications");
-  for (const id of applicationIds) revalidatePath(`/admin/applications/${id}`);
-}
 
 /**
  * The one mutation behind every resolution action in the workflow — "Keep
@@ -39,8 +20,13 @@ function revalidateDuplicateSurfaces(applicationIds: string[]) {
  * Deliberately takes `organizationId`/`resolvedByMemberId` rather than a
  * full actor object and never calls Next-only APIs (revalidatePath,
  * requireCurrentMember) — so this same function is reusable from one-time
- * backfill scripts (see prisma/backfill-duplicate-case-b.ts) that run
- * outside a Next request context, not just from resolveDuplicateGroupAction.
+ * backfill scripts (see prisma/backfill-duplicate-case-b.ts and
+ * prisma/backfill-duplicate-case-c.ts) that run outside a Next request
+ * context. The Duplicate Emails admin workflow that originally called this
+ * through a "use server" wrapper has since been removed (every historical
+ * duplicate-email group is resolved) — this function itself stays, since
+ * the backfill scripts that document how each group was resolved still
+ * import it.
  */
 export async function resolveDuplicateGroup(
   organizationId: string,
@@ -106,21 +92,4 @@ export async function resolveDuplicateGroup(
   });
 
   return { success: true };
-}
-
-export async function resolveDuplicateGroupAction(
-  keepApplicationId: string,
-  markDuplicateApplicationIds: string[],
-  note?: string
-): Promise<DuplicateResolutionResult> {
-  let actor;
-  try {
-    actor = await requireDuplicateResolver();
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Not authorized." };
-  }
-
-  const result = await resolveDuplicateGroup(actor.organizationId, actor.id, keepApplicationId, markDuplicateApplicationIds, note);
-  if (result.success) revalidateDuplicateSurfaces([keepApplicationId, ...markDuplicateApplicationIds]);
-  return result;
 }

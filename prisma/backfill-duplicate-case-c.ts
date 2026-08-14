@@ -32,8 +32,8 @@ const TARGET_EMAIL = "bigsiixstake@gmail.com";
  * matches an already-APPROVED application and an already-ACTIVE Member
  * (CH360-000086) — confirmed by the account owner — so his application is
  * the legitimate record. Rashel herrera's later PENDING application under
- * the same email is the duplicate. Reuses resolveDuplicateGroup — the exact
- * same mutation resolveDuplicateGroupAction uses for the admin UI — rather
+ * the same email is the duplicate. Reuses resolveDuplicateGroup — the same
+ * mutation the (since-removed) Duplicate Emails admin page used — rather
  * than reimplementing the write path.
  *
  * Never touches the Member table (CH360-000086 stays exactly as-is), never

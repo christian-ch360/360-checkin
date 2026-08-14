@@ -12,16 +12,23 @@ const runId = Date.now();
 let organizationId: string;
 
 /**
- * Tested at the service/data level rather than through the
- * resolveDuplicateGroupAction "use server" action itself — consistent with
- * every other integration test in this codebase (see
- * email-templates-admin.test.ts), since the action requires a real
- * authenticated request context (requireCurrentMember reads cookies via
- * Supabase) that isn't available in Vitest. The mutation tests below
- * reproduce the action's exact writes (see
- * src/features/admin/services/duplicate-resolution.actions.ts) directly
- * against real Postgres so the data model and invariants it depends on are
- * verified for real.
+ * The Duplicate Emails admin page/nav entry has been removed (every
+ * historical duplicate-email group is resolved — see
+ * prisma/backfill-duplicate-applications.ts, backfill-duplicate-case-b.ts,
+ * backfill-duplicate-case-c.ts), but the classification logic
+ * (listUnresolvedDuplicateGroups) and email-uniqueness enforcement
+ * (findEmailConflict) stay in place and stay tested: a new historical
+ * import or data-repair job could surface a fresh duplicate group, and new
+ * applications must still never be able to reuse an existing email.
+ *
+ * The mutation tests below reproduce resolveDuplicateGroup's exact writes
+ * (src/features/admin/services/duplicate-resolution.actions.ts — still
+ * exported, still used by the backfill scripts above) directly against real
+ * Postgres rather than calling it through a "use server" action, consistent
+ * with every other integration test in this codebase (see
+ * email-templates-admin.test.ts): actions require a real authenticated
+ * request context (requireCurrentMember reads cookies via Supabase) that
+ * isn't available in Vitest.
  */
 describe("Duplicate-email cleanup (integration, real Postgres)", () => {
   beforeAll(async () => {
@@ -103,8 +110,8 @@ describe("Duplicate-email cleanup (integration, real Postgres)", () => {
       data: { organizationId, fullName: "Ibrahim Alkhatib", email, phone: "5550004442", role: "CREATOR", status: "PENDING" },
     });
 
-    // Mirrors the exact write resolveDuplicateGroupAction performs for the
-    // "Keep Approved + Mark Pending Duplicate" action.
+    // Mirrors the exact write resolveDuplicateGroup performs for the
+    // "Keep Approved + Mark Pending Duplicate" case.
     const now = new Date();
     await prisma.membershipApplication.update({
       where: { id: pending.id },
