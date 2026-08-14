@@ -5,37 +5,43 @@ import { ShieldCheck, Copy } from "lucide-react";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
 import { findDuplicateEmailGroups } from "@/features/admin/services/duplicate-emails.service";
+import { listUnresolvedDuplicateGroups } from "@/features/admin/services/duplicate-resolution.service";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ApplicationStatusBadge } from "@/features/applications/components/application-status-badge";
 import { MemberStatusBadge } from "@/features/members/components/member-status-badge";
+import { DuplicateGroupCard } from "@/features/admin/components/duplicate-group-card";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Duplicate Emails" };
 
 /**
- * Read-only review queue for pre-existing "one email, two accounts" data —
- * see findDuplicateEmailGroups's doc comment for exactly what counts. This
- * page never deletes or merges anything; it exists so an admin can look at
- * each case and decide by hand (e.g. reject the stale application, or reach
- * out to the applicant), per the explicit "do not silently merge records"
- * requirement.
+ * A temporary, admin-only resolution workflow for the historical
+ * duplicate-email applications that predate email uniqueness being
+ * enforced (see email-lookup.service.ts) — never deletes or auto-merges
+ * anything; every resolution is an explicit admin click
+ * (resolveDuplicateGroupAction). Once every group below is resolved, this
+ * page (and its nav entry) has no ongoing purpose and should be removed —
+ * the empty state below says so explicitly.
  */
 export default async function DuplicateEmailsPage() {
   const actor = await requireCurrentMember();
   if (!hasPermission(actor.systemRole, "members.manage")) redirect("/dashboard");
 
-  const { applicationDuplicateGroups, applicationMemberConflicts } = await findDuplicateEmailGroups(actor.organizationId);
-  const totalIssues = applicationDuplicateGroups.length + applicationMemberConflicts.length;
+  const [unresolvedGroups, { applicationMemberConflicts }] = await Promise.all([
+    listUnresolvedDuplicateGroups(actor.organizationId),
+    findDuplicateEmailGroups(actor.organizationId),
+  ]);
+  const totalIssues = unresolvedGroups.length + applicationMemberConflicts.length;
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Duplicate Emails"
-        description="Records from before email uniqueness was enforced. Review and resolve each case manually — nothing here is deleted or merged automatically."
+        description="Historical applications from before email uniqueness was enforced. Resolve each group below — nothing here is deleted or merged automatically."
       />
 
       {totalIssues === 0 ? (
@@ -43,63 +49,35 @@ export default async function DuplicateEmailsPage() {
           <CardContent className="pt-6">
             <EmptyState
               icon={ShieldCheck}
-              title="No duplicate emails found"
-              description="Every application and member email in this organization is unique."
+              title="No duplicate emails need attention"
+              description="Every duplicate-email group has been resolved. This page and its nav entry can now be removed — email uniqueness is enforced for every new application and member going forward."
             />
           </CardContent>
         </Card>
       ) : (
         <>
-          <div>
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
-              <Copy className="size-4 text-muted-foreground" />
-              Duplicate applications
-              <Badge variant="secondary">{applicationDuplicateGroups.length}</Badge>
-            </h2>
-            {applicationDuplicateGroups.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No email was used on more than one application.</p>
-            ) : (
+          {unresolvedGroups.length > 0 && (
+            <div>
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+                <Copy className="size-4 text-muted-foreground" />
+                Duplicate applications needing resolution
+                <Badge variant="secondary">{unresolvedGroups.length}</Badge>
+              </h2>
               <div className="space-y-3">
-                {applicationDuplicateGroups.map((group) => (
-                  <Card key={group.email}>
-                    <CardHeader>
-                      <CardTitle className="text-base font-medium">{group.email}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {group.applications.map((application) => (
-                        <div
-                          key={application.id}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
-                        >
-                          <div className="min-w-0">
-                            <Link href={`/admin/applications/${application.id}`} className="font-medium hover:underline">
-                              {application.fullName}
-                            </Link>
-                            <p className="text-xs text-muted-foreground">
-                              Submitted {format(application.createdAt, "MMM d, yyyy h:mm a")}
-                            </p>
-                          </div>
-                          <ApplicationStatusBadge status={application.status} />
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                {unresolvedGroups.map((group) => (
+                  <DuplicateGroupCard key={group.email} group={group} />
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div>
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
-              <Copy className="size-4 text-muted-foreground" />
-              Applications matching an existing member
-              <Badge variant="secondary">{applicationMemberConflicts.length}</Badge>
-            </h2>
-            {applicationMemberConflicts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No pending or rejected application shares an email with an existing member.
-              </p>
-            ) : (
+          {applicationMemberConflicts.length > 0 && (
+            <div>
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+                <Copy className="size-4 text-muted-foreground" />
+                Applications matching an existing member
+                <Badge variant="secondary">{applicationMemberConflicts.length}</Badge>
+              </h2>
               <div className="space-y-3">
                 {applicationMemberConflicts.map((conflict) => (
                   <Card key={conflict.application.id}>
@@ -112,7 +90,9 @@ export default async function DuplicateEmailsPage() {
                           <Link href={`/admin/applications/${conflict.application.id}`} className="font-medium hover:underline">
                             {conflict.application.fullName}
                           </Link>
-                          <p className="text-xs text-muted-foreground">Application</p>
+                          <p className="text-xs text-muted-foreground">
+                            Application · {format(conflict.application.createdAt, "MMM d, yyyy")}
+                          </p>
                         </div>
                         <ApplicationStatusBadge status={conflict.application.status} />
                       </div>
@@ -129,8 +109,8 @@ export default async function DuplicateEmailsPage() {
                   </Card>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
     </div>

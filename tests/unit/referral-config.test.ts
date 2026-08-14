@@ -5,17 +5,22 @@ import {
   referralCodePrefixFor,
 } from "@/features/referrals/config/referral-config";
 
-describe("referral-config (future-expansion surface)", () => {
-  it("AGENCY is referral-eligible today, with prefix AGY", () => {
+describe("referral-config (every member role is referral-eligible)", () => {
+  it("AGENCY is referral-eligible, with prefix AGY", () => {
     expect(isReferralEligibleRole("AGENCY")).toBe(true);
     expect(referralCodePrefixFor("AGENCY")).toBe("AGY");
     expect(REFERRAL_ELIGIBLE_ROLES).toContain("AGENCY");
   });
 
-  it("other MemberRoles are not yet referral-eligible (until extended)", () => {
-    for (const role of ["BRAND", "BROKER", "BUSINESS_DEVELOPMENT", "CREATOR", "STAFF", "PROJECT_LEADER", "VENDOR", "ENTERTAINMENT", "INVESTOR"] as const) {
-      expect(isReferralEligibleRole(role)).toBe(false);
-      expect(referralCodePrefixFor(role)).toBeNull();
+  it("every standard MemberRole is referral-eligible, each with a unique prefix", () => {
+    const roles = ["BRAND", "BROKER", "BUSINESS_DEVELOPMENT", "CREATOR", "STAFF", "PROJECT_LEADER", "VENDOR", "ENTERTAINMENT", "INVESTOR"] as const;
+    const prefixes = new Set<string>();
+    for (const role of roles) {
+      expect(isReferralEligibleRole(role)).toBe(true);
+      const prefix = referralCodePrefixFor(role);
+      expect(prefix).not.toBeNull();
+      prefixes.add(prefix!);
     }
+    expect(prefixes.size).toBe(roles.length); // no two roles share a prefix
   });
 });

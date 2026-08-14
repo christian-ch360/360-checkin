@@ -56,7 +56,9 @@ export default async function ApplicationDetailPage({
           city: application.city,
           state: application.state,
           country: application.country,
-          referredBy: application.referredBy,
+          referredBy: application.referralLink
+            ? { name: application.referralLink.referrer.fullName, code: application.referralLink.referralCode }
+            : null,
           status: application.status,
           notes: application.notes,
           notesUpdatedAt: application.notesUpdatedAt?.toISOString() ?? null,
@@ -64,6 +66,11 @@ export default async function ApplicationDetailPage({
           createdAt: application.createdAt.toISOString(),
           reviewedAt: application.reviewedAt?.toISOString() ?? null,
           reviewedBy: application.reviewedBy,
+          duplicateOf: application.duplicateOf,
+          duplicatesOfThis: application.duplicatesOfThis,
+          duplicateResolvedAt: application.duplicateResolvedAt?.toISOString() ?? null,
+          duplicateResolvedBy: application.duplicateResolvedBy,
+          duplicateResolutionNote: application.duplicateResolutionNote,
         }}
         history={history.map((h) => ({ ...h, createdAt: h.createdAt.toISOString() }))}
       />

@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit-log";
 import { sendEmailWithRetry, type SendEmailResult } from "@/lib/email/send-email";
 import { getEmailFrom } from "@/lib/email/resend";
-import { renderTemplate, type TemplateName, type TemplateProps } from "@/lib/email/email-types";
+import type { TemplateName, TemplateProps } from "@/lib/email/email-types";
+import { renderTemplateWithOverride } from "@/lib/email/template-overrides";
 import { TEMPLATE_CATEGORY } from "@/features/communications/config/template-catalog";
 
 type SendArgs<K extends TemplateName> = {
@@ -25,7 +26,7 @@ type SendArgs<K extends TemplateName> = {
  */
 async function sendTemplatedEmail<K extends TemplateName>(template: K, args: SendArgs<K>): Promise<SendEmailResult> {
   const { to, organizationId, memberId, sentBy, priority, ...props } = args;
-  const { subject, html, text } = await renderTemplate(template, props as unknown as TemplateProps[K]);
+  const { subject, html, text } = await renderTemplateWithOverride(organizationId, template, props as unknown as TemplateProps[K]);
   const from = getEmailFrom();
   // Opportunistic — the overwhelming majority of templates take a `fullName`
   // prop for the recipient; templates that don't (e.g. org_invitation,

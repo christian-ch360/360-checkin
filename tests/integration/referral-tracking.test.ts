@@ -82,25 +82,31 @@ describe("Agency ID + QR referral tracking (integration, real Postgres)", () => 
     expect(stored.referralCode).toBe(code);
   });
 
-  it("ensureReferralCode no-ops for non-referral-eligible roles", async () => {
+  it("ensureReferralCode mints a code for every referral-eligible role, not just AGENCY", async () => {
     const creator = await prisma.member.create({
       data: {
         organizationId,
-        memberNumber: `TEST-REF-NOTELIGIBLE-${runId}`,
-        fullName: "Not Eligible",
-        email: `not-eligible-${runId}@example.com`,
+        memberNumber: `TEST-REF-CREATOR-ELIGIBLE-${runId}`,
+        fullName: "Eligible Creator",
+        email: `eligible-creator-${runId}@example.com`,
         role: "CREATOR",
       },
     });
     const code = await ensureReferralCode(creator.id, "CREATOR");
-    expect(code).toBeNull();
+    expect(code).toMatch(/^CRT-\d{6}$/);
     await prisma.member.delete({ where: { id: creator.id } });
   });
 
   it("validateReferralCode accepts a real active agency and rejects unknown/inactive ones", async () => {
     const agency = await prisma.member.findUniqueOrThrow({ where: { id: agencyId }, select: { referralCode: true } });
     const valid = await validateReferralCode(organizationId, agency.referralCode!);
-    expect(valid).toEqual({ valid: true, referrerId: agencyId, referrerName: "Influence Management Group", referrerRole: "AGENCY" });
+    expect(valid).toEqual({
+      valid: true,
+      referrerId: agencyId,
+      referrerName: "Influence Management Group",
+      referrerRole: "AGENCY",
+      referrerEmail: `agency-${runId}@example.com`,
+    });
 
     const unknown = await validateReferralCode(organizationId, "AGY-999999");
     expect(unknown.valid).toBe(false);
@@ -114,14 +120,38 @@ describe("Agency ID + QR referral tracking (integration, real Postgres)", () => 
   it("createReferralLinkForApplication creates a PENDING link, and silently no-ops on an invalid code", async () => {
     const agency = await prisma.member.findUniqueOrThrow({ where: { id: agencyId }, select: { referralCode: true } });
 
-    const link = await createReferralLinkForApplication(organizationId, applicationId, agency.referralCode!, "QR_CODE");
+    const link = await createReferralLinkForApplication(
+      organizationId,
+      applicationId,
+      agency.referralCode!,
+      "QR_CODE",
+      `creator-${runId}@example.com`
+    );
     expect(link).not.toBeNull();
     expect(link!.status).toBe("PENDING");
     expect(link!.referrerMemberId).toBe(agencyId);
     expect(link!.source).toBe("QR_CODE");
 
-    const junk = await createReferralLinkForApplication(organizationId, applicationId, "AGY-000000", "MANUAL_ENTRY");
+    const junk = await createReferralLinkForApplication(
+      organizationId,
+      applicationId,
+      "AGY-000000",
+      "MANUAL_ENTRY",
+      `creator-${runId}@example.com`
+    );
     expect(junk).toBeNull();
+  });
+
+  it("createReferralLinkForApplication silently no-ops on a self-referral attempt", async () => {
+    const agency = await prisma.member.findUniqueOrThrow({ where: { id: agencyId }, select: { referralCode: true, email: true } });
+    const selfReferral = await createReferralLinkForApplication(
+      organizationId,
+      applicationId,
+      agency.referralCode!,
+      "QR_CODE",
+      agency.email
+    );
+    expect(selfReferral).toBeNull();
   });
 
   it("connectReferralOnApproval links the newly-created Member to the agency and activates the ReferralLink", async () => {

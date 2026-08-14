@@ -11,6 +11,8 @@ import {
   requestOrConnectAgency,
   approveCreatorRequest,
   rejectCreatorRequest,
+  setReferralCodeDisabled,
+  regenerateReferralCode,
   type RequestAgencyResult,
 } from "@/features/referrals/services/referral.service";
 
@@ -151,6 +153,63 @@ export async function approveCreatorRequestAction(referralLinkId: string): Promi
   revalidatePath("/agency");
   revalidatePath(`/members/${result.creatorId}`);
   return { success: true };
+}
+
+export type ReferralCodeActionResult = { success: true; referralCode: string | null } | { success: false; error: string };
+
+/**
+ * "Admins/Super Admins can disable a referral code ... regenerating must NOT
+ * automatically change existing referral attribution" — gated the same way
+ * transferReferralAction is (Super Admin only, via referrals.transfer),
+ * since disabling/regenerating are the other two pieces of "full referral
+ * management" the spec reserves for that role.
+ */
+export async function setReferralCodeDisabledAction(memberId: string, disabled: boolean): Promise<ReferralCodeActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "referrals.transfer")) {
+    return { success: false, error: "Only Super Admins can manage referral codes." };
+  }
+
+  const result = await setReferralCodeDisabled(actor.organizationId, memberId, disabled);
+  if (!result.success) return result;
+
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: disabled ? "referral.code_disabled" : "referral.code_enabled",
+    entityType: "member",
+    entityId: memberId,
+    after: { referralCode: result.referralCode, disabled },
+  });
+
+  revalidatePath(`/members/${memberId}`);
+  revalidatePath("/admin/referrals");
+  return result;
+}
+
+export async function regenerateReferralCodeAction(memberId: string): Promise<ReferralCodeActionResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "referrals.transfer")) {
+    return { success: false, error: "Only Super Admins can manage referral codes." };
+  }
+
+  const before = await prisma.member.findFirst({ where: { id: memberId, organizationId: actor.organizationId }, select: { referralCode: true } });
+  const result = await regenerateReferralCode(actor.organizationId, memberId);
+  if (!result.success) return result;
+
+  await logAudit({
+    organizationId: actor.organizationId,
+    actorId: actor.id,
+    action: "referral.code_regenerated",
+    entityType: "member",
+    entityId: memberId,
+    before: { referralCode: before?.referralCode ?? null },
+    after: { referralCode: result.referralCode },
+  });
+
+  revalidatePath(`/members/${memberId}`);
+  revalidatePath("/admin/referrals");
+  return result;
 }
 
 export async function rejectCreatorRequestAction(referralLinkId: string, note?: string): Promise<CreatorRequestReviewResult> {

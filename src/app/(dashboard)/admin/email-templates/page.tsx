@@ -1,29 +1,72 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  TEMPLATE_CATEGORY,
-  TEMPLATE_DESCRIPTIONS,
-  EMAIL_CATEGORY_LABELS,
-} from "@/features/communications/config/template-catalog";
+import { EMAIL_CATEGORY_LABELS } from "@/features/communications/config/template-catalog";
 import { EmailTemplateRowActions } from "@/features/communications/components/email-template-row-actions";
-import type { TemplateName } from "@/lib/email/email-types";
+import { listEmailTemplateRows, humanizeTemplateKey } from "@/features/communications/services/email-template-admin.service";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Email Templates" };
 
-const TEMPLATE_NAMES = Object.keys(TEMPLATE_CATEGORY) as TemplateName[];
+// Descriptions past this length are the ones that actually clip at the
+// column's rendered width — only those get a tooltip, so short descriptions
+// (most of them) don't show a pointless hover affordance.
+const DESCRIPTION_TRUNCATE_THRESHOLD = 60;
 
-function humanize(name: string) {
-  return name
-    .split("_")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ");
+function TemplateDescriptionCell({ description }: { description: string | null }) {
+  if (!description) return <span className="text-muted-foreground">—</span>;
+  const truncated = <div className="truncate">{description}</div>;
+  if (description.length <= DESCRIPTION_TRUNCATE_THRESHOLD) return truncated;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{truncated}</TooltipTrigger>
+      <TooltipContent>{description}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function StatusBadge({ isSystem, overrideStatus }: { isSystem: boolean; overrideStatus: "DRAFT" | "ACTIVE" | "INACTIVE" | null }) {
+  // A system template with no saved override is live via its code default —
+  // that's "Active" from the sender's perspective even though nothing is
+  // stored in email_templates yet.
+  if (isSystem && overrideStatus === null) {
+    return (
+      <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" variant="outline">
+        Active
+      </Badge>
+    );
+  }
+  if (overrideStatus === "ACTIVE") {
+    return (
+      <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" variant="outline">
+        Active
+      </Badge>
+    );
+  }
+  if (overrideStatus === "DRAFT") {
+    return (
+      <Badge className="border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400" variant="outline">
+        Draft
+      </Badge>
+    );
+  }
+  // INACTIVE — for a system row this means "reverted to the code default,"
+  // for a custom row it means "turned off."
+  return (
+    <Badge variant="outline" className="text-muted-foreground">
+      {isSystem ? "Default" : "Inactive"}
+    </Badge>
+  );
 }
 
 export default async function EmailTemplatesPage() {
@@ -33,45 +76,55 @@ export default async function EmailTemplatesPage() {
   }
   const canManage = hasPermission(actor.systemRole, "communications.manage");
 
-  const rows = [...TEMPLATE_NAMES].sort((a, b) => humanize(a).localeCompare(humanize(b)));
+  const rows = (await listEmailTemplateRows(actor.organizationId)).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Email Templates"
-        description={`${rows.length} templates across every category. Preview or send a test email — full template editing is coming soon.`}
+        description={`${rows.length} templates across every category. Preview, edit, or send a test email.`}
+        actions={
+          canManage ? (
+            <Button asChild>
+              <Link href="/admin/email-templates/new">
+                <Plus className="size-4" /> Create Template
+              </Link>
+            </Button>
+          ) : undefined
+        }
       />
 
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Template Name</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead className="w-56">Template Name</TableHead>
+                  <TableHead className="w-40">Category</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-28">Status</TableHead>
+                  <TableHead className="w-[220px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((template) => (
-                  <TableRow key={template}>
-                    <TableCell className="font-medium">{humanize(template)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{EMAIL_CATEGORY_LABELS[TEMPLATE_CATEGORY[template]]}</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs text-sm text-muted-foreground">
-                      {TEMPLATE_DESCRIPTIONS[template]}
+                {rows.map((row) => (
+                  <TableRow key={row.templateKey}>
+                    <TableCell className="truncate font-medium">
+                      <span className="truncate">{row.name || humanizeTemplateKey(row.templateKey)}</span>
+                      {!row.isSystem && <span className="ml-1.5 text-xs font-normal text-muted-foreground">Custom</span>}
                     </TableCell>
                     <TableCell>
-                      <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" variant="outline">
-                        Active
-                      </Badge>
+                      <Badge variant="outline">{EMAIL_CATEGORY_LABELS[row.category]}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      <TemplateDescriptionCell description={row.description} />
                     </TableCell>
                     <TableCell>
-                      <EmailTemplateRowActions template={template} canManage={canManage} />
+                      <StatusBadge isSystem={row.isSystem} overrideStatus={row.overrideStatus} />
+                    </TableCell>
+                    <TableCell>
+                      <EmailTemplateRowActions row={row} canManage={canManage} />
                     </TableCell>
                   </TableRow>
                 ))}

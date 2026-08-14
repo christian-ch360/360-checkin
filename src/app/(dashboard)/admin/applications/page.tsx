@@ -46,6 +46,7 @@ export default async function ApplicationsPage({
     youtube: a.youtube,
     status: a.status,
     createdAt: a.createdAt.toISOString(),
+    referralCode: a.referralLink?.referralCode ?? null,
   }));
 
   return (

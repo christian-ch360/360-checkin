@@ -244,7 +244,7 @@ describe("Agency Approval workflow (integration, real Postgres)", () => {
     const manualApp = await prisma.membershipApplication.create({
       data: { organizationId, fullName: "Apply Manual", email: `apply-manual-${runId}@example.com`, phone: "5551110000", role: "CREATOR" },
     });
-    await createReferralLinkForApplication(organizationId, manualApp.id, agencyCode, "MANUAL_ENTRY");
+    await createReferralLinkForApplication(organizationId, manualApp.id, agencyCode, "MANUAL_ENTRY", manualApp.email);
     const manualMember = await prisma.member.create({
       data: { organizationId, memberNumber: `TEST-AA-APPLYMANUAL-${runId}`, fullName: "Apply Manual", email: manualApp.email, role: "CREATOR", status: "ACTIVE" },
     });
@@ -262,7 +262,7 @@ describe("Agency Approval workflow (integration, real Postgres)", () => {
     const qrApp = await prisma.membershipApplication.create({
       data: { organizationId, fullName: "Apply QR", email: `apply-qr-${runId}@example.com`, phone: "5552220000", role: "CREATOR" },
     });
-    await createReferralLinkForApplication(organizationId, qrApp.id, agencyCode, "QR_CODE");
+    await createReferralLinkForApplication(organizationId, qrApp.id, agencyCode, "QR_CODE", qrApp.email);
     const qrMember = await prisma.member.create({
       data: { organizationId, memberNumber: `TEST-AA-APPLYQR-${runId}`, fullName: "Apply QR", email: qrApp.email, role: "CREATOR", status: "ACTIVE" },
     });

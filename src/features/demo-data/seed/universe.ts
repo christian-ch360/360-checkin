@@ -109,6 +109,7 @@ function buildMember(
     systemRole: "MEMBER",
     referralSource: null,
     referralCode: null,
+    referralCodeDisabled: false,
     referredByMemberId: null,
     referredByCode: null,
     commissionTierId: null,

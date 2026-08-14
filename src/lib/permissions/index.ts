@@ -26,6 +26,7 @@ const ALL_PERMISSIONS = [
   "legal.manage",
   "legal.publish",
   "referrals.transfer",
+  "referrals.view",
   "agencies.merge",
   "agencies.access_override",
   "kiosk.manage",
@@ -63,6 +64,7 @@ const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     "events.manage",
     "community.moderate",
     "community.suspend",
+    "referrals.view",
   ],
   MANAGER: [
     "members.view",
@@ -79,6 +81,7 @@ const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     "feedback.manage",
     "community.moderate",
     "community.suspend",
+    "referrals.view",
   ],
   PROJECT_LEADER: [
     "members.view",

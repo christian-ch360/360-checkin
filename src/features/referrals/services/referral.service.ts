@@ -1,9 +1,9 @@
 import "server-only";
 
 import { startOfMonth } from "date-fns";
-import type { MemberRole, ReferralSource } from "@prisma/client";
+import { Prisma, type MemberRole, type ReferralSource, type ReferralStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { isReferralEligibleRole } from "@/features/referrals/config/referral-config";
+import { isReferralEligibleRole, REFERRAL_ELIGIBLE_ROLES } from "@/features/referrals/config/referral-config";
 import { notifyMembers } from "@/lib/notifications";
 import { EmailService } from "@/lib/email/email-service";
 
@@ -42,7 +42,7 @@ async function notifyAgencyOfNewRequest(organizationId: string, agencyMemberId: 
 }
 
 export type ReferralValidation =
-  | { valid: true; referrerId: string; referrerName: string; referrerRole: MemberRole }
+  | { valid: true; referrerId: string; referrerName: string; referrerRole: MemberRole; referrerEmail: string }
   | { valid: false; reason: string };
 
 /**
@@ -54,37 +54,47 @@ export type ReferralValidation =
  */
 export async function validateReferralCode(organizationId: string, rawCode: string): Promise<ReferralValidation> {
   const code = rawCode.trim().toUpperCase();
-  if (!code) return { valid: false, reason: "Enter an Agency ID." };
+  if (!code) return { valid: false, reason: "Enter a referral code." };
 
   const referrer = await prisma.member.findFirst({
     where: { organizationId, referralCode: code, deletedAt: null },
-    select: { id: true, fullName: true, role: true, status: true },
+    select: { id: true, fullName: true, email: true, role: true, status: true, referralCodeDisabled: true },
   });
 
-  if (!referrer) return { valid: false, reason: "We couldn't find an agency with that ID." };
+  if (!referrer) return { valid: false, reason: "We couldn't find a member with that referral code." };
   if (!isReferralEligibleRole(referrer.role)) {
-    return { valid: false, reason: "That ID doesn't belong to a referral-eligible account." };
+    return { valid: false, reason: "That code doesn't belong to a referral-eligible account." };
   }
-  if (referrer.status !== "ACTIVE") return { valid: false, reason: "This agency's account isn't currently active." };
+  if (referrer.referralCodeDisabled) return { valid: false, reason: "This referral code has been disabled." };
+  if (referrer.status !== "ACTIVE") return { valid: false, reason: "This member's account isn't currently active." };
 
-  return { valid: true, referrerId: referrer.id, referrerName: referrer.fullName, referrerRole: referrer.role };
+  return {
+    valid: true,
+    referrerId: referrer.id,
+    referrerName: referrer.fullName,
+    referrerRole: referrer.role,
+    referrerEmail: referrer.email,
+  };
 }
 
 /**
  * Called from submitApplication when a referral code is present (QR/link
  * param or manual entry) — creates the PENDING ReferralLink row that
  * connectReferralOnApproval later activates. Silently returns null on an
- * invalid code rather than throwing: a bad/stale referral code should never
- * block someone from applying, it just doesn't get linked.
+ * invalid code (or a self-referral attempt) rather than throwing: a bad/stale
+ * referral code — or someone applying with their own code — should never
+ * block the application itself, it just doesn't get linked.
  */
 export async function createReferralLinkForApplication(
   organizationId: string,
   applicationId: string,
   rawCode: string,
-  source: ReferralSource
+  source: ReferralSource,
+  applicantEmail: string
 ) {
   const validation = await validateReferralCode(organizationId, rawCode);
   if (!validation.valid) return null;
+  if (validation.referrerEmail.trim().toLowerCase() === applicantEmail.trim().toLowerCase()) return null;
 
   return prisma.referralLink.create({
     data: {
@@ -158,6 +168,9 @@ export async function requestOrConnectAgency(
 ): Promise<RequestAgencyResult> {
   const validation = await validateReferralCode(organizationId, rawCode);
   if (!validation.valid) return { success: false, error: validation.reason };
+  if (validation.referrerId === memberId) {
+    return { success: false, error: "You can't refer yourself." };
+  }
 
   const member = await prisma.member.findFirst({
     where: { id: memberId, organizationId, deletedAt: null },
@@ -559,6 +572,9 @@ export async function transferReferral(input: TransferReferralInput): Promise<Tr
   if (input.newReferralCode) {
     const validation = await validateReferralCode(input.organizationId, input.newReferralCode);
     if (!validation.valid) return { success: false, error: validation.reason };
+    if (validation.referrerId === input.memberId) {
+      return { success: false, error: "A member can't be referred by themselves." };
+    }
     newReferrer = { id: validation.referrerId, role: validation.referrerRole };
     normalizedCode = input.newReferralCode.trim().toUpperCase();
   }
@@ -597,12 +613,18 @@ export async function transferReferral(input: TransferReferralInput): Promise<Tr
 
 /** Ranks referral-eligible members by the *referred* GMV they've generated
  * (distinct from their own currentGMV, which leaderboardByRole in
- * gmv.service.ts already covers) — "Agency Leaderboards". Generic over any
- * referral-eligible role for the same future-expansion reason as everywhere
- * else in this module. */
-export async function getReferralLeaderboard(organizationId: string, role: MemberRole, take = 10) {
+ * gmv.service.ts already covers) — "Top Referrers". Omit `role` to rank
+ * across every referral-eligible role at once (the org-wide Admin Referral
+ * Analytics leaderboard); pass one to scope it (e.g. the Agency Dashboard's
+ * own agency-only view). */
+export async function getReferralLeaderboard(organizationId: string, role?: MemberRole, take = 10) {
   const referrers = await prisma.member.findMany({
-    where: { organizationId, role, deletedAt: null, referralCode: { not: null } },
+    where: {
+      organizationId,
+      role: role ?? { in: REFERRAL_ELIGIBLE_ROLES },
+      deletedAt: null,
+      referralCode: { not: null },
+    },
     select: {
       id: true,
       fullName: true,
@@ -623,4 +645,183 @@ export async function getReferralLeaderboard(organizationId: string, role: Membe
     }))
     .sort((a, b) => b.gmv - a.gmv)
     .slice(0, take);
+}
+
+export type MemberReferralStats = {
+  referralCode: string | null;
+  referralCodeDisabled: boolean;
+  totalReferrals: number;
+  applications: number;
+  approved: number;
+  activeMembers: number;
+};
+
+/** Powers the Member Profile / Dashboard "Referrals" section — the four
+ * counts a referral-eligible member sees for their own code. */
+export async function getMemberReferralStats(organizationId: string, memberId: string): Promise<MemberReferralStats> {
+  const member = await prisma.member.findFirst({
+    where: { id: memberId, organizationId, deletedAt: null },
+    select: { referralCode: true, referralCodeDisabled: true },
+  });
+
+  const [totalReferrals, applications, approved, activeMembers] = await Promise.all([
+    prisma.referralLink.count({ where: { organizationId, referrerMemberId: memberId } }),
+    prisma.referralLink.count({ where: { organizationId, referrerMemberId: memberId, applicationId: { not: null } } }),
+    prisma.referralLink.count({ where: { organizationId, referrerMemberId: memberId, status: "ACTIVE" } }),
+    prisma.member.count({ where: { organizationId, referredByMemberId: memberId, status: "ACTIVE", deletedAt: null } }),
+  ]);
+
+  return {
+    referralCode: member?.referralCode ?? null,
+    referralCodeDisabled: member?.referralCodeDisabled ?? false,
+    totalReferrals,
+    applications,
+    approved,
+    activeMembers,
+  };
+}
+
+export type ReferralAnalytics = {
+  totalApplications: number;
+  approvedApplications: number;
+  activeReferredMembers: number;
+  conversionRate: number;
+};
+
+/** Org-wide KPIs for the Admin Referral Analytics dashboard. */
+export async function getReferralAnalytics(organizationId: string): Promise<ReferralAnalytics> {
+  const [totalApplications, approvedApplications, activeReferredMembers] = await Promise.all([
+    prisma.referralLink.count({ where: { organizationId, applicationId: { not: null } } }),
+    prisma.referralLink.count({ where: { organizationId, status: "ACTIVE" } }),
+    prisma.member.count({ where: { organizationId, referredByMemberId: { not: null }, status: "ACTIVE", deletedAt: null } }),
+  ]);
+
+  return {
+    totalApplications,
+    approvedApplications,
+    activeReferredMembers,
+    conversionRate: totalApplications > 0 ? approvedApplications / totalApplications : 0,
+  };
+}
+
+export type ReferralHistoryFilters = {
+  search?: string;
+  status?: ReferralStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+};
+
+export type ReferralHistoryEntry = {
+  id: string;
+  referrerName: string;
+  referrerId: string;
+  applicantName: string | null;
+  referralCode: string;
+  applicationDate: Date;
+  status: ReferralStatus;
+  approvalDate: Date | null;
+  memberStatus: string | null;
+};
+
+/** The org-wide referral audit trail behind the Admin "Referral History"
+ * table — every ReferralLink, regardless of which member referred it, with
+ * search-by-name/code, status, and date-range filtering built directly into
+ * the query rather than filtered client-side. */
+export async function getReferralHistory(
+  organizationId: string,
+  filters: ReferralHistoryFilters = {}
+): Promise<ReferralHistoryEntry[]> {
+  const links = await prisma.referralLink.findMany({
+    where: {
+      organizationId,
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.dateFrom || filters.dateTo
+        ? {
+            referredAt: {
+              ...(filters.dateFrom ? { gte: filters.dateFrom } : {}),
+              ...(filters.dateTo ? { lte: filters.dateTo } : {}),
+            },
+          }
+        : {}),
+      ...(filters.search
+        ? {
+            OR: [
+              { referralCode: { contains: filters.search, mode: "insensitive" } },
+              { referrer: { fullName: { contains: filters.search, mode: "insensitive" } } },
+              { application: { fullName: { contains: filters.search, mode: "insensitive" } } },
+              { member: { fullName: { contains: filters.search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      referrer: { select: { id: true, fullName: true } },
+      application: { select: { fullName: true } },
+      member: { select: { fullName: true, status: true } },
+    },
+    orderBy: { referredAt: "desc" },
+  });
+
+  return links.map((l) => ({
+    id: l.id,
+    referrerName: l.referrer.fullName,
+    referrerId: l.referrer.id,
+    applicantName: l.application?.fullName ?? l.member?.fullName ?? null,
+    referralCode: l.referralCode,
+    applicationDate: l.referredAt,
+    status: l.status,
+    approvalDate: l.approvedAt,
+    memberStatus: l.member?.status ?? null,
+  }));
+}
+
+export type ReferralCodeManagementResult =
+  | { success: true; referralCode: string | null }
+  | { success: false; error: string };
+
+/** Super Admin-only — hides a code from future validation without touching
+ * any historical ReferralLink (see the field's own schema comment). */
+export async function setReferralCodeDisabled(
+  organizationId: string,
+  memberId: string,
+  disabled: boolean
+): Promise<ReferralCodeManagementResult> {
+  const member = await prisma.member.findFirst({
+    where: { id: memberId, organizationId, deletedAt: null },
+    select: { id: true, referralCode: true },
+  });
+  if (!member) return { success: false, error: "Member not found." };
+  if (!member.referralCode) return { success: false, error: "This member doesn't have a referral code." };
+
+  await prisma.member.update({ where: { id: memberId }, data: { referralCodeDisabled: disabled } });
+  return { success: true, referralCode: member.referralCode };
+}
+
+/** Super Admin-only — mints a brand new code and swaps it in for future
+ * sharing. Every existing ReferralLink keeps its own `referralCode` string
+ * (a permanent snapshot, not a live reference), so past attribution is
+ * completely unaffected — "regenerating must NOT automatically change
+ * existing referral attribution." */
+export async function regenerateReferralCode(organizationId: string, memberId: string): Promise<ReferralCodeManagementResult> {
+  const member = await prisma.member.findFirst({
+    where: { id: memberId, organizationId, deletedAt: null },
+    select: { id: true, role: true, referralCode: true },
+  });
+  if (!member) return { success: false, error: "Member not found." };
+  if (!isReferralEligibleRole(member.role)) return { success: false, error: "This member's role isn't referral-eligible." };
+
+  const { generateReferralCode } = await import("@/features/referrals/services/referral-code");
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = await generateReferralCode(member.role);
+    try {
+      await prisma.member.update({ where: { id: memberId }, data: { referralCode: code, referralCodeDisabled: false } });
+      return { success: true, referralCode: code };
+    } catch (error) {
+      const isConflict =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+      if (isConflict && attempt < 4) continue;
+      throw error;
+    }
+  }
+  return { success: false, error: "Couldn't generate a unique referral code. Try again." };
 }

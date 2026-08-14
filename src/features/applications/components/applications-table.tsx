@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Camera, Music2, Video } from "lucide-react";
 import type { MemberRole, MembershipApplicationStatus } from "@prisma/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApplicationStatusBadge } from "@/features/applications/components/application-status-badge";
 import { ROLE_LABELS } from "@/features/members/role-labels";
@@ -19,6 +20,7 @@ export type ApplicationRow = {
   youtube: string | null;
   status: MembershipApplicationStatus;
   createdAt: string;
+  referralCode: string | null;
 };
 
 function initials(name: string) {
@@ -38,13 +40,14 @@ export function ApplicationsTable({ data }: { data: ApplicationRow[] }) {
             <TableHead>Role</TableHead>
             <TableHead>Social</TableHead>
             <TableHead>Applied Date</TableHead>
+            <TableHead>Referred</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                 No applications found.
               </TableCell>
             </TableRow>
@@ -75,6 +78,15 @@ export function ApplicationsTable({ data }: { data: ApplicationRow[] }) {
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {format(new Date(row.createdAt), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell>
+                  {row.referralCode ? (
+                    <Badge variant="secondary" className="font-mono text-[10px]">
+                      {row.referralCode}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <ApplicationStatusBadge status={row.status} />

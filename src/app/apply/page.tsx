@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/db/prisma";
 import { getActivePlan } from "@/features/membership-plans/services/membership-plans.service";
 import { validateReferralCode } from "@/features/referrals/services/referral.service";
 import { getValidAgencyInvitation } from "@/features/agencies/services/agency-invitations.service";
+import { REFERRAL_COOKIE_NAME } from "@/features/referrals/config/referral-cookie";
 import { ApplyForm } from "@/features/applications/components/apply-form";
 import { AuthPageHeader } from "@/features/auth/components/auth-page-header";
 import { SafeAreaView } from "@/components/layout/safe-area-view";
@@ -15,7 +17,14 @@ export const metadata = { title: "Apply to Join" };
 export default async function ApplyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ message?: string; fullName?: string; email?: string; agency?: string; agencyInviteToken?: string }>;
+  searchParams: Promise<{
+    message?: string;
+    fullName?: string;
+    email?: string;
+    ref?: string;
+    agency?: string;
+    agencyInviteToken?: string;
+  }>;
 }) {
   // No logged-in user on this public page to derive an organization from —
   // same "single default org" resolution already used by
@@ -24,17 +33,26 @@ export default async function ApplyPage({
   // The promo banner advertises the Creator plan specifically — only Creator
   // Type applicants are ever billed (see requiresMembership()).
   const plan = organization ? await getActivePlan(organization.id, "CREATOR") : null;
-  const { message, fullName, email, agency, agencyInviteToken } = await searchParams;
+  const { message, fullName, email, ref, agency, agencyInviteToken } = await searchParams;
 
-  // "The creator should not need to manually type the Agency ID when
-  // arriving through a referral link or QR code" — resolved server-side
-  // here (not just trusted client-side) so the pre-filled "Connected to"
-  // state the form opens with is already validated. submitApplication
-  // re-validates again regardless before ever writing it.
+  // "The applicant should never need to manually enter Referred By when
+  // arriving through a referral link or QR code" — resolved server-side here
+  // (not just trusted client-side) so the pre-filled "Connected to" state the
+  // form opens with is already validated. `ref` is the general referral
+  // param; `agency` stays supported as an alias for links/QR codes already
+  // printed and in circulation. If neither is on this exact URL — e.g. the
+  // applicant clicked through from a referral link, then reloaded or
+  // navigated within the form before submitting — fall back to the
+  // first-party cookie middleware.ts set the moment they first landed here.
+  // submitApplication re-validates the resolved code server-side again
+  // regardless before ever writing it.
+  const cookieStore = await cookies();
+  const rawCode = ref?.trim() || agency?.trim() || cookieStore.get(REFERRAL_COOKIE_NAME)?.value;
+
   let referral: { code: string; agencyName: string } | null = null;
-  if (organization && agency) {
-    const result = await validateReferralCode(organization.id, agency);
-    if (result.valid) referral = { code: agency.trim().toUpperCase(), agencyName: result.referrerName };
+  if (organization && rawCode) {
+    const result = await validateReferralCode(organization.id, rawCode);
+    if (result.valid) referral = { code: rawCode.trim().toUpperCase(), agencyName: result.referrerName };
   }
 
   // "Agency Invitations" — arriving from an Owner/Manager's invite link.

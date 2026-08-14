@@ -298,6 +298,7 @@ model Organization {
   visitors                  Visitor[]
   locations                 Location[]
   emailLogs                 EmailLog[]
+  emailTemplates            EmailTemplate[]
   membershipApplications    MembershipApplication[]
   events                    Event[]
   membershipPlans           MembershipPlan[]
@@ -366,9 +367,15 @@ model Member {
   // permanent snapshot of the code at connection time, kept even if
   // referredByMemberId is later nulled out (referrer deleted), so GMV
   // attribution history survives independent of the live relation.
-  referralCode       String? @unique
-  referredByMemberId String? @db.Uuid
-  referredByCode     String?
+  referralCode         String? @unique
+  referredByMemberId   String? @db.Uuid
+  referredByCode       String?
+  // "Regenerating must NOT automatically change existing referral
+  // attribution" — disabling stops new applications from validating against
+  // this code without touching any historical ReferralLink row. A disabled
+  // member's referralCode is left in place (still unique, still owns its
+  // history) rather than cleared, so re-enabling requires no regeneration.
+  referralCodeDisabled Boolean @default(false)
 
   // "Existing Agency Claim Workflow" — null on a canonical/root agency
   // (they ARE the agency identity holding referralCode). Set on a team
@@ -502,8 +509,11 @@ model Member {
   scanEvents                        ScanEvent[]
   emailLogsReceived                 EmailLog[]                      @relation("EmailLogRecipient")
   emailLogsSent                     EmailLog[]                      @relation("EmailLogSentBy")
+  emailTemplatesCreated             EmailTemplate[]                 @relation("EmailTemplateCreatedBy")
+  emailTemplatesUpdated             EmailTemplate[]                 @relation("EmailTemplateUpdatedBy")
   reviewedApplications              MembershipApplication[]         @relation("MembershipApplicationReviewedBy")
   notesUpdatedApplications          MembershipApplication[]         @relation("MembershipApplicationNotesUpdatedBy")
+  resolvedApplicationDuplicates     MembershipApplication[]         @relation("ApplicationDuplicateResolvedBy")
   createdEvents                     Event[]                         @relation("EventCreatedBy")
   eventRsvps                        EventRsvp[]
   subscription                      MemberSubscription?
@@ -564,9 +574,9 @@ model Member {
   foldersAsAgency                   Folder[]                        @relation("FolderAgency")
   foldersCreated                    Folder[]                        @relation("FolderCreatedBy")
   agencyFiles                       File[]                          @relation("AgencyFiles")
-  brandInvitationsAsAgency          BrandInvitation[]                @relation("BrandInvitationAgency")
-  brandInvitationsSent              BrandInvitation[]                @relation("BrandInvitationInvitedBy")
-  brandInvitationsAccepted          BrandInvitation[]                @relation("BrandInvitationAcceptedBy")
+  brandInvitationsAsAgency          BrandInvitation[]               @relation("BrandInvitationAgency")
+  brandInvitationsSent              BrandInvitation[]               @relation("BrandInvitationInvitedBy")
+  brandInvitationsAccepted          BrandInvitation[]               @relation("BrandInvitationAcceptedBy")
 
   @@index([organizationId])
   @@index([companyId])
@@ -1886,6 +1896,67 @@ model EmailLog {
   @@map("email_logs")
 }
 
+// DRAFT never sends for real (Preview/Send Test still work — those are
+// explicitly "try it out" actions, not production sends); ACTIVE is honored
+// by renderTemplateWithOverride for every real EmailService call site;
+// INACTIVE is a soft-disable that keeps the row (and its history) around
+// without it taking effect. There is no separate "archived" state — for a
+// system-key row, "archived" just means back to INACTIVE (the code default
+// underneath is always available, so there's nothing destructive about it);
+// for a custom (non-system) row with no code call site, INACTIVE and
+// "archived" are the same thing in practice.
+enum EmailTemplateStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+// Admin-editable email template content, layered ON TOP of (never replacing)
+// the 51 code-defined React Email templates in src/emails/templates/**.
+//
+// isSystem=true rows have `templateKey` equal to one of the existing
+// TemplateName values (see src/lib/email/email-types.ts) — this is an
+// *override* of a real, already-shipping template. renderTemplateWithOverride
+// (src/lib/email/template-overrides.ts) is the one place that decides
+// whether to use this row's subject/bodyHtml or fall back to the original
+// React component; every one of EmailService's 51 methods goes through it,
+// so a template with no ACTIVE override here renders exactly as it always
+// has, with zero other code touched.
+//
+// isSystem=false rows are fully admin-authored templates with a
+// developer-chosen `templateKey` that doesn't collide with any TemplateName.
+// Nothing in the app calls these automatically yet — they exist to be
+// previewed/test-sent now and wired to a real trigger later — so their
+// "available variables" are deliberately limited to the small set Preview/
+// Send Test can always supply (fullName, firstName, email), never a made-up
+// variable the backend can't actually provide.
+model EmailTemplate {
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @db.Uuid
+  templateKey    String
+  isSystem       Boolean
+  name           String
+  description    String?
+  category       EmailCategory
+  subject        String
+  previewText    String?
+  bodyHtml       String              @db.Text
+  status         EmailTemplateStatus @default(DRAFT)
+  createdById    String?             @db.Uuid
+  updatedById    String?             @db.Uuid
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    Member?      @relation("EmailTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    Member?      @relation("EmailTemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, templateKey])
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@map("email_templates")
+}
+
 // =============================================================================
 // MEMBERSHIP APPLICATIONS
 // =============================================================================
@@ -1894,6 +1965,14 @@ enum MembershipApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+  // A resolution status, not an active application state — set only by the
+  // duplicate-email resolution workflow (see duplicateOfApplicationId
+  // below), never by the normal apply/approve/reject flow. Deliberately its
+  // own status rather than reusing REJECTED: a duplicate wasn't judged on
+  // its merits, it was superseded by another application for the same
+  // person/email, which is a different fact worth keeping distinct in the
+  // historical record.
+  DUPLICATE
 }
 
 // The public "Apply to Join" form writes only here — never a Member, never a
@@ -1902,64 +1981,78 @@ enum MembershipApplicationStatus {
 // admin-created members. Named MembershipApplication (not Application) since
 // that name is already taken by the unrelated Collab Hub job-application model.
 model MembershipApplication {
-  id                         String                      @id @default(uuid()) @db.Uuid
-  organizationId             String                      @db.Uuid
-  fullName                   String
-  email                      String
-  phone                      String
-  role                       MemberRole
-  company                    String?
-  website                    String?
-  businessRegistrationNumber String?
-  instagram                  String?
-  tiktok                     String?
-  youtube                    String?
-  city                       String?
-  state                      String?
-  country                    String?
-  referredBy                 String?
+  id                          String                      @id @default(uuid()) @db.Uuid
+  organizationId              String                      @db.Uuid
+  fullName                    String
+  email                       String
+  phone                       String
+  role                        MemberRole
+  company                     String?
+  website                     String?
+  businessRegistrationNumber  String?
+  instagram                   String?
+  tiktok                      String?
+  youtube                     String?
+  city                        String?
+  state                       String?
+  country                     String?
+  referredBy                  String?
   // Structured affiliate tracking, distinct from the freeform `referredBy`
   // text field above — the exact referral code (e.g. "AGY-001284") that was
   // active (via QR/link param or manual entry) when this application was
   // submitted. Validated against a real, active referrer at submit time; see
   // ReferralLink for the full audit trail this feeds.
-  referralCode               String?
+  referralCode                String?
   // "Existing Agency Claim Workflow" — set when the applicant chose "Request
   // Access to Existing Agency" instead of registering a duplicate. Plain
   // scalar (no FK), same pattern as referralCode above: validated in
   // application code (see approveApplicationAction), not enforced at the DB
   // layer, since the target agency is looked up by id at approval time.
-  claimedAgencyId            String?                     @db.Uuid
-  claimedAgencyRole          AgencyMemberRole?
+  claimedAgencyId             String?                     @db.Uuid
+  claimedAgencyRole           AgencyMemberRole?
   // "Creator Request Notes" — the applicant's answer to "Why are you
   // requesting to join this agency?", captured alongside the claim above and
   // copied onto the AgencyAccessRequest at approval time (see
   // approveApplicationAction / requestAgencyAccess).
-  claimRequestNote           String?
+  claimRequestNote            String?
   // Set when this application originated from an Owner/Manager's team
   // invitation link — an admin-issued invite IS the agency-side approval,
   // so approveApplicationAction auto-joins the new Member directly instead
   // of creating a pending AgencyAccessRequest. Plain scalar (no FK), same
   // pattern as claimedAgencyId.
-  agencyInviteToken          String?
-  status                     MembershipApplicationStatus @default(PENDING)
-  notes                      String?
-  notesUpdatedAt             DateTime?
-  notesUpdatedById           String?                     @db.Uuid
-  createdAt                  DateTime                    @default(now())
-  updatedAt                  DateTime                    @updatedAt
-  reviewedAt                 DateTime?
-  reviewedById               String?                     @db.Uuid
+  agencyInviteToken           String?
+  status                      MembershipApplicationStatus @default(PENDING)
+  notes                       String?
+  notesUpdatedAt              DateTime?
+  notesUpdatedById            String?                     @db.Uuid
+  // Duplicate-email resolution — set together, only by the resolution
+  // workflow, only ever on a row being marked DUPLICATE. `duplicateOf`
+  // points at whichever application was kept as canonical for that email;
+  // never touches the kept application, never deletes anything, so the
+  // full historical record (both rows) survives regardless of which way a
+  // duplicate group is resolved.
+  duplicateOfApplicationId    String?                     @db.Uuid
+  duplicateResolvedAt         DateTime?
+  duplicateResolvedByMemberId String?                     @db.Uuid
+  duplicateResolutionNote     String?
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
+  reviewedAt                  DateTime?
+  reviewedById                String?                     @db.Uuid
 
-  organization     Organization                           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  reviewedBy       Member?                                @relation("MembershipApplicationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  notesUpdatedBy   Member?                                @relation("MembershipApplicationNotesUpdatedBy", fields: [notesUpdatedById], references: [id], onDelete: SetNull)
-  legalAcceptances MembershipApplicationLegalAcceptance[]
-  referralLink     ReferralLink?
+  organization        Organization                           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewedBy          Member?                                @relation("MembershipApplicationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  notesUpdatedBy      Member?                                @relation("MembershipApplicationNotesUpdatedBy", fields: [notesUpdatedById], references: [id], onDelete: SetNull)
+  legalAcceptances    MembershipApplicationLegalAcceptance[]
+  referralLink        ReferralLink?
+  duplicateOf         MembershipApplication?                 @relation("ApplicationDuplicateOf", fields: [duplicateOfApplicationId], references: [id], onDelete: SetNull)
+  duplicatesOfThis    MembershipApplication[]                @relation("ApplicationDuplicateOf")
+  duplicateResolvedBy Member?                                @relation("ApplicationDuplicateResolvedBy", fields: [duplicateResolvedByMemberId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([status])
   @@index([createdAt])
+  @@index([duplicateOfApplicationId])
   @@map("membership_applications")
 }
 
@@ -2210,13 +2303,13 @@ model Campaign {
   brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   createdBy    Member       @relation("CampaignCreatedBy", fields: [createdById], references: [id])
 
-  creators      CampaignCreator[]
-  deliverables  CampaignDeliverable[]
-  tasks         Task[]
-  files         File[]
+  creators        CampaignCreator[]
+  deliverables    CampaignDeliverable[]
+  tasks           Task[]
+  files           File[]
   gmvTransactions GMVTransaction[]
-  contracts     Contract[]
-  invoices      Invoice[]
+  contracts       Contract[]
+  invoices        Invoice[]
 
   @@index([organizationId, agencyId])
   @@index([brandId])
@@ -2248,16 +2341,16 @@ enum DeliverableStatus {
 // Covers both "Deliverables" and "Approvals" as one status-transition model —
 // a Brand Contact's one write action is moving SUBMITTED -> APPROVED/REJECTED.
 model CampaignDeliverable {
-  id                 String            @id @default(uuid()) @db.Uuid
-  campaignId         String            @db.Uuid
-  title              String
-  description        String?
-  dueDate            DateTime?
-  status             DeliverableStatus @default(PENDING)
-  assignedCreatorId  String?           @db.Uuid
-  submittedUrl       String?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  id                String            @id @default(uuid()) @db.Uuid
+  campaignId        String            @db.Uuid
+  title             String
+  description       String?
+  dueDate           DateTime?
+  status            DeliverableStatus @default(PENDING)
+  assignedCreatorId String?           @db.Uuid
+  submittedUrl      String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   assignedCreator Member?  @relation(fields: [assignedCreatorId], references: [id], onDelete: SetNull)
@@ -2318,14 +2411,14 @@ model Contract {
 }
 
 model ContractVersion {
-  id             String   @id @default(uuid()) @db.Uuid
-  contractId     String   @db.Uuid
-  versionNumber  Int
-  fileUrl        String
-  fileName       String
-  uploadedById   String   @db.Uuid
-  note           String?
-  createdAt      DateTime @default(now())
+  id            String   @id @default(uuid()) @db.Uuid
+  contractId    String   @db.Uuid
+  versionNumber Int
+  fileUrl       String
+  fileName      String
+  uploadedById  String   @db.Uuid
+  note          String?
+  createdAt     DateTime @default(now())
 
   contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   uploadedBy Member   @relation(fields: [uploadedById], references: [id])
@@ -2381,14 +2474,14 @@ enum FolderVisibility {
 }
 
 model Folder {
-  id             String            @id @default(uuid()) @db.Uuid
-  organizationId String            @db.Uuid
-  agencyId       String            @db.Uuid
-  parentFolderId String?           @db.Uuid
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  agencyId       String           @db.Uuid
+  parentFolderId String?          @db.Uuid
   name           String
-  visibility     FolderVisibility  @default(AGENCY_ONLY)
-  createdById    String            @db.Uuid
-  createdAt      DateTime          @default(now())
+  visibility     FolderVisibility @default(AGENCY_ONLY)
+  createdById    String           @db.Uuid
+  createdAt      DateTime         @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   agency       Member       @relation("FolderAgency", fields: [agencyId], references: [id], onDelete: Cascade)
@@ -2416,20 +2509,20 @@ enum BrandInvitationStatus {
 // Member(role: BRAND, brandId) who can then log into the Brand Contact
 // portal scoped to that one brand.
 model BrandInvitation {
-  id             String                 @id @default(uuid()) @db.Uuid
-  organizationId String                 @db.Uuid
-  brandId        String                 @db.Uuid
-  agencyId       String                 @db.Uuid
+  id             String                @id @default(uuid()) @db.Uuid
+  organizationId String                @db.Uuid
+  brandId        String                @db.Uuid
+  agencyId       String                @db.Uuid
   fullName       String
   email          String
-  token          String                 @unique
-  status         BrandInvitationStatus  @default(PENDING)
-  invitedById    String                 @db.Uuid
+  token          String                @unique
+  status         BrandInvitationStatus @default(PENDING)
+  invitedById    String                @db.Uuid
   expiresAt      DateTime
   acceptedAt     DateTime?
-  acceptedById   String?                @db.Uuid
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  acceptedById   String?               @db.Uuid
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   brand        Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)

@@ -7,6 +7,8 @@ const STATUS_STYLES: Record<MembershipApplicationStatus, string> = {
   PENDING: statusToneClass.warning,
   APPROVED: statusToneClass.success,
   REJECTED: statusToneClass.error,
+  // A resolution state, not a rejection — neutral, not error-toned.
+  DUPLICATE: statusToneClass.neutral,
 };
 
 export function ApplicationStatusBadge({ status }: { status: MembershipApplicationStatus }) {

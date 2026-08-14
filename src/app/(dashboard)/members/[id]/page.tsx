@@ -29,6 +29,9 @@ import { CreatorSocialSummary } from "@/features/integrations/components/creator
 import { getConnectionsForMember } from "@/features/integrations/services/social-connections.service";
 import { getFollowerGrowthForMember } from "@/features/integrations/services/follower-growth.service";
 import { ReferralTransferCard } from "@/features/referrals/components/referral-transfer-card";
+import { ReferralCard } from "@/features/referrals/components/referral-card";
+import { getMemberReferralStats } from "@/features/referrals/services/referral.service";
+import { isReferralEligibleRole } from "@/features/referrals/config/referral-config";
 import { AgencyMergeCard } from "@/features/agencies/components/agency-merge-card";
 import { MemberNotesCard } from "@/features/members/components/member-notes-card";
 import { MemberActivityLog } from "@/features/members/components/member-activity-log";
@@ -63,17 +66,33 @@ export default async function MemberProfilePage({
   // may view another member's QR section on their profile.
   const canViewQr = isSelf || canManage;
 
-  const [companies, commissionTiers, collabStats, attendanceStats, spaceTimeStats, isFollowing, memberAuditLogs, socialConnections] =
-    await Promise.all([
-      listCompaniesForOrg(actor.organizationId),
-      listCommissionTiersForOrg(actor.organizationId),
-      getCollabProfileStats(actor.organizationId, member.id),
-      getMemberAttendanceStats(member.id),
-      getMemberSpaceTimeStats(member.id),
-      prisma.follow.findUnique({ where: { followerId_followingId: { followerId: actor.id, followingId: member.id } } }).then(Boolean),
-      canManage ? listMemberAuditLogs(actor.organizationId, member.id) : Promise.resolve([]),
-      canManage ? getConnectionsForMember(member.id) : Promise.resolve([]),
-    ]);
+  // Referral info is only ever shown to the member themselves or an
+  // Admin/Super Admin — "Members must not see sensitive applicant info; the
+  // referral system must not expose referral management to unauthorized
+  // users."
+  const canViewReferrals = (isSelf || canManage) && isReferralEligibleRole(member.role);
+
+  const [
+    companies,
+    commissionTiers,
+    collabStats,
+    attendanceStats,
+    spaceTimeStats,
+    isFollowing,
+    memberAuditLogs,
+    socialConnections,
+    referralStats,
+  ] = await Promise.all([
+    listCompaniesForOrg(actor.organizationId),
+    listCommissionTiersForOrg(actor.organizationId),
+    getCollabProfileStats(actor.organizationId, member.id),
+    getMemberAttendanceStats(member.id),
+    getMemberSpaceTimeStats(member.id),
+    prisma.follow.findUnique({ where: { followerId_followingId: { followerId: actor.id, followingId: member.id } } }).then(Boolean),
+    canManage ? listMemberAuditLogs(actor.organizationId, member.id) : Promise.resolve([]),
+    canManage ? getConnectionsForMember(member.id) : Promise.resolve([]),
+    canViewReferrals ? getMemberReferralStats(actor.organizationId, member.id) : Promise.resolve(null),
+  ]);
 
   const socialGrowth = canManage
     ? await getFollowerGrowthForMember(
@@ -364,6 +383,8 @@ export default async function MemberProfilePage({
               isSelf={isSelf}
             />
           )}
+
+          {referralStats && <ReferralCard stats={referralStats} />}
 
           {canManage && (
             <ReferralTransferCard

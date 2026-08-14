@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, Check, X, Mail, Phone, Building2, MapPin, Camera, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Check, X, Mail, Phone, Building2, MapPin, Camera, ExternalLink, Copy } from "lucide-react";
 import type { MemberRole, MembershipApplicationStatus } from "@prisma/client";
 import {
   approveApplicationAction,
@@ -43,7 +44,7 @@ export type ApplicationDetail = {
   city: string | null;
   state: string | null;
   country: string | null;
-  referredBy: string | null;
+  referredBy: { name: string; code: string } | null;
   status: MembershipApplicationStatus;
   notes: string | null;
   notesUpdatedAt: string | null;
@@ -51,6 +52,11 @@ export type ApplicationDetail = {
   createdAt: string;
   reviewedAt: string | null;
   reviewedBy: { id: string; fullName: string } | null;
+  duplicateOf: { id: string; fullName: string; status: MembershipApplicationStatus } | null;
+  duplicatesOfThis: { id: string; fullName: string; status: MembershipApplicationStatus }[];
+  duplicateResolvedAt: string | null;
+  duplicateResolvedBy: { id: string; fullName: string } | null;
+  duplicateResolutionNote: string | null;
 };
 
 function Field({ label, value }: { label: string; value: string | null }) {
@@ -181,6 +187,60 @@ export function ApplicationReview({
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
+        {application.status === "DUPLICATE" && (
+          <Card className="border-muted-foreground/30 bg-muted/40">
+            <CardContent className="flex items-start gap-3 pt-6">
+              <Copy className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">Duplicate Application</p>
+                <p className="text-muted-foreground">
+                  This application was marked as a duplicate
+                  {application.duplicateOf && (
+                    <>
+                      {" "}
+                      of{" "}
+                      <Link href={`/admin/applications/${application.duplicateOf.id}`} className="font-medium text-foreground hover:underline">
+                        {application.duplicateOf.fullName}
+                      </Link>
+                    </>
+                  )}
+                  .
+                </p>
+                {application.duplicateResolvedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Resolved {format(new Date(application.duplicateResolvedAt), "MMM d, yyyy h:mm a")}
+                    {application.duplicateResolvedBy ? ` by ${application.duplicateResolvedBy.fullName}` : ""}
+                  </p>
+                )}
+                {application.duplicateResolutionNote && (
+                  <p className="text-xs text-muted-foreground">Note: {application.duplicateResolutionNote}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {application.duplicatesOfThis.length > 0 && (
+          <Card className="border-muted-foreground/30 bg-muted/40">
+            <CardContent className="flex items-start gap-3 pt-6">
+              <Copy className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">
+                  {application.duplicatesOfThis.length} other application{application.duplicatesOfThis.length > 1 ? "s" : ""} marked as
+                  duplicate of this one
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
+                  {application.duplicatesOfThis.map((dup) => (
+                    <Link key={dup.id} href={`/admin/applications/${dup.id}`} className="hover:underline">
+                      {dup.fullName}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Application details</CardTitle>
@@ -194,7 +254,10 @@ export function ApplicationReview({
             <Field label="Website" value={application.website} />
             <Field label="Business registration #" value={application.businessRegistrationNumber} />
             <Field label="Location" value={location} />
-            <Field label="Referral" value={application.referredBy} />
+            <Field
+              label="Referred By"
+              value={application.referredBy ? `${application.referredBy.name} (${application.referredBy.code})` : "Not Referred"}
+            />
             <SocialField label="Instagram" url={instagramUrl(application.instagram)} rawValue={application.instagram} />
             <SocialField label="TikTok" url={tiktokUrl(application.tiktok)} rawValue={application.tiktok} />
             <SocialField label="YouTube" url={youtubeUrl(application.youtube)} rawValue={application.youtube} />

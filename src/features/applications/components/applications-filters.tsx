@@ -12,6 +12,7 @@ const STATUS_TABS = [
   { value: "PENDING", label: "Pending" },
   { value: "APPROVED", label: "Approved" },
   { value: "REJECTED", label: "Rejected" },
+  { value: "DUPLICATE", label: "Duplicate" },
 ] as const;
 
 export function ApplicationsFilters() {

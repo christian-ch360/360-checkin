@@ -106,7 +106,8 @@ export async function submitApplication(input: ApplicationInput) {
       organization.id,
       application.id,
       input.referralCode,
-      input.referralSource ?? "MANUAL_ENTRY"
+      input.referralSource ?? "MANUAL_ENTRY",
+      input.email
     );
   }
 
@@ -194,7 +195,10 @@ export async function listApplications(organizationId: string, filters: Applicat
   return prisma.membershipApplication.findMany({
     where,
     orderBy,
-    include: { reviewedBy: { select: { id: true, fullName: true } } },
+    include: {
+      reviewedBy: { select: { id: true, fullName: true } },
+      referralLink: { select: { referralCode: true } },
+    },
   });
 }
 
@@ -204,6 +208,16 @@ export async function getApplicationById(organizationId: string, id: string) {
     include: {
       reviewedBy: { select: { id: true, fullName: true } },
       notesUpdatedBy: { select: { id: true, fullName: true } },
+      // "Admins must be able to see whether an application was referred —
+      // Referred By: [Name] / Code: [CODE], or Not Referred if none" — never
+      // shown to the applicant, only surfaced here on the admin review page.
+      referralLink: { select: { referralCode: true, referrer: { select: { fullName: true } } } },
+      // Duplicate-resolution linkage — populated only when this application
+      // was itself marked DUPLICATE (duplicateOf) or is the canonical
+      // application another one was resolved against (duplicatesOfThis).
+      duplicateOf: { select: { id: true, fullName: true, status: true } },
+      duplicatesOfThis: { select: { id: true, fullName: true, status: true } },
+      duplicateResolvedBy: { select: { id: true, fullName: true } },
     },
   });
 }

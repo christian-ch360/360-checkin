@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   Sparkles,
   Copy,
+  Share2,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import type { AccentName } from "@/config/nav-colors";
@@ -71,6 +72,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
       { title: "Members", href: "/members", icon: Users, accent: "blue", permission: "members.view" },
       { title: "Community", href: "/community", icon: Sparkles, accent: "violet" },
       { title: "Applications", href: "/admin/applications", icon: FileCheck2, accent: "amber", permission: "members.approve" },
+      { title: "Referrals", href: "/admin/referrals", icon: Share2, accent: "indigo", permission: "referrals.view" },
       { title: "Duplicate Emails", href: "/admin/duplicate-emails", icon: Copy, accent: "pink", permission: "members.manage" },
       { title: "Operations", href: "/check-in", icon: QrCode, accent: "emerald", permission: "checkin.manage" },
       { title: "Analytics", href: "/analytics", icon: BarChart3, accent: "emerald", permission: "reports.view" },
