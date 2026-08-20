@@ -295,4 +295,5 @@ export const TEMPLATE_SAMPLE_PROPS: { [K in TemplateName]: TemplateProps[K] } = 
     ctaUrl: "https://creatorhub360.com/agency/team",
     ctaLabel: "View Team",
   },
+  welcome_newsletter: {},
 };

@@ -188,4 +188,6 @@ export const EmailService = {
     sendTemplatedEmail("agency_access_rejected", args),
   sendAgencyTeamActivityEmail: (args: SendArgs<"agency_team_activity">) =>
     sendTemplatedEmail("agency_team_activity", args),
+  sendWelcomeNewsletterEmail: (args: SendArgs<"welcome_newsletter">) =>
+    sendTemplatedEmail("welcome_newsletter", args),
 };

@@ -32,9 +32,14 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Profile" };
 
-export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; checkout?: string }>;
+}) {
   const actor = await requireCurrentMember();
-  const { tab } = await searchParams;
+  const { tab, checkout } = await searchParams;
+  const checkoutStatus = checkout === "success" || checkout === "cancelled" ? checkout : undefined;
 
   const [
     member,
@@ -142,6 +147,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             monthlyRevenueSeries={monthlyRevenueSeries}
             topRevenueSources={topRevenueSources}
             revenueGoal={revenueGoal}
+            checkoutStatus={checkoutStatus}
           />
         </TabsContent>
 

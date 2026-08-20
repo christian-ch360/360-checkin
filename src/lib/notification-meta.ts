@@ -43,6 +43,10 @@ import {
   FileSignature,
   ListChecks,
   Receipt,
+  CreditCard,
+  AlertTriangle,
+  XCircle,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
@@ -100,4 +104,9 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, { icon: LucideIcon
   CONTRACT_EXPIRING: { icon: FileSignature },
   TASK_ASSIGNED: { icon: ListChecks },
   INVOICE_OVERDUE: { icon: Receipt },
+  PAYMENT_SUCCEEDED: { icon: CreditCard },
+  PAYMENT_FAILED: { icon: AlertTriangle },
+  PAYMENT_ACTION_REQUIRED: { icon: AlertTriangle },
+  MEMBERSHIP_CANCELED: { icon: XCircle },
+  MEMBERSHIP_RENEWED: { icon: RefreshCw },
 };

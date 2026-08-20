@@ -201,6 +201,11 @@ enum NotificationType {
   CONTRACT_EXPIRING
   TASK_ASSIGNED
   INVOICE_OVERDUE
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  PAYMENT_ACTION_REQUIRED
+  MEMBERSHIP_CANCELED
+  MEMBERSHIP_RENEWED
 }
 
 enum FeedbackCategory {
@@ -2860,6 +2865,12 @@ model MembershipPlan {
   priceCents      Int
   billingInterval BillingInterval @default(MONTHLY)
   trialMonths     Int             @default(0)
+  // The Stripe recurring Price this plan bills through — set once a Super
+  // Admin creates the matching Product/Price in the Stripe Dashboard and
+  // links it here. Null means this plan can't be checked out via Stripe yet
+  // (createMembershipCheckoutSession rejects it with a clear error rather
+  // than falling back to a client-supplied price).
+  stripePriceId   String?         @unique
   // Free-text marketing bullets not tied to access control (e.g. "Creator
   // Profile," "Community Access") — structured, enforceable benefits live in
   // MembershipPlanFeatureValue instead (see that model's comment).
@@ -3059,10 +3070,20 @@ model MemberSubscription {
   cancelAt                  DateTime?
   canceledAt                DateTime?
   trialEndingSoonNotifiedAt DateTime?
-  // Unused until a real payment gateway is integrated — reserved so that
-  // integration has somewhere to write without another migration.
-  paymentProviderCustomerId String?
-  externalSubscriptionId    String?
+  // Stripe Customer id ("cus_...") — the Stripe integration's write target
+  // for the field this column was originally reserved for (see the old
+  // comment this replaced: "unused until a real payment gateway is
+  // integrated"). Set by getOrCreateStripeCustomer the first time a member
+  // enters Checkout; stays null for every member who never has (existing
+  // trial/manually-managed members are never backfilled or charged).
+  paymentProviderCustomerId String?            @unique
+  // Stripe Subscription id ("sub_...") — set once Checkout completes and
+  // kept in sync by the Stripe webhook handler (syncSubscriptionFromStripe).
+  // Null means this member's subscription is not Stripe-backed (trial,
+  // legacy, or admin-managed via recordMembershipPayment) — cancelMembership
+  // and resumeMembership branch on this to decide whether to call Stripe or
+  // keep the existing local-only behavior.
+  externalSubscriptionId    String?            @unique
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
@@ -3074,18 +3095,58 @@ model MemberSubscription {
   @@map("member_subscriptions")
 }
 
+enum MembershipPaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
 model MembershipPayment {
-  id                   String   @id @default(uuid()) @db.Uuid
-  memberSubscriptionId String   @db.Uuid
-  amountCents          Int
-  paidAt               DateTime @default(now())
-  note                 String?
-  createdAt            DateTime @default(now())
+  id                    String                  @id @default(uuid()) @db.Uuid
+  memberSubscriptionId  String                  @db.Uuid
+  amountCents           Int
+  // ISO 4217, lowercase, matching Stripe's own convention (e.g. "usd") — a
+  // constant today but not hardcoded, since Stripe invoices/charges always
+  // carry their own currency and this column should just mirror it.
+  currency              String                  @default("usd")
+  status                MembershipPaymentStatus @default(PAID)
+  paidAt                DateTime                @default(now())
+  note                  String?
+  // Stripe references only — never card numbers, CVC, or any raw payment
+  // credential (Stripe itself remains the sole holder of those). All three
+  // are null for rows created by the pre-Stripe manual admin flow
+  // (recordMembershipPayment) and populated for rows synced from a webhook.
+  // stripeInvoiceId is unique so an invoice.paid/payment_failed webhook
+  // retry upserts the same row instead of creating a duplicate.
+  stripePaymentIntentId String?                 @unique
+  stripeInvoiceId       String?                 @unique
+  stripeCustomerId      String?
+  createdAt             DateTime                @default(now())
 
   subscription MemberSubscription @relation(fields: [memberSubscriptionId], references: [id], onDelete: Cascade)
 
   @@index([memberSubscriptionId])
+  @@index([stripeCustomerId])
   @@map("membership_payments")
+}
+
+// Idempotency guard for /api/stripe/webhook — every verified Stripe event is
+// inserted here, inside the same transaction as the DB writes it triggers,
+// before that event is processed. A retried delivery of the same event.id
+// hits the unique constraint, is recognized as already-handled, and returns
+// 200 without reprocessing (never a second MembershipPayment/Notification/
+// lifecycle-event for one Stripe event). If processing itself throws, the
+// transaction (including this insert) rolls back, so a genuine failure is
+// still retryable by Stripe rather than being permanently marked "handled."
+model StripeWebhookEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  stripeEventId String   @unique
+  type          String
+  processedAt   DateTime @default(now())
+
+  @@map("stripe_webhook_events")
 }
 
 // =============================================================================

@@ -17,6 +17,7 @@ import { checkAgencyDuplicate } from "@/features/agencies/services/agency-duplic
 import { requestAgencyAccess } from "@/features/agencies/services/agency-access.service";
 import { acceptAgencyInvitation } from "@/features/agencies/services/agency-invitations.service";
 import { isReferralEligibleRole } from "@/features/referrals/config/referral-config";
+import { wasEmailAlreadySent } from "@/lib/email/idempotency";
 
 export type ApplicationReviewResult =
   | { success: true; onboardingNote?: string }
@@ -200,6 +201,32 @@ export async function approveApplicationAction(applicationId: string): Promise<A
       actorId: actor.id,
       skipReferralCode: Boolean(application.claimedAgencyId),
     });
+
+    // Second, separate email in the two-email acceptance flow — the
+    // CreatorHub360 welcome newsletter (informational artwork, no
+    // login/account details). Independent of the account/access email sent
+    // by provisionMemberOnboarding above: guarded by its own EmailLog check
+    // so a retry of this whole action can't double-send either email
+    // independently of the other. Never blocks approval — EmailService
+    // never throws on delivery failure.
+    //
+    // Creator-only: the newsletter's content ("You've been accepted to our
+    // invite only community" / creator-specific mission and asks) is written
+    // for content creators specifically, not Brands/Agencies/Brokers/etc. —
+    // application.role is the existing Creator-Type field (MemberRole enum,
+    // reused verbatim as Member.role on the row created above), so no new
+    // field was added to gate this.
+    if (
+      application.role === "CREATOR" &&
+      !(await wasEmailAlreadySent(actor.organizationId, member.id, "welcome_newsletter"))
+    ) {
+      await EmailService.sendWelcomeNewsletterEmail({
+        to: member.email,
+        organizationId: actor.organizationId,
+        memberId: member.id,
+        sentBy: actor.id,
+      });
+    }
 
     // Notes are managed independently (updateApplicationNotesAction, auto-saved
     // as the admin types) — approval never overwrites whatever's already there.

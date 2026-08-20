@@ -8,6 +8,7 @@ import { EmailService } from "@/lib/email/email-service";
 import { generateTempPassword } from "@/lib/security/temp-password";
 import { hasPermission } from "@/lib/permissions";
 import { ensureReferralCode } from "@/features/referrals/services/referral-code";
+import { wasEmailAlreadySent } from "@/lib/email/idempotency";
 
 /**
  * The account-provisioning half of "add a member" — QR badge, Supabase auth
@@ -77,10 +78,16 @@ export async function provisionMemberOnboarding(
     memberId: member.id,
     sentBy: options.actorId ?? null,
   };
-  if (options.emailTemplate === "application_approved") {
-    await EmailService.sendApplicationApprovedEmail(emailArgs);
-  } else {
-    await EmailService.sendWelcomeEmail(emailArgs);
+  // Guards against a retried caller (e.g. approveApplicationAction re-run
+  // after a partial failure) double-sending this specific email — reuses
+  // EmailLog as the dedupe check rather than adding new state.
+  const credentialsTemplate = options.emailTemplate === "application_approved" ? "application_approved" : "welcome";
+  if (!(await wasEmailAlreadySent(member.organizationId, member.id, credentialsTemplate))) {
+    if (credentialsTemplate === "application_approved") {
+      await EmailService.sendApplicationApprovedEmail(emailArgs);
+    } else {
+      await EmailService.sendWelcomeEmail(emailArgs);
+    }
   }
 
   if (member.role === "CREATOR") {

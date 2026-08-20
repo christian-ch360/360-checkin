@@ -47,11 +47,13 @@ export function SettingsMembershipTab({
   switchablePlans,
   memberFullName,
   memberNumber,
+  checkoutStatus,
 }: {
   membership: MembershipOverviewData;
   switchablePlans: MembershipOverviewSwitchablePlan[];
   memberFullName: string;
   memberNumber: string;
+  checkoutStatus?: "success" | "cancelled";
 }) {
   return (
     <SettingsSectionCard title="Membership" description="Your package, benefits, and billing.">
@@ -65,7 +67,7 @@ export function SettingsMembershipTab({
             memberNumber={memberNumber}
           />
         )}
-        <MembershipOverview membership={membership} switchablePlans={switchablePlans} />
+        <MembershipOverview membership={membership} switchablePlans={switchablePlans} checkoutStatus={checkoutStatus} />
       </div>
     </SettingsSectionCard>
   );

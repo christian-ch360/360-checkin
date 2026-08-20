@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, CreditCard } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { SubscriptionStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,13 +16,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cancelMembership, resumeMembership } from "@/features/members/services/membership-actions";
+import { MembershipPaymentActions } from "@/features/creator-dashboard/components/membership-payment-actions";
 
 export function MembershipBillingActions({
   status,
   cancelAt,
+  isStripeBacked,
 }: {
   status: SubscriptionStatus;
   cancelAt: Date | null;
+  isStripeBacked: boolean;
 }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -38,7 +41,11 @@ export function MembershipBillingActions({
         toast.error(result.error);
         return;
       }
-      toast.success("Membership canceled — you'll keep access until your current period ends.");
+      toast.success(
+        result.pendingStripeSync
+          ? "Cancellation requested — this updates as soon as Stripe confirms it."
+          : "Membership canceled — you'll keep access until your current period ends."
+      );
       setConfirmOpen(false);
       router.refresh();
     });
@@ -51,7 +58,7 @@ export function MembershipBillingActions({
         toast.error(result.error);
         return;
       }
-      toast.success("Membership resumed");
+      toast.success(result.pendingStripeSync ? "Resume requested — this updates as soon as Stripe confirms it." : "Membership resumed");
       router.refresh();
     });
   }
@@ -59,9 +66,7 @@ export function MembershipBillingActions({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" disabled title="Payment processing isn't connected yet">
-          <CreditCard /> Update payment method
-        </Button>
+        <MembershipPaymentActions isStripeBacked={isStripeBacked} />
         {canResume && (
           <Button size="sm" onClick={onResume} disabled={isPending}>
             {isPending && <Loader2 className="size-4 animate-spin" />}

@@ -198,3 +198,55 @@ export async function ensureAgencyFilesBucket(): Promise<boolean> {
 export async function uploadAgencyFile(path: string, blob: Blob): Promise<string> {
   return uploadAttachment(AGENCY_FILES_BUCKET, agencyFilesBucketEnsured, path, blob);
 }
+
+const EMAIL_ASSETS_BUCKET = "email-assets";
+const EMAIL_ASSET_MAX_BYTES = 10 * 1024 * 1024; // 10MB — static newsletter/graphic assets, not user uploads
+const EMAIL_ASSET_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+let emailAssetsBucketEnsured = false;
+
+/**
+ * Idempotently creates the public "email-assets" Storage bucket — hosts
+ * static graphics referenced by React Email templates (e.g. the welcome
+ * newsletter) that need a real absolute URL rather than a local file path,
+ * since email clients can never load images from the app's filesystem.
+ * Same self-healing bucket-creation pattern as ensureAvatarBucket().
+ */
+export async function ensureEmailAssetsBucket(): Promise<boolean> {
+  if (emailAssetsBucketEnsured) return true;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { data: existing } = await admin.storage.getBucket(EMAIL_ASSETS_BUCKET);
+  if (!existing) {
+    const { error } = await admin.storage.createBucket(EMAIL_ASSETS_BUCKET, {
+      public: true,
+      fileSizeLimit: EMAIL_ASSET_MAX_BYTES,
+      allowedMimeTypes: EMAIL_ASSET_MIME_TYPES,
+    });
+    if (error && !/already exists/i.test(error.message)) {
+      throw error;
+    }
+  }
+
+  emailAssetsBucketEnsured = true;
+  return true;
+}
+
+/** Uploads a static email template graphic and returns its public URL. */
+export async function uploadEmailAsset(path: string, blob: Blob): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) throw new Error("Image storage is not configured (SUPABASE_SERVICE_ROLE_KEY missing).");
+
+  await ensureEmailAssetsBucket();
+
+  const { error } = await admin.storage.from(EMAIL_ASSETS_BUCKET).upload(path, blob, {
+    contentType: blob.type || "image/png",
+    upsert: true,
+  });
+  if (error) throw error;
+
+  const { data } = admin.storage.from(EMAIL_ASSETS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}

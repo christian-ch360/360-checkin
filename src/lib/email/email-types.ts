@@ -140,6 +140,10 @@ import {
   AgencyTeamActivityEmail,
   type AgencyTeamActivityEmailProps,
 } from "@/emails/templates/admin/agency-team-activity-email";
+import {
+  WelcomeNewsletterEmail,
+  type WelcomeNewsletterEmailProps,
+} from "@/emails/templates/membership/welcome-newsletter-email";
 
 /**
  * Every template registered here gets a matching EmailService method (see
@@ -203,6 +207,10 @@ export type TemplateProps = {
   agency_access_approved: AgencyAccessApprovedEmailProps;
   agency_access_rejected: AgencyAccessRejectedEmailProps;
   agency_team_activity: AgencyTeamActivityEmailProps;
+  // Separate from application_approved (the account/access email) — this is
+  // the second, purely informational email in the two-email acceptance
+  // flow. Static artwork, no per-recipient fields.
+  welcome_newsletter: WelcomeNewsletterEmailProps;
 };
 
 export type TemplateName = keyof TemplateProps;
@@ -326,6 +334,10 @@ export const TEMPLATES: { [K in TemplateName]: TemplateDef<K> } = {
   agency_team_activity: {
     component: AgencyTeamActivityEmail,
     subject: (p) => p.headline,
+  },
+  welcome_newsletter: {
+    component: WelcomeNewsletterEmail,
+    subject: () => "Welcome to Creator Hub 360 — You're In!",
   },
 };
 

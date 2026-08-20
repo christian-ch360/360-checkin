@@ -3,6 +3,8 @@ import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { getPlanFeatureValues, renderEntitlementLabel } from "@/features/membership-plans/services/membership-features.service";
 import { getRemainingUsage } from "@/features/membership-plans/services/membership-usage.service";
+import { isStripeConfigured } from "@/lib/stripe/stripe";
+import { getDefaultPaymentMethodSummary } from "@/features/members/services/stripe-billing.service";
 
 export type MemberBenefitStatus = {
   key: string;
@@ -32,6 +34,16 @@ export async function getMemberMembership(memberId: string) {
     include: { plan: true, payments: { orderBy: { paidAt: "desc" }, take: 20 } },
   });
   if (!subscription) return null;
+
+  // Live, display-only Stripe lookup — never persisted locally (see
+  // getDefaultPaymentMethodSummary's comment on why brand/last4 is fetched
+  // fresh rather than cached). Only attempted for members who've actually
+  // gone through Checkout; every other member simply sees "No payment
+  // method on file" without any Stripe call being made.
+  const paymentMethod =
+    isStripeConfigured() && subscription.paymentProviderCustomerId
+      ? await getDefaultPaymentMethodSummary(subscription.paymentProviderCustomerId).catch(() => null)
+      : null;
 
   const featureValues = await getPlanFeatureValues(subscription.planId);
 
@@ -76,8 +88,16 @@ export async function getMemberMembership(memberId: string) {
     payments: subscription.payments.map((p) => ({
       id: p.id,
       amountCents: p.amountCents,
+      currency: p.currency,
+      status: p.status,
       paidAt: p.paidAt,
       note: p.note,
     })),
+    // Whether this subscription is billed through Stripe at all — gates
+    // "Update payment method" (opens the real Billing Portal) vs. "Set up
+    // billing" (starts Checkout) in the UI, and whether the payment-method
+    // card is even shown.
+    isStripeBacked: subscription.externalSubscriptionId != null,
+    paymentMethod,
   };
 }

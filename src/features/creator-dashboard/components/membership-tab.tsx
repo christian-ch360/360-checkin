@@ -27,6 +27,7 @@ export function MembershipTab({
   monthlyRevenueSeries,
   topRevenueSources,
   revenueGoal,
+  checkoutStatus,
 }: {
   membership: MembershipOverviewData;
   switchablePlans: MembershipOverviewSwitchablePlan[];
@@ -35,6 +36,7 @@ export function MembershipTab({
   monthlyRevenueSeries: MonthlyRevenuePoint[];
   topRevenueSources: TopRevenueSource[];
   revenueGoal: RevenueGoalSummary | null;
+  checkoutStatus?: "success" | "cancelled";
 }) {
   return (
     <div className="space-y-6">
@@ -51,7 +53,7 @@ export function MembershipTab({
         </div>
       </div>
 
-      <MembershipOverview membership={membership} switchablePlans={switchablePlans} />
+      <MembershipOverview membership={membership} switchablePlans={switchablePlans} checkoutStatus={checkoutStatus} />
     </div>
   );
 }

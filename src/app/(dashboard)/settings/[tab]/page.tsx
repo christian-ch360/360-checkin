@@ -34,8 +34,16 @@ export async function generateMetadata({ params }: { params: Promise<{ tab: stri
   return { title: def ? `${def.label} · Settings` : "Settings" };
 }
 
-export default async function SettingsTabPage({ params }: { params: Promise<{ tab: string }> }) {
+export default async function SettingsTabPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ tab: string }>;
+  searchParams: Promise<{ checkout?: string }>;
+}) {
   const { tab } = await params;
+  const { checkout } = await searchParams;
+  const checkoutStatus = checkout === "success" || checkout === "cancelled" ? checkout : undefined;
   const actor = await requireCurrentMember();
 
   const isAdmin = hasPermission(actor.systemRole, "admin.access");
@@ -107,6 +115,7 @@ export default async function SettingsTabPage({ params }: { params: Promise<{ ta
           switchablePlans={switchablePlans}
           memberFullName={member.fullName}
           memberNumber={member.memberNumber}
+          checkoutStatus={checkoutStatus}
         />
       );
       break;
