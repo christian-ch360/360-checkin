@@ -6,7 +6,7 @@ import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/db/audit-log";
 import { EmailService } from "@/lib/email/email-service";
-import { generateMemberNumber, isUniqueConstraintError, isUniqueConstraintErrorOnField } from "@/features/members/services/member-number";
+import { generateMemberNumber, isUniqueConstraintErrorOnField } from "@/features/members/services/member-number";
 import { normalizeEmail } from "@/lib/utils/email";
 import { provisionMemberOnboarding } from "@/features/members/services/onboarding";
 import { formatLocation } from "@/features/applications/utils/location";
@@ -124,11 +124,22 @@ export async function approveApplicationAction(applicationId: string): Promise<A
         if (isUniqueConstraintErrorOnField(error, "email")) {
           return { success: false, error: "A member with this email already exists." };
         }
-        if (isUniqueConstraintError(error) && attempt < 2) continue;
-        if (isUniqueConstraintError(error)) {
-          return { success: false, error: "A member with this email already exists." };
-        }
-        throw error;
+        // memberNumber collisions come from member_number_seq (see
+        // generateMemberNumber) and should never happen under normal
+        // operation — the sequence is atomic and gap-immune — but retry
+        // safely with a freshly generated number rather than trust "can't
+        // happen" reasoning alone in production.
+        if (isUniqueConstraintErrorOnField(error, "memberNumber") && attempt < 2) continue;
+        // Any other unique-constraint violation, or any other unexpected
+        // error, must never be mislabeled as an email collision — log the
+        // real cause server-side and surface a safe, accurate message
+        // instead of raw Prisma/database error text.
+        console.error("[approveApplicationAction] member creation failed", {
+          applicationId: application.id,
+          attempt,
+          error,
+        });
+        return { success: false, error: "Could not create the member due to a system error. Please try again or contact support." };
       }
     }
     if (!member) return { success: false, error: "Could not create member. Please try again." };

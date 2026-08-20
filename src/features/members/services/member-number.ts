@@ -7,13 +7,24 @@ const PREFIX = "CH360";
 const PAD_LENGTH = 6;
 
 /**
- * Generates the next sequential member number (e.g. CH360-000001).
- * Retries on unique-constraint races instead of relying on a DB sequence,
- * since concurrent signups are rare relative to check-in/GMV write volume.
+ * Generates the next member number (e.g. CH360-000132) from the
+ * `member_number_seq` Postgres sequence (see the
+ * 20260820020000_member_number_sequence migration) — not `member.count() + 1`.
+ * Count-based generation was unsafe against any historical deletion: once
+ * total row count drops below the highest number ever issued, count()+1
+ * recomputes an already-taken number, and every retry recomputes the exact
+ * same colliding number since count() doesn't change between failed
+ * attempts. A native sequence's nextval() is atomic and monotonically
+ * increasing — Postgres guarantees it never returns the same value twice,
+ * even to two transactions calling it at the same instant, with no
+ * application-level locking required, and it's immune to gaps since it
+ * always advances from its own last value rather than being recomputed from
+ * current row count.
  */
 export async function generateMemberNumber(): Promise<string> {
-  const count = await prisma.member.count();
-  return `${PREFIX}-${String(count + 1).padStart(PAD_LENGTH, "0")}`;
+  const result = await prisma.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('member_number_seq') AS nextval`;
+  const n = Number(result[0].nextval);
+  return `${PREFIX}-${String(n).padStart(PAD_LENGTH, "0")}`;
 }
 
 export function isUniqueConstraintError(error: unknown): boolean {
