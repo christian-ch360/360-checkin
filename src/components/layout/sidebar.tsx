@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import type { SystemRole, MemberRole } from "@prisma/client";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
-import { CREATOR_NAV_SECTIONS, ADMIN_NAV_SECTIONS } from "@/config/nav";
+import { NAV_SECTIONS } from "@/config/nav";
 import { hasPermission } from "@/lib/permissions";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,9 @@ import { LogoMark } from "@/features/auth/components/logo-mark";
 
 export function Sidebar({ role, memberRole }: { role: SystemRole; memberRole: MemberRole }) {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const navSections = hasPermission(role, "admin.access") ? ADMIN_NAV_SECTIONS : CREATOR_NAV_SECTIONS;
+  const navSections = NAV_SECTIONS.filter(
+    (section) => !section.requiredPermission || hasPermission(role, section.requiredPermission)
+  );
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 768px) and (max-width: 1024px)");

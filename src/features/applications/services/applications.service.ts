@@ -175,19 +175,39 @@ export function buildApplicationWhere(organizationId: string, filters: Applicati
   };
 }
 
-export async function listApplications(organizationId: string, filters: ApplicationListFilters = {}) {
+export type ApplicationListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+const DEFAULT_APPLICATION_PAGE_SIZE = 25;
+
+export async function listApplications(
+  organizationId: string,
+  filters: ApplicationListFilters = {},
+  pagination: ApplicationListPagination = { page: 1, pageSize: DEFAULT_APPLICATION_PAGE_SIZE }
+) {
   const where = buildApplicationWhere(organizationId, filters);
   const orderBy: Prisma.MembershipApplicationOrderByWithRelationInput =
     filters.sort === "role" ? { role: "asc" } : { createdAt: "desc" };
+  const page = Math.max(1, pagination.page);
+  const pageSize = pagination.pageSize;
 
-  return prisma.membershipApplication.findMany({
-    where,
-    orderBy,
-    include: {
-      reviewedBy: { select: { id: true, fullName: true } },
-      referralLink: { select: { referralCode: true } },
-    },
-  });
+  const [items, total] = await Promise.all([
+    prisma.membershipApplication.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        reviewedBy: { select: { id: true, fullName: true } },
+        referralLink: { select: { referralCode: true } },
+      },
+    }),
+    prisma.membershipApplication.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize, pageCount: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export async function getApplicationById(organizationId: string, id: string) {

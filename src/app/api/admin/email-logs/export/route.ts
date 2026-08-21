@@ -7,6 +7,7 @@ import type { EmailCategory, EmailStatus, Prisma } from "@prisma/client";
 import { exportToCSV, exportToXLSX } from "@/features/reports/services/export";
 import type { ReportTable } from "@/features/reports/services/reports.service";
 import { EMAIL_CATEGORY_LABELS, EMAIL_STATUS_LABELS } from "@/features/communications/config/template-catalog";
+import { getInboxCutoff } from "@/features/communications/services/email-logs.service";
 
 const CONTENT_TYPES = {
   csv: "text/csv",
@@ -28,10 +29,31 @@ export async function GET(request: NextRequest) {
   const status = (params.get("status") as EmailStatus | null) || undefined;
   const dateFrom = params.get("from") ? new Date(params.get("from")!) : undefined;
   const dateTo = params.get("to") ? new Date(params.get("to")!) : undefined;
+  const view = (params.get("view") as "inbox" | "archive" | null) || undefined;
   const exportFormat = (params.get("format") ?? "csv") as keyof typeof CONTENT_TYPES;
 
   if (!(exportFormat in CONTENT_TYPES)) {
     return NextResponse.json({ error: "Unknown format" }, { status: 400 });
+  }
+
+  // Separate AND entries (matching buildEmailLogWhere in email-logs.service.ts)
+  // so the dateFrom/dateTo range and the Inbox/Archive cutoff don't collide
+  // on the same `createdAt` key. A search bypasses the cutoff, same as the list view.
+  const and: Prisma.EmailLogWhereInput[] = [];
+  if (dateFrom) and.push({ createdAt: { gte: dateFrom } });
+  if (dateTo) and.push({ createdAt: { lte: dateTo } });
+  if (view && !search) {
+    const cutoff = getInboxCutoff();
+    and.push(view === "inbox" ? { createdAt: { gte: cutoff } } : { createdAt: { lt: cutoff } });
+  }
+  if (search) {
+    and.push({
+      OR: [
+        { to: { contains: search, mode: "insensitive" } },
+        { recipientName: { contains: search, mode: "insensitive" } },
+        { subject: { contains: search, mode: "insensitive" } },
+      ],
+    });
   }
 
   const where: Prisma.EmailLogWhereInput = {
@@ -39,18 +61,7 @@ export async function GET(request: NextRequest) {
     ...(template ? { template } : {}),
     ...(category ? { category } : {}),
     ...(status ? { status } : {}),
-    ...(dateFrom || dateTo
-      ? { createdAt: { ...(dateFrom ? { gte: dateFrom } : {}), ...(dateTo ? { lte: dateTo } : {}) } }
-      : {}),
-    ...(search
-      ? {
-          OR: [
-            { to: { contains: search, mode: "insensitive" } },
-            { recipientName: { contains: search, mode: "insensitive" } },
-            { subject: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    ...(and.length ? { AND: and } : {}),
   };
 
   const logs = await prisma.emailLog.findMany({

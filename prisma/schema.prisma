@@ -206,6 +206,7 @@ enum NotificationType {
   PAYMENT_ACTION_REQUIRED
   MEMBERSHIP_CANCELED
   MEMBERSHIP_RENEWED
+  NEW_CREATOR_JOINED
 }
 
 enum FeedbackCategory {

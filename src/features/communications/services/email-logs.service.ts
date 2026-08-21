@@ -11,6 +11,12 @@ export type EmailLogFilters = {
   status?: EmailStatus;
   dateFrom?: Date;
   dateTo?: Date;
+  /** Scopes the query to Inbox (created within INBOX_RETENTION_DAYS) or
+   * Archive (older), via the same `createdAt` timestamp already used for
+   * sorting and the dateFrom/dateTo filter. Ignored when `search` is set —
+   * a search is meant to find a match on either side of the boundary
+   * regardless of which tab it was typed from (see listEmailLogs). */
+  view?: "inbox" | "archive";
 };
 
 export type EmailLogPage = {
@@ -19,6 +25,21 @@ export type EmailLogPage = {
 };
 
 const DEFAULT_PAGE_SIZE = 25;
+
+export const INBOX_RETENTION_DAYS = 30;
+
+/**
+ * Exact instant, not a calendar-day boundary: an email created at precisely
+ * this instant belongs to Inbox (`createdAt >= cutoff`); everything strictly
+ * older is Archive (`createdAt < cutoff`). Mutually exclusive and exhaustive,
+ * so no email can appear in both or neither. Recomputed on every call (never
+ * cached) so it always reflects "now" — Date/Prisma's `timestamptz` both
+ * operate on the same absolute instant regardless of server timezone, so
+ * this needs no separate timezone handling.
+ */
+export function getInboxCutoff(): Date {
+  return subDays(new Date(), INBOX_RETENTION_DAYS);
+}
 
 // Every column except html/text — those are large (@db.Text) and only ever
 // needed by the detail drawer's lazy fetch (getEmailLogDetail), never the
@@ -49,28 +70,35 @@ const LIST_SELECT = {
 export type EmailLogListItem = Prisma.EmailLogGetPayload<{ select: typeof LIST_SELECT }>;
 
 function buildEmailLogWhere(organizationId: string, filters: EmailLogFilters): Prisma.EmailLogWhereInput {
+  // Separate AND entries (rather than one merged `createdAt` object) so the
+  // dateFrom/dateTo range filter and the Inbox/Archive cutoff can both apply
+  // at once without their `gte`/`lt` keys colliding.
+  const and: Prisma.EmailLogWhereInput[] = [];
+
+  if (filters.dateFrom) and.push({ createdAt: { gte: filters.dateFrom } });
+  if (filters.dateTo) and.push({ createdAt: { lte: filters.dateTo } });
+
+  if (filters.view && !filters.search) {
+    const cutoff = getInboxCutoff();
+    and.push(filters.view === "inbox" ? { createdAt: { gte: cutoff } } : { createdAt: { lt: cutoff } });
+  }
+
+  if (filters.search) {
+    and.push({
+      OR: [
+        { to: { contains: filters.search, mode: "insensitive" } },
+        { recipientName: { contains: filters.search, mode: "insensitive" } },
+        { subject: { contains: filters.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
   return {
     organizationId,
     ...(filters.template ? { template: filters.template } : {}),
     ...(filters.category ? { category: filters.category } : {}),
     ...(filters.status ? { status: filters.status } : {}),
-    ...(filters.dateFrom || filters.dateTo
-      ? {
-          createdAt: {
-            ...(filters.dateFrom ? { gte: filters.dateFrom } : {}),
-            ...(filters.dateTo ? { lte: filters.dateTo } : {}),
-          },
-        }
-      : {}),
-    ...(filters.search
-      ? {
-          OR: [
-            { to: { contains: filters.search, mode: "insensitive" } },
-            { recipientName: { contains: filters.search, mode: "insensitive" } },
-            { subject: { contains: filters.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    ...(and.length ? { AND: and } : {}),
   };
 }
 

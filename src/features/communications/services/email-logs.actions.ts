@@ -71,6 +71,7 @@ export async function retryEmailLogAction(id: string): Promise<EmailLogActionRes
   });
 
   revalidatePath("/admin/email-center");
+  revalidatePath("/admin/email-center/archive");
 
   if (!result.sent) {
     return { success: false, error: `Retry failed: ${result.reason ?? "unknown error"}` };
@@ -101,5 +102,6 @@ export async function deleteEmailLogAction(id: string): Promise<EmailLogActionRe
   });
 
   revalidatePath("/admin/email-center");
+  revalidatePath("/admin/email-center/archive");
   return { success: true };
 }

@@ -26,14 +26,22 @@ export function ApplicationsFilters() {
     const params = new URLSearchParams(searchParams.toString());
     if (value === "all") params.delete(key);
     else params.set(key, value);
+    params.delete("page");
     router.push(`${pathname}?${params.toString()}`);
   }
 
   useEffect(() => {
+    // Skips on mount and on external URL changes (e.g. clicking a page
+    // number) where `search` merely mirrors what's already in the URL —
+    // without this, the debounced push below would fire anyway and strip
+    // an existing `page` param even though the user didn't type anything.
+    if (search === (searchParams.get("search") ?? "")) return;
+
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
       if (search) params.set("search", search);
       else params.delete("search");
+      params.delete("page");
       startTransition(() => router.push(`${pathname}?${params.toString()}`));
     }, 300);
     return () => clearTimeout(timeout);

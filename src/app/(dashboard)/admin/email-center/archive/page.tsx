@@ -1,12 +1,7 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { BarChart3 } from "lucide-react";
 import { requireCurrentMember } from "@/features/auth/services/current-member";
 import { hasPermission } from "@/lib/permissions";
-import { getEmailLogKPIs } from "@/features/communications/services/email-logs.service";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { EmailCenterKpis } from "@/features/communications/components/email-center-kpis";
 import { EmailCenterTabs } from "@/features/communications/components/email-center-tabs";
 import {
   EmailCenterListSection,
@@ -16,9 +11,9 @@ import { ExportEmailLogsButton } from "@/features/communications/components/expo
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Email Center" };
+export const metadata = { title: "Email Archive" };
 
-export default async function EmailCenterPage({
+export default async function EmailArchivePage({
   searchParams,
 }: {
   searchParams: Promise<EmailCenterSearchParams>;
@@ -30,34 +25,21 @@ export default async function EmailCenterPage({
   const canManage = hasPermission(actor.systemRole, "communications.manage");
 
   const params = await searchParams;
-  const kpis = await getEmailLogKPIs(actor.organizationId);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Email Center"
-        description="View, search, inspect, retry, and monitor every email sent by the platform."
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/admin/email-center/analytics">
-                <BarChart3 className="size-4" />
-                Analytics
-              </Link>
-            </Button>
-            {canManage && <ExportEmailLogsButton view="inbox" />}
-          </div>
-        }
+        description="Emails older than 30 days — kept in full, searchable, and available for the same actions as Inbox."
+        actions={canManage ? <ExportEmailLogsButton view="archive" /> : undefined}
       />
 
-      <EmailCenterKpis kpis={kpis} />
-
-      <EmailCenterTabs active="inbox" />
+      <EmailCenterTabs active="archive" />
 
       <EmailCenterListSection
         organizationId={actor.organizationId}
         canManage={canManage}
-        view="inbox"
+        view="archive"
         searchParams={params}
       />
     </div>

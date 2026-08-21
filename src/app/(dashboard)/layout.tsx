@@ -42,6 +42,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <div className="sticky top-0 z-40 flex flex-col">
           <Topbar
             role={member.systemRole}
+            memberRole={member.role}
             memberId={member.id}
             fullName={member.fullName}
             email={member.email}

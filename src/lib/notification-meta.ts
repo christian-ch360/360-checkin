@@ -28,6 +28,7 @@ import {
   MailCheck,
   MailX,
   UserMinus,
+  UserCheck,
   Shuffle,
   Crown,
   CalendarPlus,
@@ -109,4 +110,5 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, { icon: LucideIcon
   PAYMENT_ACTION_REQUIRED: { icon: AlertTriangle },
   MEMBERSHIP_CANCELED: { icon: XCircle },
   MEMBERSHIP_RENEWED: { icon: RefreshCw },
+  NEW_CREATOR_JOINED: { icon: UserCheck },
 };

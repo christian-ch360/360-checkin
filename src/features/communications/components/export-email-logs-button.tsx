@@ -10,13 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function ExportEmailLogsButton() {
+export function ExportEmailLogsButton({ view }: { view?: "inbox" | "archive" }) {
   const searchParams = useSearchParams();
 
   function hrefFor(format: "csv" | "xlsx") {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("page");
     params.set("format", format);
+    if (view) params.set("view", view);
     return `/api/admin/email-logs/export?${params.toString()}`;
   }
 

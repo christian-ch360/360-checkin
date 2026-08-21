@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import type { SystemRole } from "@prisma/client";
+import type { SystemRole, MemberRole } from "@prisma/client";
 import { useUIStore } from "@/stores/ui-store";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -11,6 +11,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 
 export function Topbar({
   role,
+  memberRole,
   memberId,
   fullName,
   email,
@@ -18,6 +19,7 @@ export function Topbar({
   memberNumber,
 }: {
   role: SystemRole;
+  memberRole: MemberRole;
   memberId: string;
   fullName: string;
   email: string;
@@ -31,7 +33,7 @@ export function Topbar({
     // not here — it groups this header with any notification banners so the two stick
     // to the viewport top as one unit and the banner never scrolls out from under it.
     <header className="pt-safe flex min-h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur">
-      <MobileNav role={role} />
+      <MobileNav role={role} memberRole={memberRole} />
 
       <button
         onClick={() => setCommandPaletteOpen(true)}

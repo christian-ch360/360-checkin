@@ -9,6 +9,7 @@ import { generateTempPassword } from "@/lib/security/temp-password";
 import { hasPermission } from "@/lib/permissions";
 import { ensureReferralCode } from "@/features/referrals/services/referral-code";
 import { wasEmailAlreadySent } from "@/lib/email/idempotency";
+import { notifyMembers } from "@/lib/notifications";
 
 /**
  * The account-provisioning half of "add a member" — QR badge, Supabase auth
@@ -91,20 +92,23 @@ export async function provisionMemberOnboarding(
   }
 
   if (member.role === "CREATOR") {
+    // In-app only — no admin email. This used to loop
+    // EmailService.sendNewCreatorJoinedAdminEmail per admin; that internal
+    // notification email was judged unnecessary email volume and removed in
+    // favor of the existing Notification/bell system, matching the same
+    // conversion already done for new_membership_application_admin (see
+    // MEMBERSHIP_APPLICATION_RECEIVED in applications.service.ts).
     const admins = await prisma.member.findMany({
       where: { organizationId: member.organizationId, status: "ACTIVE" },
-      select: { id: true, email: true, fullName: true, systemRole: true },
+      select: { id: true, systemRole: true },
     });
-    for (const admin of admins.filter((a) => hasPermission(a.systemRole, "admin.access"))) {
-      await EmailService.sendNewCreatorJoinedAdminEmail({
-        to: admin.email,
-        fullName: admin.fullName,
-        creatorName: member.fullName,
-        memberUrl: `${appUrl}/members/${member.id}`,
-        organizationId: member.organizationId,
-        memberId: admin.id,
-      });
-    }
+    const approverIds = admins.filter((a) => hasPermission(a.systemRole, "admin.access")).map((a) => a.id);
+    await notifyMembers(approverIds, {
+      type: "NEW_CREATOR_JOINED",
+      title: `${member.fullName} just joined`,
+      body: `Creator · ${member.memberNumber}`,
+      link: `/members/${member.id}`,
+    });
   }
 
   return {};

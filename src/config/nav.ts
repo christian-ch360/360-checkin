@@ -37,18 +37,26 @@ export type NavItem = {
 export type NavSection = {
   title: string;
   items: NavItem[];
+  /** Gates the ENTIRE section regardless of each item's own `permission`.
+   * Needed because several existing item permissions (e.g. `members.view`,
+   * `reports.view`) are also held by non-admin SystemRoles (MANAGER,
+   * PROJECT_LEADER) for unrelated reasons — item-level filtering alone can't
+   * reliably hide an admin-only section. Mirrors the same `admin.access`
+   * check this file used to apply by rendering two separate arrays. */
+  requiredPermission?: Permission;
 };
 
-// CreatorHub360 renders two intentionally different navigations depending on
-// role (see src/app/(dashboard)/layout.tsx) rather than one shared list
-// filtered permission-by-permission — creators get a workspace focused on
-// booking/collaborating/messaging, admins get an operations-focused one.
-// Neither list deletes any route: pages not listed here (Brands, Companies,
-// Events, Feedback, GMV, Commissions, Pending Members, /admin) stay fully
-// reachable by URL, from within the pages above, and via the command palette
-// (⌘K) — only the primary sidebar listing is scoped down.
+// One navbar, two sections: MAIN (everyone) and ADMIN (admin.access holders
+// only — ADMIN and SUPER_ADMIN). Historically these were two independent
+// hand-curated arrays selected by role; consolidated into one list with an
+// explicit section-level gate so the ADMIN divider is a single visible label
+// rather than four separate sub-sections. Neither section deletes any route:
+// pages not listed here (Brands, Companies, Events, Feedback, GMV,
+// Commissions, Pending Members, /admin) stay fully reachable by URL, from
+// within the pages above, and via the command palette (⌘K) — only the
+// primary sidebar listing is scoped down.
 
-export const CREATOR_NAV_SECTIONS: NavSection[] = [
+export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Main",
     items: [
@@ -61,27 +69,17 @@ export const CREATOR_NAV_SECTIONS: NavSection[] = [
       { title: "Profile", href: "/profile", icon: CircleUserRound, accent: "gray" },
     ],
   },
-];
-
-export const ADMIN_NAV_SECTIONS: NavSection[] = [
   {
-    title: "Main",
+    title: "Admin",
+    requiredPermission: "admin.access",
     items: [
-      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, accent: "blue" },
       { title: "Members", href: "/members", icon: Users, accent: "blue", permission: "members.view" },
-      { title: "Community", href: "/community", icon: Sparkles, accent: "violet" },
       { title: "Applications", href: "/admin/applications", icon: FileCheck2, accent: "amber", permission: "members.approve" },
       { title: "Referrals", href: "/admin/referrals", icon: Share2, accent: "indigo", permission: "referrals.view" },
       { title: "Operations", href: "/check-in", icon: QrCode, accent: "emerald", permission: "checkin.manage" },
       { title: "Analytics", href: "/analytics", icon: BarChart3, accent: "emerald", permission: "reports.view" },
       { title: "Reports", href: "/reports", icon: FileSpreadsheet, accent: "teal", permission: "reports.view" },
-      { title: "Profile", href: "/profile", icon: CircleUserRound, accent: "gray" },
       { title: "Settings", href: "/settings", icon: Settings, accent: "gray" },
-    ],
-  },
-  {
-    title: "Communications",
-    items: [
       { title: "Email Center", href: "/admin/email-center", icon: Inbox, accent: "cyan", permission: "admin.access" },
       {
         title: "Email Templates",
@@ -90,15 +88,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
         accent: "indigo",
         permission: "admin.access",
       },
-    ],
-  },
-  {
-    title: "Legal",
-    items: [{ title: "Legal", href: "/admin/legal", icon: Scale, accent: "slate", permission: "legal.manage" }],
-  },
-  {
-    title: "Operations",
-    items: [
+      { title: "Legal", href: "/admin/legal", icon: Scale, accent: "slate", permission: "legal.manage" },
       {
         title: "Kiosk Themes",
         href: "/admin/kiosk-manager?tab=themes",
