@@ -105,6 +105,7 @@ function defaultForm(): FormState {
     sponsors: [],
     checkInMessage: "",
     themedActionButtons: false,
+    backgroundOverlay: true,
   };
 }
 
@@ -156,6 +157,7 @@ function fromVersion(v: EditableThemeVersion): FormState {
     sponsors: Array.isArray(v.sponsors) ? (v.sponsors as Sponsor[]) : [],
     checkInMessage: v.checkInMessage ?? "",
     themedActionButtons: v.themedActionButtons,
+    backgroundOverlay: v.backgroundOverlay,
   };
 }
 
@@ -240,6 +242,7 @@ export function KioskThemeEditor({
       sponsors: form.sponsors.length > 0 ? form.sponsors : null,
       checkInMessage: form.checkInMessage || null,
       themedActionButtons: form.themedActionButtons,
+      backgroundOverlay: form.backgroundOverlay,
     };
   }
 
@@ -438,6 +441,7 @@ export function KioskThemeEditor({
       promoBannerLink: form.promoBannerLink || null,
       checkInMessage: form.checkInMessage || null,
       themedActionButtons: form.themedActionButtons,
+      backgroundOverlay: form.backgroundOverlay,
     }),
     [form, themeKey]
   );

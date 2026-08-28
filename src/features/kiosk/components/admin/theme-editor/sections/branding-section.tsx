@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { KioskLogoVariant } from "@prisma/client";
 import { KIOSK_HERO_SIZE_RANGES } from "@/features/kiosk/config/kiosk-hero-sizing.config";
 import { BackgroundImageUpload } from "../background-image-upload";
@@ -14,6 +15,18 @@ export function BrandingSection({ form, update, themeKey }: { form: FormState; u
         <Label>Background Image</Label>
         <BackgroundImageUpload themeKey={themeKey} value={form.backgroundImageUrl} onChange={(url) => update("backgroundImageUrl", url)} />
       </div>
+      {form.backgroundImageUrl && (
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Background Overlay</p>
+            <p className="text-xs text-muted-foreground">
+              A dark wash over the background image, for light hero text on an arbitrary photo. Turn off for an
+              image that&rsquo;s already light and meant to be the primary visual, like a soft floral background.
+            </p>
+          </div>
+          <Switch checked={form.backgroundOverlay} onCheckedChange={(v) => update("backgroundOverlay", v)} />
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="theme-bg-video">Background Video URL (optional)</Label>
         <Input id="theme-bg-video" value={form.backgroundVideoUrl} onChange={(e) => update("backgroundVideoUrl", e.target.value)} />

@@ -3432,6 +3432,15 @@ model KioskTheme {
   // action-card appearance unless an admin explicitly turns this on.
   themedActionButtons Boolean @default(false)
 
+  // Opt-out: the dark gradient wash KioskThemeBackground always laid over a
+  // backgroundImageUrl (so light hero text stays readable on an arbitrary
+  // photo) assumes a moody/dark photo. Defaults true so every theme that
+  // already uses backgroundImageUrl today keeps that exact look; a theme
+  // whose image is intentionally light (e.g. a soft floral background
+  // that's meant to read as the primary visual, not a dimmed backdrop) sets
+  // this false to render its image with no wash at all.
+  backgroundOverlay Boolean @default(true)
+
   backgroundImageUrl String?
   backgroundVideoUrl String?
   logoOverrideUrl    String?

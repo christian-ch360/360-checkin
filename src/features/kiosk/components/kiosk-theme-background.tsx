@@ -46,7 +46,9 @@ export function KioskThemeBackground({ theme }: { theme?: ResolvedKioskTheme | n
             // eslint-disable-next-line @next/next/no-img-element -- kiosk background is admin-supplied, arbitrary remote URLs
             <img src={theme.backgroundImageUrl!} alt="" className="size-full object-cover" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+          {theme.backgroundOverlay && (
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+          )}
         </div>
       )}
       {hasColorBackground && (

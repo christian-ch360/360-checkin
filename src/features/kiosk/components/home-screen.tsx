@@ -109,7 +109,7 @@ export function HomeScreen({
       transition={{ duration: 0.6, ease: "easeOut" }}
       className={
         useHeroCard
-          ? "flex w-full max-w-xl flex-col items-center gap-6 rounded-[2.5rem] bg-[#FDF8F6]/95 px-6 py-10 text-center shadow-[0_1px_2px_rgba(74,59,56,0.04),0_30px_70px_-25px_rgba(74,59,56,0.18)] backdrop-blur-sm sm:gap-8 sm:px-12 sm:py-14"
+          ? "flex w-full max-w-xl flex-col items-center gap-6 rounded-[2.5rem] bg-[#FDF8F6]/90 px-6 py-10 text-center shadow-[0_1px_2px_rgba(74,59,56,0.04),0_30px_70px_-25px_rgba(74,59,56,0.18)] backdrop-blur-sm sm:gap-8 sm:px-12 sm:py-14"
           : "flex w-full max-w-4xl flex-col items-center gap-6 text-center sm:gap-8"
       }
     >

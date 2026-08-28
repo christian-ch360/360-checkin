@@ -61,6 +61,7 @@ export type KioskThemeInput = {
   sponsors?: { name: string; logoUrl: string; message?: string; ctaLabel?: string; ctaLink?: string }[] | null;
   checkInMessage?: string | null;
   themedActionButtons?: boolean;
+  backgroundOverlay?: boolean;
 };
 
 /**
@@ -298,6 +299,7 @@ export async function duplicateTheme(organizationId: string, sourceThemeKey: str
       sponsors: source.sponsors ?? undefined,
       checkInMessage: source.checkInMessage,
       themedActionButtons: source.themedActionButtons,
+      backgroundOverlay: source.backgroundOverlay,
     },
   });
   return { success: true, themeKey };
@@ -375,6 +377,7 @@ export async function rollbackTheme(
       priority: target.priority,
       checkInMessage: target.checkInMessage,
       themedActionButtons: target.themedActionButtons,
+      backgroundOverlay: target.backgroundOverlay,
     },
   });
   return { success: true, themeKey };
@@ -474,5 +477,6 @@ function toWriteData(input: KioskThemeInput) {
     sponsors: input.sponsors ?? undefined,
     checkInMessage: input.checkInMessage ?? null,
     themedActionButtons: input.themedActionButtons ?? false,
+    backgroundOverlay: input.backgroundOverlay ?? true,
   };
 }
