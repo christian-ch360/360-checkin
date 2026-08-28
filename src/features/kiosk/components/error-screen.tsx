@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { AlertCircle, ShieldAlert } from "lucide-react";
 import type { KioskCheckInResult } from "@/features/kiosk/services/kiosk-checkin.service";
+import type { ResolvedKioskTheme } from "@/features/kiosk/services/kiosk-theme-resolution.service";
 
 type Outcome = Exclude<KioskCheckInResult["outcome"], "checked_in" | "checked_out">;
 
@@ -51,9 +52,21 @@ const TONE_STYLES: Record<"warn" | "block" | "info", string> = {
   info: "bg-emerald-50 text-emerald-600",
 };
 
-export function ErrorScreen({ outcome, onScanAgain }: { outcome: Outcome; onScanAgain: () => void }) {
+export function ErrorScreen({
+  outcome,
+  onScanAgain,
+  theme,
+}: {
+  outcome: Outcome;
+  onScanAgain: () => void;
+  /** Same opt-in as HomeScreen's action cards — only recolors the Retry button when
+   * theme.themedActionButtons is set; the outcome copy/logic below never changes. */
+  theme?: ResolvedKioskTheme | null;
+}) {
   const { icon: Icon, title, body, tone } = CONTENT[outcome];
   const showScanAgain = outcome === "not_found" || outcome === "wrong_type" || outcome === "wrong_org";
+  const isThemed = Boolean(theme && !theme.isDefault);
+  const useThemedButton = Boolean(isThemed && theme?.themedActionButtons && theme.buttonColor);
 
   return (
     <motion.div
@@ -76,7 +89,19 @@ export function ErrorScreen({ outcome, onScanAgain }: { outcome: Outcome; onScan
         <button
           type="button"
           onClick={onScanAgain}
-          className="min-h-14 w-full max-w-xs rounded-2xl bg-black text-lg font-semibold text-white outline-none transition-transform active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/25 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+          className={
+            useThemedButton
+              ? "min-h-14 w-full max-w-xs rounded-2xl bg-[var(--kiosk-btn-bg)] text-lg font-semibold text-[var(--kiosk-btn-text)] outline-none transition-transform active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-[var(--kiosk-btn-bg)]/30 focus-visible:ring-offset-4"
+              : "min-h-14 w-full max-w-xs rounded-2xl bg-black text-lg font-semibold text-white outline-none transition-transform active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-black/25 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+          }
+          style={
+            useThemedButton
+              ? ({
+                  "--kiosk-btn-bg": theme!.buttonColor as string,
+                  "--kiosk-btn-text": theme!.buttonTextColor || "#ffffff",
+                } as React.CSSProperties)
+              : undefined
+          }
         >
           Retry
         </button>

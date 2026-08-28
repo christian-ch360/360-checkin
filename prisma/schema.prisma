@@ -3341,6 +3341,7 @@ enum KioskDecorativeElement {
   BOKEH_LIGHTS
   FIREWORKS
   LIGHT_RAYS
+  FLORAL_PETALS
 }
 
 // "Schedule by Date / by Time / by Day of Week / Recurring Themes" — NONE
@@ -3406,11 +3407,30 @@ model KioskTheme {
 
   name        String
   headline    String
+  // Optional third heading tier, rendered as the Hero's dominant <h1>
+  // ABOVE headline/subheadline when set (e.g. "KIOSK CHECK-IN") — headline
+  // becomes a smaller wordmark-style eyebrow line above it. Null on every
+  // theme authored before this field existed, so KioskHero falls back to
+  // its original two-tier headline/subheadline layout for them unchanged.
+  kioskTitle  String?
   subheadline String?
   location    String?
   // Shown directly beneath the hero's location row — same "inline content,
   // superseded by the linked Event when set" pattern as location itself.
   parkingInfo String?
+  // Guest-facing "check-in messaging" — rendered as a footer line beneath
+  // the Check In / Register cards on the home screen, and (when set) as the
+  // Success screen's closing line in place of its generic default. Null on
+  // every theme authored before this field existed, so nothing changes for
+  // them until an admin opts in.
+  checkInMessage String?
+  // Opt-in: lets this theme's buttonColor/buttonStyle recolor the shared
+  // Check In / Register action cards on the home screen, which otherwise
+  // stay a fixed white/black regardless of theme (see HomeScreen). Defaults
+  // false so every existing theme — including the three seeded presets,
+  // which already set buttonColor for their Hero CTA — keeps its current
+  // action-card appearance unless an admin explicitly turns this on.
+  themedActionButtons Boolean @default(false)
 
   backgroundImageUrl String?
   backgroundVideoUrl String?

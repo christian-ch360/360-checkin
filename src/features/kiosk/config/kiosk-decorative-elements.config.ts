@@ -41,6 +41,7 @@ export const KIOSK_DECORATIVE_ELEMENTS: Record<KioskDecorativeElement, Decorativ
   BOKEH_LIGHTS: { label: "Bokeh Lights", description: "Soft out-of-focus light orbs drifting behind the content.", effect: "particles-float", sprite: "●" },
   FIREWORKS: { label: "Fireworks", description: "Periodic firework bursts launching and exploding across the sky.", effect: "firework-burst" },
   LIGHT_RAYS: { label: "Light Rays", description: "Soft animated light rays sweeping behind the content.", effect: "light-rays" },
+  FLORAL_PETALS: { label: "Floral Petals", description: "Delicate petals drifting slowly near the edges.", effect: "sprite-drift", sprite: "🌸" },
 };
 
 export const KIOSK_DECORATIVE_ELEMENT_VALUES = Object.keys(KIOSK_DECORATIVE_ELEMENTS) as KioskDecorativeElement[];

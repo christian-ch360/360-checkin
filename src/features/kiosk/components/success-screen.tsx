@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfettiBurst } from "@/features/kiosk/components/confetti-burst";
+import type { ResolvedKioskTheme } from "@/features/kiosk/services/kiosk-theme-resolution.service";
 
 function playSuccessTone() {
   try {
@@ -33,12 +34,21 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
-type Props =
+type Props = (
   | { outcome: "checked_in"; memberName: string; profilePhotoUrl: string | null; time: string }
-  | { outcome: "checked_out"; memberName: string; profilePhotoUrl: string | null; duration: string };
+  | { outcome: "checked_out"; memberName: string; profilePhotoUrl: string | null; duration: string }
+) & {
+  /** Currently-resolved theme — same prop KioskHero/HomeScreen already take. Only its
+   * name/checkInMessage are used here, and only for the check-in (not check-out) outcome:
+   * "Welcome to Charmzone" reads naturally after checking IN, not after checking out. */
+  theme?: ResolvedKioskTheme | null;
+};
 
 export function SuccessScreen(props: Props) {
   const isCheckIn = props.outcome === "checked_in";
+  const isThemed = Boolean(props.theme && !props.theme.isDefault);
+  const themedHeadline = isThemed && isCheckIn ? `Welcome to ${props.theme!.name}` : null;
+  const themedClosingLine = isThemed && isCheckIn ? props.theme!.checkInMessage : null;
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -73,8 +83,8 @@ export function SuccessScreen(props: Props) {
       </motion.div>
 
       <div className="space-y-1">
-        <p className="text-2xl font-semibold text-emerald-500">
-          {isCheckIn ? "Welcome back!" : "Check Out Successful"}
+        <p className="text-2xl font-semibold text-emerald-500 text-balance uppercase">
+          {themedHeadline ?? (isCheckIn ? "Welcome back!" : "Check Out Successful")}
         </p>
         <p className="text-4xl font-semibold tracking-tight text-balance text-black">{props.memberName}</p>
       </div>
@@ -84,7 +94,7 @@ export function SuccessScreen(props: Props) {
         <p className="text-2xl font-semibold text-black tabular-nums">{isCheckIn ? props.time : props.duration}</p>
       </div>
 
-      <p className="text-black/50">{isCheckIn ? "You have been checked in." : "Have a great day!"}</p>
+      <p className="text-black/50">{themedClosingLine ?? (isCheckIn ? "You have been checked in." : "Have a great day!")}</p>
     </div>
   );
 }

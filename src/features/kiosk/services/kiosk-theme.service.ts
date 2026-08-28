@@ -17,6 +17,7 @@ export { computeDisplayStatus, type KioskThemeDisplayStatus };
 export type KioskThemeInput = {
   name: string;
   headline: string;
+  kioskTitle?: string | null;
   subheadline?: string | null;
   location?: string | null;
   parkingInfo?: string | null;
@@ -58,6 +59,8 @@ export type KioskThemeInput = {
   showCountdown?: boolean;
   eventId?: string | null;
   sponsors?: { name: string; logoUrl: string; message?: string; ctaLabel?: string; ctaLink?: string }[] | null;
+  checkInMessage?: string | null;
+  themedActionButtons?: boolean;
 };
 
 /**
@@ -251,6 +254,7 @@ export async function duplicateTheme(organizationId: string, sourceThemeKey: str
       createdById: actorId,
       name: `${source.name} (Copy)`,
       headline: source.headline,
+      kioskTitle: source.kioskTitle,
       subheadline: source.subheadline,
       location: source.location,
       parkingInfo: source.parkingInfo,
@@ -292,6 +296,8 @@ export async function duplicateTheme(organizationId: string, sourceThemeKey: str
       showCountdown: source.showCountdown,
       eventId: source.eventId,
       sponsors: source.sponsors ?? undefined,
+      checkInMessage: source.checkInMessage,
+      themedActionButtons: source.themedActionButtons,
     },
   });
   return { success: true, themeKey };
@@ -323,6 +329,7 @@ export async function rollbackTheme(
       changeSummary: `Rolled back to version ${targetVersion}`,
       name: target.name,
       headline: target.headline,
+      kioskTitle: target.kioskTitle,
       subheadline: target.subheadline,
       location: target.location,
       parkingInfo: target.parkingInfo,
@@ -366,6 +373,8 @@ export async function rollbackTheme(
       sponsors: target.sponsors ?? undefined,
       isDefault: target.isDefault,
       priority: target.priority,
+      checkInMessage: target.checkInMessage,
+      themedActionButtons: target.themedActionButtons,
     },
   });
   return { success: true, themeKey };
@@ -421,6 +430,7 @@ function toWriteData(input: KioskThemeInput) {
   return {
     name: input.name,
     headline: input.headline,
+    kioskTitle: input.kioskTitle ?? null,
     subheadline: input.subheadline ?? null,
     location: input.location ?? null,
     parkingInfo: input.parkingInfo ?? null,
@@ -462,5 +472,7 @@ function toWriteData(input: KioskThemeInput) {
     showCountdown: input.showCountdown ?? false,
     eventId: input.eventId ?? null,
     sponsors: input.sponsors ?? undefined,
+    checkInMessage: input.checkInMessage ?? null,
+    themedActionButtons: input.themedActionButtons ?? false,
   };
 }

@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { FormState, UpdateFormField } from "../types";
 
 export function BasicInfoSection({
@@ -24,6 +25,20 @@ export function BasicInfoSection({
         <Input id="theme-headline" value={form.headline} onChange={(e) => update("headline", e.target.value)} placeholder="🥃 Whiskey Wednesday" />
       </div>
       <div className="space-y-2">
+        <Label htmlFor="theme-kiosk-title">Kiosk Title (optional)</Label>
+        <Input
+          id="theme-kiosk-title"
+          value={form.kioskTitle}
+          onChange={(e) => update("kioskTitle", e.target.value)}
+          placeholder="KIOSK CHECK-IN"
+        />
+        <p className="text-xs text-muted-foreground">
+          A dedicated third heading, shown below Hero Title as the interface&rsquo;s main title — e.g. for a
+          brand-fronted theme where Hero Title carries the wordmark. Leave blank to keep the current two-line
+          Hero Title / Hero Subtitle layout.
+        </p>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="theme-subheadline">Hero Subtitle</Label>
         <Textarea id="theme-subheadline" rows={2} value={form.subheadline} onChange={(e) => update("subheadline", e.target.value)} />
       </div>
@@ -39,6 +54,30 @@ export function BasicInfoSection({
           onChange={(e) => update("parkingInfo", e.target.value)}
           placeholder="Uber Preferred, Valet and Street Parking available"
         />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="theme-checkin-message">Check-In Message</Label>
+        <Textarea
+          id="theme-checkin-message"
+          rows={2}
+          value={form.checkInMessage}
+          onChange={(e) => update("checkInMessage", e.target.value)}
+          placeholder="Thank you for being part of this special experience."
+        />
+        <p className="text-xs text-muted-foreground">
+          Shown beneath the Check In / Register buttons, and as the Success screen&rsquo;s closing line. Leave blank to
+          keep the default copy.
+        </p>
+      </div>
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <p className="text-sm font-medium">Themed Action Buttons</p>
+          <p className="text-xs text-muted-foreground">
+            Lets this theme&rsquo;s Button Color recolor the Check In / Register cards below the hero, which
+            otherwise stay a neutral white regardless of theme.
+          </p>
+        </div>
+        <Switch checked={form.themedActionButtons} onCheckedChange={(v) => update("themedActionButtons", v)} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

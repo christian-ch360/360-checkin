@@ -156,12 +156,12 @@ export function KioskApp({
           />
         )}
 
-        {screen.name === "scanning" && <ScanScreen onScan={handleScan} onCancel={goHome} />}
+        {screen.name === "scanning" && <ScanScreen onScan={handleScan} onCancel={goHome} theme={theme} />}
 
-        {screen.name === "success" && <SuccessScreen {...screen.data} />}
+        {screen.name === "success" && <SuccessScreen {...screen.data} theme={theme} />}
 
         {screen.name === "error" && (
-          <ErrorScreen outcome={screen.outcome} onScanAgain={() => setScreen({ name: "scanning" })} />
+          <ErrorScreen outcome={screen.outcome} onScanAgain={() => setScreen({ name: "scanning" })} theme={theme} />
         )}
 
         {screen.name === "apply-form" && <ApplyFormScreen onSubmitted={handleApplySubmitted} onCancel={goHome} />}

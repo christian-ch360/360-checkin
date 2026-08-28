@@ -61,6 +61,7 @@ function defaultForm(): FormState {
   return {
     name: "",
     headline: "",
+    kioskTitle: "",
     subheadline: "",
     location: "",
     parkingInfo: "",
@@ -102,6 +103,8 @@ function defaultForm(): FormState {
     showCountdown: false,
     eventId: "",
     sponsors: [],
+    checkInMessage: "",
+    themedActionButtons: false,
   };
 }
 
@@ -109,6 +112,7 @@ function fromVersion(v: EditableThemeVersion): FormState {
   return {
     name: v.name,
     headline: v.headline,
+    kioskTitle: v.kioskTitle ?? "",
     subheadline: v.subheadline ?? "",
     location: v.location ?? "",
     parkingInfo: v.parkingInfo ?? "",
@@ -150,6 +154,8 @@ function fromVersion(v: EditableThemeVersion): FormState {
     showCountdown: v.showCountdown,
     eventId: v.eventId ?? "",
     sponsors: Array.isArray(v.sponsors) ? (v.sponsors as Sponsor[]) : [],
+    checkInMessage: v.checkInMessage ?? "",
+    themedActionButtons: v.themedActionButtons,
   };
 }
 
@@ -187,6 +193,7 @@ export function KioskThemeEditor({
     return {
       name: form.name,
       headline: form.headline,
+      kioskTitle: form.kioskTitle || null,
       subheadline: form.subheadline || null,
       location: form.location || null,
       parkingInfo: form.parkingInfo || null,
@@ -231,6 +238,8 @@ export function KioskThemeEditor({
       showCountdown: form.showCountdown,
       eventId: form.eventId || null,
       sponsors: form.sponsors.length > 0 ? form.sponsors : null,
+      checkInMessage: form.checkInMessage || null,
+      themedActionButtons: form.themedActionButtons,
     };
   }
 
@@ -382,6 +391,7 @@ export function KioskThemeEditor({
       version: 1,
       name: form.name || "Untitled Theme",
       headline: form.headline || "Your Headline Here",
+      kioskTitle: form.kioskTitle || null,
       subheadline: form.subheadline || null,
       location: form.location || null,
       parkingInfo: form.parkingInfo || null,
@@ -426,6 +436,8 @@ export function KioskThemeEditor({
         .filter(Boolean),
       promoBannerText: form.promoBannerText || null,
       promoBannerLink: form.promoBannerLink || null,
+      checkInMessage: form.checkInMessage || null,
+      themedActionButtons: form.themedActionButtons,
     }),
     [form, themeKey]
   );

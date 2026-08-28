@@ -46,6 +46,38 @@ function fluidPx(px: number): string {
   return `clamp(${min}px, ${(px / 12).toFixed(2)}cqw, ${px}px)`;
 }
 
+/** The "PRIVATE EVENT"-style accent pill — extracted so it renders identically in both its
+ * original position (above the logo, pre-kioskTitle themes) and its repositioned spot inside
+ * the 3-tier hierarchy (between the wordmark and the kiosk title, when kioskTitle is set). */
+function PromoBannerPill({
+  theme,
+  hasBackground,
+  forceWhiteText,
+  textStyle,
+}: {
+  theme: ResolvedKioskTheme;
+  hasBackground: boolean;
+  forceWhiteText: boolean;
+  textStyle: React.CSSProperties | undefined;
+}) {
+  return (
+    <a
+      href={theme.promoBannerLink || undefined}
+      target={theme.promoBannerLink ? "_blank" : undefined}
+      rel={theme.promoBannerLink ? "noopener noreferrer" : undefined}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium",
+        hasBackground ? "bg-white/15 backdrop-blur-sm" : "bg-black/[0.04]",
+        forceWhiteText && "text-white",
+        theme.promoBannerLink ? "cursor-pointer hover:opacity-80" : "cursor-default"
+      )}
+      style={forceWhiteText ? undefined : textStyle}
+    >
+      <Megaphone className="size-3.5" /> {theme.promoBannerText}
+    </a>
+  );
+}
+
 /** Button appearance driven by theme.buttonStyle — the same 4 styles the Theme Editor offers. */
 function buttonClassAndStyle(theme: ResolvedKioskTheme): { className: string; style: React.CSSProperties } {
   const bg = theme.buttonColor || "#000000";
@@ -142,21 +174,13 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
       transition={{ duration: 0.7, ease: "easeOut" }}
       className="relative flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-10 text-center sm:gap-8 sm:px-12 sm:py-14"
     >
-      {theme.promoBannerText && (
-        <a
-          href={theme.promoBannerLink || undefined}
-          target={theme.promoBannerLink ? "_blank" : undefined}
-          rel={theme.promoBannerLink ? "noopener noreferrer" : undefined}
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium",
-            hasBackground ? "bg-white/15 backdrop-blur-sm" : "bg-black/[0.04]",
-            forceWhiteText && "text-white",
-            theme.promoBannerLink ? "cursor-pointer hover:opacity-80" : "cursor-default"
-          )}
-          style={forceWhiteText ? undefined : textStyle}
-        >
-          <Megaphone className="size-3.5" /> {theme.promoBannerText}
-        </a>
+      {/* Without a kioskTitle, promoBannerText keeps its original position and look — every
+          theme authored before kioskTitle existed renders pixel-identical to before. With a
+          kioskTitle, the pill moves below the headline/wordmark line (see the hierarchy block
+          below) so it reads as "brand → invitation accent → page title", matching the reference
+          3-tier layout instead of floating above the logo. */}
+      {theme.promoBannerText && !theme.kioskTitle && (
+        <PromoBannerPill theme={theme} hasBackground={hasBackground} forceWhiteText={forceWhiteText} textStyle={textStyle} />
       )}
 
       {theme.logoVariant !== "DEFAULT" && theme.logoVariant !== "HIDDEN" && (
@@ -197,12 +221,34 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
             )}
           </p>
         )}
-        <h1
-          className="font-semibold tracking-tight text-balance"
-          style={{ fontSize: fluidPx(titleSize), ...(hasBackground ? undefined : accentStyle) }}
-        >
-          {theme.headline}
-        </h1>
+        {theme.kioskTitle ? (
+          <>
+            {/* Wordmark eyebrow — headline demoted from <h1> to a compact tracked-out label so
+                kioskTitle can be the page's one true <h1>, matching both the reference's visual
+                hierarchy (brand → invitation accent → page title) and normal heading semantics. */}
+            <p className="text-sm font-semibold tracking-[0.25em] uppercase opacity-90 sm:text-base">
+              {theme.headline}
+            </p>
+            {theme.promoBannerText && (
+              <div className="flex justify-center">
+                <PromoBannerPill theme={theme} hasBackground={hasBackground} forceWhiteText={forceWhiteText} textStyle={textStyle} />
+              </div>
+            )}
+            <h1
+              className="font-semibold tracking-tight text-balance"
+              style={{ fontSize: fluidPx(titleSize), ...(hasBackground ? undefined : accentStyle) }}
+            >
+              {theme.kioskTitle}
+            </h1>
+          </>
+        ) : (
+          <h1
+            className="font-semibold tracking-tight text-balance"
+            style={{ fontSize: fluidPx(titleSize), ...(hasBackground ? undefined : accentStyle) }}
+          >
+            {theme.headline}
+          </h1>
+        )}
         {theme.subheadline && (
           <p
             className="text-balance whitespace-pre-line opacity-80"

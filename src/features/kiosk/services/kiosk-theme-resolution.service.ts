@@ -24,6 +24,7 @@ export type ResolvedKioskTheme = {
   version: number;
   name: string;
   headline: string;
+  kioskTitle: string | null;
   subheadline: string | null;
   location: string | null;
   backgroundImageUrl: string | null;
@@ -62,6 +63,8 @@ export type ResolvedKioskTheme = {
   promoBannerText: string | null;
   promoBannerLink: string | null;
   parkingInfo: string | null;
+  checkInMessage: string | null;
+  themedActionButtons: boolean;
 };
 
 type KioskThemeRow = Awaited<ReturnType<typeof fetchPublishedThemes>>[number];
@@ -127,6 +130,7 @@ function resolveScheduleAndContent(
   const content = {
     name: row.name,
     headline: event?.title ?? row.headline,
+    kioskTitle: row.kioskTitle,
     subheadline: row.subheadline ?? event?.description ?? null,
     location: event?.location ?? row.location,
     parkingInfo: event?.parkingInfo ?? row.parkingInfo,
@@ -163,6 +167,8 @@ function resolveScheduleAndContent(
     featuredEventTags: row.featuredEventTags,
     promoBannerText: row.promoBannerText,
     promoBannerLink: row.promoBannerLink,
+    checkInMessage: row.checkInMessage,
+    themedActionButtons: row.themedActionButtons,
   };
 
   return { schedule, content };

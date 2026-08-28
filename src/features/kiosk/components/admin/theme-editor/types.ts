@@ -13,6 +13,7 @@ export type ThemeColor = { name: string; hex: string };
 export type FormState = {
   name: string;
   headline: string;
+  kioskTitle: string;
   subheadline: string;
   location: string;
   parkingInfo: string;
@@ -54,6 +55,8 @@ export type FormState = {
   showCountdown: boolean;
   eventId: string;
   sponsors: Sponsor[];
+  checkInMessage: string;
+  themedActionButtons: boolean;
 };
 
 /** Passed down to every section panel — identical shape to the setter kiosk-theme-editor.tsx has always used. */
@@ -67,6 +70,7 @@ export type EditableThemeVersion = {
   isPinnedLive: boolean;
   name: string;
   headline: string;
+  kioskTitle: string | null;
   subheadline: string | null;
   location: string | null;
   parkingInfo: string | null;
@@ -108,6 +112,8 @@ export type EditableThemeVersion = {
   showCountdown: boolean;
   eventId: string | null;
   sponsors: unknown;
+  checkInMessage: string | null;
+  themedActionButtons: boolean;
   publishedAt: Date | null;
   /** Used only for the "Last saved" indicator in the top bar — presentational only. */
   updatedAt: Date;
