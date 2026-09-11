@@ -250,3 +250,53 @@ export async function uploadEmailAsset(path: string, blob: Blob): Promise<string
   const { data } = admin.storage.from(EMAIL_ASSETS_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
+
+const CREATOR_LIBRARY_BUCKET = "creator-library";
+const CREATOR_LIBRARY_IMAGE_MAX_BYTES = 8 * 1024 * 1024; // 8MB — editorial hero portraits, not client-compressed like avatars
+const CREATOR_LIBRARY_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+let creatorLibraryBucketEnsured = false;
+
+/**
+ * Idempotently creates the public "creator-library" Storage bucket for the
+ * Creator Library's Ops-uploaded creator portraits. Same self-healing
+ * bucket-creation pattern as ensureAvatarBucket().
+ */
+export async function ensureCreatorLibraryBucket(): Promise<boolean> {
+  if (creatorLibraryBucketEnsured) return true;
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return false;
+
+  const { data: existing } = await admin.storage.getBucket(CREATOR_LIBRARY_BUCKET);
+  if (!existing) {
+    const { error } = await admin.storage.createBucket(CREATOR_LIBRARY_BUCKET, {
+      public: true,
+      fileSizeLimit: CREATOR_LIBRARY_IMAGE_MAX_BYTES,
+      allowedMimeTypes: CREATOR_LIBRARY_IMAGE_MIME_TYPES,
+    });
+    if (error && !/already exists/i.test(error.message)) {
+      throw error;
+    }
+  }
+
+  creatorLibraryBucketEnsured = true;
+  return true;
+}
+
+/** Uploads a Creator Library portrait and returns its public URL. */
+export async function uploadCreatorLibraryImage(path: string, blob: Blob): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) throw new Error("Image storage is not configured (SUPABASE_SERVICE_ROLE_KEY missing).");
+
+  await ensureCreatorLibraryBucket();
+
+  const { error } = await admin.storage.from(CREATOR_LIBRARY_BUCKET).upload(path, blob, {
+    contentType: blob.type || "image/jpeg",
+    upsert: true,
+  });
+  if (error) throw error;
+
+  const { data } = admin.storage.from(CREATOR_LIBRARY_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}

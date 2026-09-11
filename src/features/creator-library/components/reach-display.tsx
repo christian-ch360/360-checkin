@@ -1,0 +1,52 @@
+import { Camera, Clapperboard, Music2 } from "lucide-react";
+import type { SocialPlatform } from "@prisma/client";
+import { cn } from "@/lib/utils";
+import { PLATFORM_LABELS } from "@/features/creator-library/config/library-config";
+import { formatAudience, type AudienceBreakdown } from "@/features/creator-library/lib/audience";
+
+const PLATFORM_ICON: Record<SocialPlatform, typeof Camera> = {
+  INSTAGRAM: Camera,
+  TIKTOK: Music2,
+  YOUTUBE: Clapperboard,
+};
+
+// Fixed platform order so cards line up in the grid regardless of which
+// platforms a given creator has.
+const ORDER: SocialPlatform[] = ["INSTAGRAM", "TIKTOK", "YOUTUBE"];
+
+/**
+ * The per-platform reach breakdown + a TOTAL REACH row — the lower half of a
+ * creator card in the CH360 concept. Numbers come from the already-computed
+ * AudienceBreakdown; nothing is invented (empty platforms are simply omitted,
+ * and a creator with no data shows "Reach data unavailable").
+ */
+export function ReachDisplay({ audience, className }: { audience: AudienceBreakdown; className?: string }) {
+  if (audience.isEmpty) {
+    return <p className={cn("text-xs text-muted-foreground", className)}>Reach data unavailable</p>;
+  }
+
+  const byPlatform = new Map(audience.platforms.map((entry) => [entry.platform, entry.count]));
+
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      {ORDER.filter((platform) => byPlatform.has(platform)).map((platform) => {
+        const Icon = PLATFORM_ICON[platform];
+        return (
+          <div key={platform} className="flex items-center justify-between gap-3 text-sm">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Icon className="size-3.5" />
+              {PLATFORM_LABELS[platform]}
+            </span>
+            <span className="font-medium tabular-nums">{formatAudience(byPlatform.get(platform) as number)}</span>
+          </div>
+        );
+      })}
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-2">
+        <span className="text-[0.65rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+          Total Reach
+        </span>
+        <span className="text-base font-semibold tabular-nums">{formatAudience(audience.total)}</span>
+      </div>
+    </div>
+  );
+}

@@ -29,6 +29,8 @@ export const contentCategoryValues = [
   "STREAMING",
   "VLOGS",
   "PODCASTS",
+  "ENTERTAINMENT",
+  "HOME_DESIGN",
 ] as const;
 
 export const CONTENT_CATEGORY_LABELS: Record<ContentCategory, string> = {
@@ -60,4 +62,6 @@ export const CONTENT_CATEGORY_LABELS: Record<ContentCategory, string> = {
   STREAMING: "Streaming",
   VLOGS: "Vlogs",
   PODCASTS: "Podcasts",
+  ENTERTAINMENT: "Entertainment",
+  HOME_DESIGN: "Home & Design",
 };

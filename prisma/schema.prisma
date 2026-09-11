@@ -328,6 +328,8 @@ model Organization {
   invoices                  Invoice[]
   folders                   Folder[]
   brandInvitations          BrandInvitation[]
+  creatorLibraryProfiles    CreatorLibraryProfile[]
+  creatorImportBatches      CreatorImportBatch[]
 
   @@map("organizations")
 }
@@ -583,6 +585,9 @@ model Member {
   brandInvitationsAsAgency          BrandInvitation[]               @relation("BrandInvitationAgency")
   brandInvitationsSent              BrandInvitation[]               @relation("BrandInvitationInvitedBy")
   brandInvitationsAccepted          BrandInvitation[]               @relation("BrandInvitationAcceptedBy")
+  creatorLibraryProfile             CreatorLibraryProfile?          @relation("CreatorLibraryProfileMember")
+  creatorLibraryProfilesAdded       CreatorLibraryProfile[]         @relation("CreatorLibraryProfileAddedBy")
+  creatorImportBatchesUploaded      CreatorImportBatch[]            @relation("CreatorImportBatchUploadedBy")
 
   @@index([organizationId])
   @@index([companyId])
@@ -629,6 +634,8 @@ enum ContentCategory {
   STREAMING
   VLOGS
   PODCASTS
+  ENTERTAINMENT
+  HOME_DESIGN
 }
 
 // Private admin-only notes on a member's approval application. Append-only —
@@ -3614,4 +3621,149 @@ model KioskInteractionEvent {
   @@index([organizationId, type, occurredAt])
   @@index([organizationId, themeKey])
   @@map("kiosk_interaction_events")
+}
+
+// =============================================================================
+// CREATOR LIBRARY  ("C360 Creator Network")
+// =============================================================================
+
+/**
+ * Per-creator opt-in record for the public, password-gated Creator Library
+ * (/creator-library). Deliberately a separate 1:1 table rather than columns
+ * on Member: it keeps getCurrentMember()'s include and every existing Member
+ * query untouched, and namespaces all library-only data (publishing control,
+ * Featured status, Ops-curated overrides, manually-entered follower counts)
+ * in one place.
+ * A Member only appears in the library when a row exists here with
+ * `visible = true` (see §21 of the build spec). Fields left null fall back to
+ * the equivalent Member field at read time — Ops edits here never mutate the
+ * creator's own self-service profile.
+ * Follower counts here are the Ops-entered numbers; when null, the library
+ * read layer falls back to the creator's synced SocialConnection.followerCount
+ * for that platform. Total audience is always computed from whichever numbers
+ * are available — never stored, so it can't go stale.
+ */
+model CreatorLibraryProfile {
+  id             String  @id @default(uuid()) @db.Uuid
+  // Optional: a LINKED profile points at a real CreatorHub360 Member (identity
+  // read from that Member, these override columns win where set — original
+  // behavior). A STANDALONE profile (memberId null) is a CSV-imported
+  // directory entry with no Member yet; its identity lives entirely on the
+  // columns below. Ops can link a standalone profile to a Member later.
+  // @unique still holds — Postgres allows many NULLs in a unique index.
+  memberId       String? @unique @db.Uuid
+  organizationId String  @db.Uuid
+
+  // Publishing control (§21) + Featured (§19).
+  visible      Boolean @default(false)
+  featured     Boolean @default(false)
+  // Manual ordering for the Featured rail; lower sorts first, nulls last.
+  displayOrder Int?
+
+  // Ops-curated overrides. For a linked profile, null → fall back to the
+  // Member field noted. For a standalone profile these ARE the identity.
+  headline      String? // short card tagline; falls back to Member.bio (truncated)
+  libraryBio    String? // "About" section; falls back to Member.bio
+  locationLabel String? // display fallback; structured country/state/city below is preferred
+  // Curated category set for the library; empty → fall back to Member.contentCategories.
+  categories    ContentCategory[] @default([])
+  // Library-specific hero/profile image; null → fall back to Member.profilePhotoUrl.
+  imageUrl      String?
+
+  // Standalone identity (used when memberId is null; also usable as overrides).
+  name           String?
+  email          String?
+  phone          String?
+  usernameHandle String?
+  instagramUrl   String?
+  tiktokUrl      String?
+  youtubeUrl     String?
+  websiteUrl     String?
+  companyName    String?
+
+  // Structured geography — powers the Locations view + Country/State/City
+  // filters (spec §7, §15). Stored separately, never as one blob.
+  country String?
+  state   String?
+  city    String?
+
+  // Ops-entered follower counts. Null for a platform → library falls back to
+  // that member's synced SocialConnection.followerCount, else treats it as
+  // "no data" for that platform.
+  instagramFollowers Int?
+  tiktokFollowers    Int?
+  youtubeSubscribers Int?
+
+  // Set the first time `visible` flips true; kept afterwards for "Recently Added" sort.
+  publishedAt DateTime?
+
+  // Import provenance (spec §17) — which CSV import created/last-touched this row.
+  importBatchId   String? @db.Uuid
+  sourceRowNumber Int?
+
+  addedById String?  @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member       Member?             @relation("CreatorLibraryProfileMember", fields: [memberId], references: [id], onDelete: Cascade)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  addedBy      Member?             @relation("CreatorLibraryProfileAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  importBatch  CreatorImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, visible])
+  @@index([organizationId, featured, visible])
+  @@index([organizationId, country, state, city])
+  @@index([importBatchId])
+  @@map("creator_library_profiles")
+}
+
+enum CreatorImportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum CreatorImportMode {
+  DRAFT
+  PUBLISH
+}
+
+enum CreatorImportExistingMode {
+  SKIP
+  FILL_MISSING
+  UPDATE_SELECTED
+}
+
+/**
+ * One row per CSV/XLSX import run into the Creator Library (spec §17). The
+ * uploaded file itself is never stored — `report` holds the per-row outcome
+ * (created / updated / skipped / error + reason) so Ops can audit an import
+ * without retaining raw creator data on disk.
+ */
+model CreatorImportBatch {
+  id             String                    @id @default(uuid()) @db.Uuid
+  organizationId String                    @db.Uuid
+  uploadedById   String?                   @db.Uuid
+  fileName       String
+  fileSizeBytes  Int?
+  status         CreatorImportStatus       @default(PENDING)
+  importMode     CreatorImportMode         @default(DRAFT)
+  existingMode   CreatorImportExistingMode @default(FILL_MISSING)
+  totalRows      Int                       @default(0)
+  createdCount   Int                       @default(0)
+  updatedCount   Int                       @default(0)
+  skippedCount   Int                       @default(0)
+  errorCount     Int                       @default(0)
+  mapping        Json                      @default("{}")
+  report         Json                      @default("[]")
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   Member?                 @relation("CreatorImportBatchUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  profiles     CreatorLibraryProfile[]
+
+  @@index([organizationId, createdAt])
+  @@map("creator_import_batches")
 }
