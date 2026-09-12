@@ -217,22 +217,13 @@ export function QRScanner({
 
   const startWithCamera = useCallback(
     async (cameraId: string) => {
-      console.log("startWithCamera: called with cameraId =", cameraId);
-      if (startInFlightRef.current) {
-        console.log("startWithCamera: bailing, a start is already in flight");
-        return;
-      }
-      if (stateRef.current === "scanning") {
-        console.log("startWithCamera: bailing, already scanning");
-        return;
-      }
+      if (startInFlightRef.current) return;
+      if (stateRef.current === "scanning") return;
       startInFlightRef.current = true;
       setScannerState("starting");
       setError(null);
       try {
-        console.log("startWithCamera: getting/creating Html5Qrcode instance…");
         const scanner = await getScanner();
-        console.log("startWithCamera: instance ready, calling scanner.start()…");
         await withTimeout(
           scanner.start(cameraId, SCAN_CONFIG, handleSuccess, () => {
             // Per-frame "no QR in view" noise -- expected, not an error.
@@ -240,7 +231,6 @@ export function QRScanner({
           CAMERA_TIMEOUT_MS,
           "scanner.start() did not settle in time"
         );
-        console.log("startWithCamera: scanner.start() resolved — camera is live");
         setScannerState("scanning");
         detectTorchSupport(scanner);
         saveCameraId(cameraId);
@@ -256,24 +246,17 @@ export function QRScanner({
   );
 
   const handleStart = useCallback(async () => {
-    console.log("Start Scanner clicked");
-    if (stateRef.current === "scanning" || stateRef.current === "starting") {
-      console.log("handleStart: bailing, state is already", stateRef.current);
-      return;
-    }
+    if (stateRef.current === "scanning" || stateRef.current === "starting") return;
     setError(null);
     setSuccess(null);
     setScannerState("starting");
     try {
-      console.log("handleStart: loading html5-qrcode module…");
       const Html5QrcodeCtor = await loadHtml5Qrcode();
-      console.log("handleStart: module loaded, calling getCameras()…");
       const devices = await withTimeout(
         Html5QrcodeCtor.getCameras(),
         CAMERA_TIMEOUT_MS,
         "getCameras() did not settle in time"
       );
-      console.log("handleStart: getCameras() resolved with", devices);
       if (!devices || devices.length === 0) {
         setError("No camera was found on this device.");
         setScannerState("idle");
@@ -281,7 +264,6 @@ export function QRScanner({
       }
       setCameras(devices);
       const defaultCamera = pickDefaultCamera(devices);
-      console.log("handleStart: default camera picked:", defaultCamera);
       if (!defaultCamera) {
         setError("No camera was found on this device.");
         setScannerState("idle");

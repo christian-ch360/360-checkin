@@ -1,15 +1,12 @@
 import { cn } from "@/lib/utils";
 import type { ReachTier } from "@/features/creator-library/lib/reach";
 
-const TONE: Record<string, string> = {
-  emerging: "border-border bg-muted/60 text-muted-foreground",
-  rising: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  established: "border-teal-500/25 bg-teal-500/10 text-teal-600 dark:text-teal-400",
-  influential: "border-indigo-500/25 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-  major: "border-violet-500/25 bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  elite: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-};
-
+/**
+ * Reach tier pill — deliberately one consistent gold treatment across every
+ * tier rather than a different hue per level, so the tier name (not a
+ * rainbow of colors) does the differentiating; "Elite" gets the deeper gold
+ * fill to read as the top rung.
+ */
 export function ReachTierPill({
   tier,
   className,
@@ -20,16 +17,17 @@ export function ReachTierPill({
   showRange?: boolean;
 }) {
   if (!tier) return null;
+  const isElite = tier.key === "elite";
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.14em]",
-        TONE[tier.key] ?? TONE.emerging,
+        isElite ? "border-[#D4AF6A] bg-[#D4AF6A] text-white" : "border-[#E8D5A3] bg-[#FBF3DE] text-[#8A6A2E]",
         className,
       )}
     >
       {tier.label}
-      {showRange ? <span className="opacity-60">· {tier.range}</span> : null}
+      {showRange ? <span className="opacity-70">· {tier.range}</span> : null}
     </span>
   );
 }

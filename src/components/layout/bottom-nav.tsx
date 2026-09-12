@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, DoorOpen, MessageSquare, Settings, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, DoorOpen, MessageSquare, CircleUserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BottomNavFab } from "@/components/layout/bottom-nav-fab";
 import { QuickActionsSheet } from "@/components/layout/quick-actions-sheet";
@@ -13,12 +13,16 @@ type BottomNavItem = { title: string; href: string; icon: LucideIcon };
 // One universal 4-item set for every role — full role-appropriate navigation
 // (admin or creator) lives in the hamburger/MobileNav sheet; the bottom bar
 // is just quick-tap access, and 4 icons is the natural ceiling for it
-// regardless of role.
+// regardless of role. The 4th slot is Profile (not Settings) — same
+// CircleUserRound icon as the sidebar's own Profile entry (src/config/nav.ts)
+// — so the bottom bar's one identity-related tap target matches how every
+// other social app treats "the last icon," and account settings stay one
+// tap away from Profile itself rather than needing their own bottom-bar slot.
 const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   { title: "Home", href: "/dashboard", icon: LayoutDashboard },
   { title: "Spaces", href: "/spaces", icon: DoorOpen },
   { title: "Messages", href: "/messages", icon: MessageSquare },
-  { title: "Settings", href: "/settings", icon: Settings },
+  { title: "Profile", href: "/profile", icon: CircleUserRound },
 ];
 
 function tapHaptic() {

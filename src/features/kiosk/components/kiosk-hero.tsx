@@ -254,7 +254,29 @@ export function KioskHero({ theme }: { theme: ResolvedKioskTheme }) {
             className="text-balance whitespace-pre-line opacity-80"
             style={{ fontSize: fluidPx(subtitleSize) }}
           >
-            {theme.subheadline}
+            {/* A subheadline with 2+ explicit lines AND an accentColor gets its LAST line
+                rendered in that accent (e.g. a "Matcha & Coffee"-style closing line under a
+                two-line event title) — every theme authored today either has a single-line
+                subheadline or no accentColor at all, so this never fires for existing data;
+                a plain single-line subheadline (the only case any existing theme uses) renders
+                exactly as before via the same whitespace-pre-line join. */}
+            {(() => {
+              const lines = theme.subheadline!.split("\n");
+              if (lines.length < 2 || !theme.accentColor) return theme.subheadline;
+              const last = lines[lines.length - 1];
+              const rest = lines.slice(0, -1);
+              return (
+                <>
+                  {rest.map((line, i) => (
+                    <span key={i}>
+                      {line}
+                      <br />
+                    </span>
+                  ))}
+                  <span style={{ color: theme.accentColor }}>{last}</span>
+                </>
+              );
+            })()}
           </p>
         )}
         {(theme.featuredEventTitle || theme.location || theme.parkingInfo) && (

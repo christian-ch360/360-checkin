@@ -1,7 +1,7 @@
 import type { ContentCategory } from "@prisma/client";
 
 /**
- * Per-category emoji + soft pastel treatment for the CH360 Creator Network
+ * Per-category emoji + soft pastel treatment for the CreatorHub360 Creator Network
  * category explorer, chips, and category views.
  *
  * `tint`/`text` are full literal Tailwind class strings (JIT scans source for

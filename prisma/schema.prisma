@@ -3448,6 +3448,17 @@ model KioskTheme {
   // this false to render its image with no wash at all.
   backgroundOverlay Boolean @default(true)
 
+  // Opt-in: backgroundImageUrl normally renders `object-cover` — fills the
+  // viewport, cropping whatever doesn't fit. Defaults false so every theme
+  // already using backgroundImageUrl keeps that exact crop-to-fill look.
+  // A theme whose artwork is a deliberately-composed poster (meaningful
+  // content framing the edges, e.g. illustrations bordering a clean center)
+  // sets this true to render the *whole* image via `object-contain` instead
+  // — nothing at the edges is ever cropped away — backed by a primaryColor
+  // fill (chosen to match the artwork's own background) so contain's own
+  // letterboxing reads as part of the artwork rather than as bars.
+  backgroundContain Boolean @default(false)
+
   backgroundImageUrl String?
   backgroundVideoUrl String?
   logoOverrideUrl    String?

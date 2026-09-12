@@ -27,6 +27,19 @@ export function BrandingSection({ form, update, themeKey }: { form: FormState; u
           <Switch checked={form.backgroundOverlay} onCheckedChange={(v) => update("backgroundOverlay", v)} />
         </div>
       )}
+      {form.backgroundImageUrl && (
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Fit Whole Image (no cropping)</p>
+            <p className="text-xs text-muted-foreground">
+              Fills the viewport by default, cropping whatever doesn&rsquo;t fit. Turn on for a deliberately-composed
+              poster (e.g. illustrations framing the edges) so nothing at the edges is ever cropped away — filled with
+              the Primary Color to match the artwork&rsquo;s own background.
+            </p>
+          </div>
+          <Switch checked={form.backgroundContain} onCheckedChange={(v) => update("backgroundContain", v)} />
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="theme-bg-video">Background Video URL (optional)</Label>
         <Input id="theme-bg-video" value={form.backgroundVideoUrl} onChange={(e) => update("backgroundVideoUrl", e.target.value)} />

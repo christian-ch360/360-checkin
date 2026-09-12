@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   Sparkles,
   Share2,
+  BookMarked,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import type { AccentName } from "@/config/nav-colors";
@@ -74,6 +75,7 @@ export const NAV_SECTIONS: NavSection[] = [
     requiredPermission: "admin.access",
     items: [
       { title: "Members", href: "/members", icon: Users, accent: "blue", permission: "members.view" },
+      { title: "Creator Library", href: "/admin/creator-library", icon: BookMarked, accent: "violet", permission: "members.manage" },
       { title: "Applications", href: "/admin/applications", icon: FileCheck2, accent: "amber", permission: "members.approve" },
       { title: "Referrals", href: "/admin/referrals", icon: Share2, accent: "indigo", permission: "referrals.view" },
       { title: "Operations", href: "/check-in", icon: QrCode, accent: "emerald", permission: "checkin.manage" },

@@ -33,7 +33,7 @@ export default async function AdminLibraryCategoriesPage() {
       <AdminLibrarySubNav />
       <PageHeader
         title="Categories"
-        description="The CH360 category taxonomy and how many published creators use each one."
+        description="The CreatorHub360 category taxonomy and how many published creators use each one."
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

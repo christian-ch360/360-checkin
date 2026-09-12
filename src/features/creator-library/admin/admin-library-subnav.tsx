@@ -11,6 +11,7 @@ const ITEMS = [
   { label: "Categories", href: "/admin/creator-library/categories", match: (p: string) => p.startsWith("/admin/creator-library/categories") },
   { label: "Locations", href: "/admin/creator-library/locations", match: (p: string) => p.startsWith("/admin/creator-library/locations") },
   { label: "Reach", href: "/admin/creator-library/reach", match: (p: string) => p.startsWith("/admin/creator-library/reach") },
+  { label: "Settings", href: "/admin/creator-library/settings", match: (p: string) => p.startsWith("/admin/creator-library/settings") },
 ];
 
 export function AdminLibrarySubNav() {

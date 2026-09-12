@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { ContentCategory } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   uploadCreatorLibraryPortrait,
 } from "@/features/creator-library/services/creator-library-admin.actions";
 import type { AdminCreatorEditor } from "@/features/creator-library/services/creator-library-admin.service";
+import { LibraryDropzoneUploader } from "@/features/creator-library/admin/library-dropzone-uploader";
 
 type FormState = {
   visible: boolean;
@@ -77,8 +78,6 @@ export function AdminLibraryEditor({ data }: { data: AdminCreatorEditor }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(() => toForm(data));
   const [isPending, startTransition] = useTransition();
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -93,20 +92,18 @@ export function AdminLibraryEditor({ data }: { data: AdminCreatorEditor }) {
     }));
   }
 
-  function handleUpload(file: File) {
-    setUploading(true);
+  async function handlePortraitUpload(file: File) {
     const body = new FormData();
     body.set("file", file);
-    uploadCreatorLibraryPortrait(data.profileId, body)
-      .then((result) => {
-        if (result.success) {
-          set("imageUrl", result.imageUrl);
-          toast.success("Portrait uploaded.");
-        } else {
-          toast.error(result.error);
-        }
-      })
-      .finally(() => setUploading(false));
+    const result = await uploadCreatorLibraryPortrait(data.profileId, body);
+    if (!result.success) return { success: false as const, error: result.error };
+    set("imageUrl", result.imageUrl);
+    return { success: true as const, url: result.imageUrl };
+  }
+
+  async function handlePortraitRemove() {
+    set("imageUrl", "");
+    return { success: true as const };
   }
 
   function save() {
@@ -191,45 +188,16 @@ export function AdminLibraryEditor({ data }: { data: AdminCreatorEditor }) {
               </div>
             ) : null}
 
-            <div className="space-y-1.5">
-              <Label>Portrait</Label>
-              <div className="flex items-center gap-3">
-                <div className="size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-                  {(form.imageUrl || data.memberProfilePhotoUrl) && (
-                    // eslint-disable-next-line @next/next/no-img-element -- remote URL preview
-                    <img src={form.imageUrl || data.memberProfilePhotoUrl || ""} alt="" className="size-full object-cover" />
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                    {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-                    Upload image
-                  </Button>
-                  {form.imageUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => set("imageUrl", "")}
-                      className="block text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      Remove image
-                    </button>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Falls back to a branded CH360 placeholder.</p>
-                  )}
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) handleUpload(file);
-                    event.target.value = "";
-                  }}
-                />
-              </div>
-            </div>
+            <LibraryDropzoneUploader
+              title="Portrait"
+              description="Falls back to a branded CreatorHub360 placeholder when none is set."
+              currentUrl={form.imageUrl || data.memberProfilePhotoUrl || null}
+              accept="image/jpeg,image/png,image/webp"
+              hint="PNG, JPG, or WEBP"
+              previewFit="cover"
+              onUpload={handlePortraitUpload}
+              onRemove={handlePortraitRemove}
+            />
 
             <div className="space-y-3">
               <Label>Follower counts</Label>

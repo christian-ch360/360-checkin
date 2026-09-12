@@ -190,4 +190,6 @@ export const EmailService = {
     sendTemplatedEmail("agency_team_activity", args),
   sendWelcomeNewsletterEmail: (args: SendArgs<"welcome_newsletter">) =>
     sendTemplatedEmail("welcome_newsletter", args),
+  sendCreatorHubAcademyKickoffEmail: (args: SendArgs<"creatorhub_academy_kickoff">) =>
+    sendTemplatedEmail("creatorhub_academy_kickoff", args),
 };

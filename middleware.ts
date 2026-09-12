@@ -1,8 +1,16 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { guardCreatorLibrary } from "@/features/creator-library/auth/guard";
 import { REFERRAL_COOKIE_NAME, REFERRAL_COOKIE_MAX_AGE_SECONDS } from "@/features/referrals/config/referral-cookie";
 
 export async function middleware(request: NextRequest) {
+  // Creator Library has its own shared-password session, entirely separate
+  // from the Supabase member auth updateSession() handles — gate it here
+  // before any of that runs.
+  if (request.nextUrl.pathname.startsWith("/creator-library")) {
+    return guardCreatorLibrary(request);
+  }
+
   const response = await updateSession(request);
 
   // "Persist referral through navigation ... reasonable expiration (~30

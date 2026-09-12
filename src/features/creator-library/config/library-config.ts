@@ -11,13 +11,6 @@ export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
   YOUTUBE: "YouTube",
 };
 
-/** Audience metric noun per platform — YouTube counts "subscribers". */
-export const PLATFORM_METRIC_NOUN: Record<SocialPlatform, string> = {
-  INSTAGRAM: "followers",
-  TIKTOK: "followers",
-  YOUTUBE: "subscribers",
-};
-
 export type FollowerBucket = {
   value: string;
   label: string;
@@ -40,13 +33,6 @@ export function resolveFollowerBucket(value: string | undefined | null): Followe
   if (!value) return null;
   return FOLLOWER_BUCKETS.find((bucket) => bucket.value === value) ?? null;
 }
-
-/**
- * Spec §7 "LOCATION" — quick presets. Location is a free-text field on
- * Member, so these are prefix/contains hints, and the search box also accepts
- * any city. Kept short and editorial; "Other" is handled in the UI as "clear".
- */
-export const LOCATION_PRESETS = ["Los Angeles", "New York", "Miami", "Atlanta", "Chicago", "Austin"];
 
 export type LibrarySortKey =
   | "relevance"
@@ -75,12 +61,12 @@ export function resolveLibrarySort(value: string | undefined | null): LibrarySor
 }
 
 /**
- * A distinct CH360 identity marker, deliberately NOT a generic social
- * "verified" checkmark. Verified CH360 members (their Member record passed
+ * A distinct CreatorHub360 identity marker, deliberately NOT a generic social
+ * "verified" checkmark. Verified CreatorHub360 members (their Member record passed
  * identity verification) get the stronger treatment; everyone else in the
  * library still carries the network mark.
  */
 export const C360_STATUS = {
-  verified: { label: "Verified CH360 Member", short: "Verified" },
-  network: { label: "CH360 Creator", short: "Network" },
+  verified: { label: "Verified CreatorHub360 Member", short: "Verified" },
+  network: { label: "CreatorHub360 Creator", short: "Network" },
 } as const;

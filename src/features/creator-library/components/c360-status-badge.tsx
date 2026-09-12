@@ -24,8 +24,8 @@ export function C360StatusBadge({
         "inline-flex items-center gap-1.5 rounded-full border font-medium uppercase",
         size === "sm" ? "px-2 py-0.5 text-[0.6rem] tracking-[0.16em]" : "px-2.5 py-1 text-[0.65rem] tracking-[0.18em]",
         verified
-          ? "border-[color-mix(in_oklch,var(--community),transparent_65%)] bg-[color-mix(in_oklch,var(--community),transparent_88%)] text-[var(--community)]"
-          : "border-border bg-muted/60 text-muted-foreground",
+          ? "border-[#E8D5A3] bg-[#FBF3DE] text-[#8A6A2E]"
+          : "border-[#EAE1CB] bg-[#F5F1E8] text-[#6B6B6B]",
         className,
       )}
     >
@@ -33,7 +33,7 @@ export function C360StatusBadge({
         aria-hidden
         className={cn(
           "grid size-3.5 place-items-center text-[0.5rem] font-bold leading-none text-white",
-          verified ? "bg-[var(--community)]" : "bg-foreground/70",
+          verified ? "bg-[#D4AF6A]" : "bg-[#6B6B6B]",
         )}
         style={{ clipPath: "polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)" }}
       >

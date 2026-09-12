@@ -13,8 +13,8 @@ const caveat = Caveat({ subsets: ["latin"], weight: ["500", "600", "700"], varia
 
 export const metadata: Metadata = {
   title: {
-    default: "CH360 Creator Network",
-    template: "%s · CH360 Creator Network",
+    default: "CreatorHub360 Creator Network",
+    template: "%s · CreatorHub360 Creator Network",
   },
   description: "Discover the creators behind the network.",
   robots: { index: false, follow: false },
@@ -26,6 +26,10 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Fixed warm-ivory/charcoal/gold editorial palette — deliberately independent
+// of the app's light/dark theme (same rationale as /login and /kiosk), so
+// the public Creator Network always reads as a bright luxury directory
+// regardless of the visitor's system theme.
 export default function CreatorLibraryLayout({ children }: { children: ReactNode }) {
-  return <div className={`${caveat.variable} min-h-svh bg-background text-foreground`}>{children}</div>;
+  return <div className={`${caveat.variable} min-h-svh bg-[#FAF9F6] text-[#161616]`}>{children}</div>;
 }

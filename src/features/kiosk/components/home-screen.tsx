@@ -23,6 +23,20 @@ const WELCOME_ROTATION: { headline: string; subheadline: string }[] = [
 
 const WELCOME_ROTATE_MS = 9000;
 
+/** True for a light/near-white hex color — used only to pick the Hero card's own background
+ * (see useHeroCard below), never for anything text-contrast-critical. */
+function isLightHex(hex: string | null | undefined): boolean {
+  if (!hex) return false;
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) return false;
+  const n = Number.parseInt(match[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  // Standard relative-luminance weighting (ITU-R BT.601).
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+}
+
 function useRotatingWelcome(enabled: boolean) {
   const [index, setIndex] = useState(0);
   useEffect(() => {
@@ -96,11 +110,56 @@ export function HomeScreen({
     ? "absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 text-[11px] font-medium text-[var(--kiosk-btn-text)]/70 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100"
     : "absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 text-[11px] font-medium text-black/40 opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100";
 
+  // Opt-in: a theme with themedActionButtons on AND buttonStyle="OUTLINE" gets Register
+  // rendered as a secondary bordered/transparent card instead of the shared solid one, so its
+  // primary Check In action can visually lead without Register competing for attention — same
+  // "primary vs secondary" language as the Hero CTA's own OUTLINE style. Every theme that already
+  // has themedActionButtons=true today uses buttonStyle="SOLID" (see kiosk-theme.service.ts
+  // toWriteData's SOLID default), so this branch is never reached by existing data — their
+  // Register card keeps rendering byte-for-byte as before.
+  const useOutlineRegister = useThemedButtons && theme?.buttonStyle === "OUTLINE";
+  const registerCardClass = useOutlineRegister
+    ? "group relative flex min-h-11 flex-col items-center justify-center gap-1.5 rounded-3xl border-2 bg-transparent px-3.5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_20px_50px_-20px_rgba(0,0,0,0.18)] outline-none transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-offset-4"
+    : cardClass;
+  // Uses the theme's own textColor (its readable page-text color), not buttonTextColor — the
+  // latter is chosen for contrast against the SOLID buttonColor fill (e.g. white-on-green for
+  // Check In) and would be illegible on Register's transparent/cream fill instead.
+  const registerCardStyle = useOutlineRegister
+    ? ({
+        borderColor: theme!.textColor || (theme!.buttonColor as string),
+        color: theme!.textColor || (theme!.buttonColor as string),
+      } as React.CSSProperties)
+    : themedCardVars;
+  const registerIconBoxClass = useOutlineRegister
+    ? "flex size-7 items-center justify-center rounded-xl bg-current/10"
+    : iconBoxClass;
+  const registerTitleClass = useOutlineRegister ? "text-base font-semibold tracking-tight" : cardTitleClass;
+  const registerSubtitleClass = useOutlineRegister ? "text-xs opacity-70" : cardSubtitleClass;
+  const registerHintClass = useOutlineRegister
+    ? "absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 text-[11px] font-medium opacity-0 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 group-hover:opacity-100"
+    : cardHintClass;
+
   // Same opt-in signal as useThemedButtons — a theme rich enough to define its own kioskTitle
   // (a dedicated page-title tier) is exactly the kind of branded event that also wants its own
   // elevated card rather than sitting flat on the page background. No kioskTitle means no card,
   // so every theme authored before this existed renders exactly as it did before.
-  const useHeroCard = Boolean(isThemed && theme?.kioskTitle);
+  const hasHeroTitle = Boolean(isThemed && theme?.kioskTitle);
+  // A backgroundContain poster (a deliberately-composed background whose own open center IS the
+  // "clean area for text," per its own design) skips the CARD's visual chrome — an additional
+  // box there would be a second, competing container sitting on top of artwork that's meant to
+  // read as the kiosk's own design, not a website placed over an image — but keeps the SAME
+  // narrower width/padding the card used, so type still wraps at the size it was designed for
+  // instead of stretching to the page's full width and overflowing. No existing theme uses
+  // backgroundContain, so neither branch below ever changes anything for them.
+  const useHeroCard = hasHeroTitle && !theme?.backgroundContain;
+  const useNarrowFlat = hasHeroTitle && Boolean(theme?.backgroundContain);
+  // The card itself was originally hardcoded to one warm-cream look, which only ever suits a
+  // theme authored with dark text (Charmzone: textColor "#4A3B38"). A theme authored with light/
+  // cream text (expecting to sit directly on its own dark background) gets a barely-there frosted
+  // "glass" card instead — subtle elevation without a jarring light rectangle. Every theme with
+  // kioskTitle set today (only Charmzone) has a dark textColor, so this is the only branch that
+  // can fire for existing data — Charmzone's card renders byte-for-byte as before.
+  const useDarkHeroCard = useHeroCard && isLightHex(theme?.textColor);
 
   return (
     <motion.div
@@ -108,9 +167,13 @@ export function HomeScreen({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       className={
-        useHeroCard
-          ? "flex w-full max-w-xl flex-col items-center gap-6 rounded-[2.5rem] bg-[#FDF8F6]/90 px-6 py-10 text-center shadow-[0_1px_2px_rgba(74,59,56,0.04),0_30px_70px_-25px_rgba(74,59,56,0.18)] backdrop-blur-sm sm:gap-8 sm:px-12 sm:py-14"
-          : "flex w-full max-w-4xl flex-col items-center gap-6 text-center sm:gap-8"
+        useDarkHeroCard
+          ? "flex w-full max-w-xl flex-col items-center gap-6 rounded-[2.5rem] border border-white/10 bg-white/[0.04] px-6 py-10 text-center shadow-[0_1px_2px_rgba(0,0,0,0.2),0_30px_70px_-25px_rgba(0,0,0,0.5)] backdrop-blur-md sm:gap-8 sm:px-12 sm:py-14"
+          : useHeroCard
+            ? "flex w-full max-w-xl flex-col items-center gap-6 rounded-[2.5rem] bg-[#FDF8F6]/90 px-6 py-10 text-center shadow-[0_1px_2px_rgba(74,59,56,0.04),0_30px_70px_-25px_rgba(74,59,56,0.18)] backdrop-blur-sm sm:gap-8 sm:px-12 sm:py-14"
+            : useNarrowFlat
+              ? "flex w-full max-w-xl flex-col items-center gap-6 px-6 py-10 text-center sm:gap-8 sm:px-12 sm:py-14"
+              : "flex w-full max-w-4xl flex-col items-center gap-6 text-center sm:gap-8"
       }
     >
       {showHero &&
@@ -149,15 +212,15 @@ export function HomeScreen({
           className={`-mt-2 grid w-full max-w-[270px] grid-cols-1 gap-2.5 sm:-mt-4 sm:gap-3 ${showCheckIn && showRegister ? "sm:max-w-[380px] sm:grid-cols-2" : ""}`}
         >
           {showRegister && (
-            <button type="button" onClick={onRegisterNow} className={cardClass} style={themedCardVars}>
-              <span className={iconBoxClass}>
+            <button type="button" onClick={onRegisterNow} className={registerCardClass} style={registerCardStyle}>
+              <span className={registerIconBoxClass}>
                 <UserPlus className="size-3.5" />
               </span>
               <span className="flex flex-col items-center gap-0.5">
-                <span className={cardTitleClass}>Register</span>
-                <span className={cardSubtitleClass}>Become a Member</span>
+                <span className={registerTitleClass}>Register</span>
+                <span className={registerSubtitleClass}>Become a Member</span>
               </span>
-              <span className={cardHintClass}>
+              <span className={registerHintClass}>
                 Continue <ArrowRight className="size-3" />
               </span>
             </button>

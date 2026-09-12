@@ -98,8 +98,15 @@ const INSTAGRAM_DOMAIN_RE = /^(www\.)?instagram\.com\//i;
 const TIKTOK_DOMAIN_RE = /^(www\.)?tiktok\.com\//i;
 const LINKEDIN_DOMAIN_RE = /^(www\.)?linkedin\.com\/(in\/)?/i;
 
+// No "www." — matches this codebase's established Instagram-link convention:
+// every manual-entry placeholder (settings/signup/apply/member/profile-edit
+// forms) shows "https://instagram.com/..." as the example, and the
+// independently-written OAuth-connected-account URL builder
+// (social-connections.service.ts) already emits the same bare-domain form.
+// TikTok/LinkedIn/YouTube each have their own established convention (see
+// their own buildUrl below) and are untouched by this.
 export function parseInstagramInput(value: string | null | undefined): ParsedSocialInput | null {
-  return parse(value, INSTAGRAM_DOMAIN_RE, (handle) => `https://www.instagram.com/${handle}`);
+  return parse(value, INSTAGRAM_DOMAIN_RE, (handle) => `https://instagram.com/${handle}`);
 }
 
 export function parseTiktokInput(value: string | null | undefined): ParsedSocialInput | null {

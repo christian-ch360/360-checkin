@@ -106,6 +106,7 @@ function defaultForm(): FormState {
     checkInMessage: "",
     themedActionButtons: false,
     backgroundOverlay: true,
+    backgroundContain: false,
   };
 }
 
@@ -158,6 +159,7 @@ function fromVersion(v: EditableThemeVersion): FormState {
     checkInMessage: v.checkInMessage ?? "",
     themedActionButtons: v.themedActionButtons,
     backgroundOverlay: v.backgroundOverlay,
+    backgroundContain: v.backgroundContain,
   };
 }
 
@@ -243,6 +245,7 @@ export function KioskThemeEditor({
       checkInMessage: form.checkInMessage || null,
       themedActionButtons: form.themedActionButtons,
       backgroundOverlay: form.backgroundOverlay,
+      backgroundContain: form.backgroundContain,
     };
   }
 
@@ -442,6 +445,7 @@ export function KioskThemeEditor({
       checkInMessage: form.checkInMessage || null,
       themedActionButtons: form.themedActionButtons,
       backgroundOverlay: form.backgroundOverlay,
+      backgroundContain: form.backgroundContain,
     }),
     [form, themeKey]
   );

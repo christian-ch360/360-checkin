@@ -7,28 +7,34 @@ import type { LibraryCreatorCard } from "@/features/creator-library/services/cre
  * same card grid, no loud badges beyond the small "Featured" marker the card
  * already carries.
  */
-export function LibraryFeaturedView({ creators }: { creators: LibraryCreatorCard[] }) {
+export function LibraryFeaturedView({
+  creators,
+  placeholderIconUrl,
+}: {
+  creators: LibraryCreatorCard[];
+  placeholderIconUrl?: string | null;
+}) {
   return (
     <section className="mx-auto max-w-7xl px-4 py-12 sm:px-8 sm:py-16">
-      <p className="text-[0.7rem] font-medium tracking-[0.24em] text-muted-foreground uppercase">Hand-picked</p>
+      <p className="text-[0.7rem] font-medium tracking-[0.24em] text-[#6B6B6B] uppercase">Hand-picked</p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Featured Creators</h1>
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-        A rotating selection from across the CH360 Creator Network, chosen by the CreatorHub360 team.
+      <p className="mt-2 max-w-lg text-sm text-[#6B6B6B]">
+        A rotating selection from across the CreatorHub360 Creator Network, chosen by the CreatorHub360 team.
       </p>
 
       <div className="mt-8">
         {creators.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-            <div className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#EAE1CB] py-16 text-center">
+            <div className="grid size-12 place-items-center rounded-full bg-[#F5F1E8] text-[#6B6B6B]">
               <Star className="size-5" />
             </div>
             <p className="text-sm font-medium">No featured creators yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
+            <p className="max-w-sm text-sm text-[#6B6B6B]">
               The team hasn&apos;t featured anyone yet. Every creator is still browsable under Creators.
             </p>
           </div>
         ) : (
-          <CreatorGrid creators={creators} />
+          <CreatorGrid creators={creators} placeholderIconUrl={placeholderIconUrl} />
         )}
       </div>
     </section>

@@ -27,10 +27,12 @@ export function AdminCreatorGrid({
   rows,
   selected,
   onToggleSelect,
+  placeholderIconUrl,
 }: {
   rows: AdminCreatorRow[];
   selected: Set<string>;
   onToggleSelect: (profileId: string) => void;
+  placeholderIconUrl?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -55,7 +57,13 @@ export function AdminCreatorGrid({
           className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
         >
           <div className="relative aspect-[4/5] overflow-hidden">
-            <CreatorPortrait name={row.name} imageUrl={row.photoUrl} seed={row.profileId ?? row.key} rounded="rounded-none" />
+            <CreatorPortrait
+              name={row.name}
+              imageUrl={row.photoUrl}
+              seed={row.profileId ?? row.key}
+              placeholderIconUrl={placeholderIconUrl}
+              rounded="rounded-none"
+            />
             {row.profileId ? (
               <div className="absolute left-3 top-3">
                 <Checkbox

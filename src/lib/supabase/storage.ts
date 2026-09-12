@@ -253,7 +253,9 @@ export async function uploadEmailAsset(path: string, blob: Blob): Promise<string
 
 const CREATOR_LIBRARY_BUCKET = "creator-library";
 const CREATOR_LIBRARY_IMAGE_MAX_BYTES = 8 * 1024 * 1024; // 8MB — editorial hero portraits, not client-compressed like avatars
-const CREATOR_LIBRARY_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// Includes SVG so the bucket (whose allowlist is fixed at creation) also
+// accepts the Card Placeholder Icon upload below.
+const CREATOR_LIBRARY_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 
 let creatorLibraryBucketEnsured = false;
 

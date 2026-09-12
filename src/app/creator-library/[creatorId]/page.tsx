@@ -9,6 +9,7 @@ import {
   getLibraryCreator,
   getPrimaryOrganizationId,
 } from "@/features/creator-library/services/creator-library.service";
+import { getLibrarySettings } from "@/features/creator-library/lib/library-settings";
 import { LibraryTopBar } from "@/features/creator-library/components/library-top-bar";
 import {
   CreatorProfile,
@@ -34,12 +35,19 @@ export default async function CreatorLibraryProfilePage({
   }
 
   const organizationId = await getPrimaryOrganizationId();
-  const creator = organizationId ? await getLibraryCreator(organizationId, creatorId) : null;
+  const [creator, settings] = await Promise.all([
+    organizationId ? getLibraryCreator(organizationId, creatorId) : Promise.resolve(null),
+    organizationId ? getLibrarySettings(organizationId) : Promise.resolve(null),
+  ]);
 
   return (
     <>
       <LibraryTopBar activeView={null} />
-      {creator ? <CreatorProfile creator={creator} /> : <CreatorProfileMissing />}
+      {creator ? (
+        <CreatorProfile creator={creator} placeholderIconUrl={settings?.placeholderIconUrl} />
+      ) : (
+        <CreatorProfileMissing />
+      )}
     </>
   );
 }

@@ -12,6 +12,9 @@ import { sendEmailWithRetry } from "@/lib/email/send-email";
 import { renderCustomContent } from "@/lib/email/template-overrides";
 import { sanitizeEmailHtml } from "@/lib/email/template-html-sanitize";
 import { extractVariableTokens } from "@/lib/email/template-interpolation";
+import { renderTemplate, type TemplateName } from "@/lib/email/email-types";
+import { TEMPLATE_SAMPLE_PROPS } from "@/features/communications/config/template-sample-props";
+import { TEMPLATE_CATEGORY } from "@/features/communications/config/template-catalog";
 import {
   emailTemplateSchema,
   templateKeySchema,
@@ -388,6 +391,90 @@ export async function sendTestFromEditorAction(input: {
   });
 
   const result = await sendEmailWithRetry({ to: data.to, subject: testSubject, html, text });
+  const now = new Date();
+
+  await prisma.emailLog.update({
+    where: { id: log.id },
+    data: {
+      status: result.sent ? "SENT" : "FAILED",
+      providerId: result.providerId ?? null,
+      error: result.sent ? null : (result.reason ?? null),
+      attempts: result.attempts,
+      deliveredAt: result.sent ? now : null,
+      failedAt: result.sent ? null : now,
+    },
+  });
+
+  if (!result.sent) return { success: false, error: `Send failed: ${result.reason ?? "unknown error"}` };
+  return { success: true };
+}
+
+/**
+ * Renders a system template's real code-defined component (not the raw-HTML
+ * override editor's content) against its sample props — the "Preview
+ * current default" gap getEmailTemplateForEdit's own docstring already
+ * anticipated but the generic override editor never actually implements,
+ * since its Preview/Send Test only ever exercise renderCustomContent (the
+ * admin-authored bodyHtml path). Needed for any system template that's rich
+ * enough (tables/columns/media queries) that hand-copying it into the
+ * bodyHtml textarea would both duplicate it and lose fidelity to the
+ * sanitizer's tag/style stripping. Read-only — same admin.access gate as
+ * previewEditorContentAction.
+ */
+export async function previewSystemDefaultAction(templateKey: string): Promise<EditorRenderResult> {
+  const actor = await requireCurrentMember();
+  if (!hasPermission(actor.systemRole, "admin.access")) throw new Error("Not authorized.");
+  if (!isSystemTemplateKey(templateKey)) throw new Error("Not a system template.");
+
+  return renderTemplate(templateKey, TEMPLATE_SAMPLE_PROPS[templateKey]);
+}
+
+const sendSystemDefaultTestSchema = z.object({
+  templateKey: templateKeySchema,
+  to: z.string().email("Enter a valid email"),
+});
+
+/**
+ * Send-Test counterpart to previewSystemDefaultAction — sends the real
+ * component's default render (sample props) rather than draft override
+ * content, through the exact same EmailLog + sendEmailWithRetry pipeline
+ * sendTestFromEditorAction already uses.
+ */
+export async function sendSystemDefaultTestAction(input: { templateKey: string; to: string }): Promise<SendTestFromEditorResult> {
+  let actor;
+  try {
+    actor = await requireCommunicationsManager();
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = sendSystemDefaultTestSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const { templateKey, to } = parsed.data;
+
+  if (!isSystemTemplateKey(templateKey)) return { success: false, error: "Not a system template." };
+
+  const { subject, html, text } = await renderTemplate(templateKey, TEMPLATE_SAMPLE_PROPS[templateKey]);
+  const testSubject = `[TEST] ${subject}`;
+  const from = getEmailFrom();
+
+  const log = await prisma.emailLog.create({
+    data: {
+      organizationId: actor.organizationId,
+      to,
+      recipientName: "Test send (default template)",
+      subject: testSubject,
+      template: templateKey,
+      category: TEMPLATE_CATEGORY[templateKey as TemplateName],
+      status: "QUEUED",
+      from,
+      html,
+      text,
+      sentById: actor.id,
+    },
+  });
+
+  const result = await sendEmailWithRetry({ to, subject: testSubject, html, text });
   const now = new Date();
 
   await prisma.emailLog.update({

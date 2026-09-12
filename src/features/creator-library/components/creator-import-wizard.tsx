@@ -35,10 +35,10 @@ type RawRow = Record<string, string>;
 
 const AUTO_MAP: { field: TargetField; patterns: RegExp }[] = [
   { field: "name", patterns: /^(full[_\s-]?name|name|creator[_\s-]?name|display[_\s-]?name)$/i },
-  { field: "memberId", patterns: /^(member[_\s-]?id|memberid|c360[_\s-]?id|ch360[_\s-]?id)$/i },
+  { field: "memberId", patterns: /^(member[_\s-]?id|memberid|c360[_\s-]?id|ch360[_\s-]?id|creatorhub360[_\s-]?id)$/i },
   { field: "email", patterns: /^(e[-_\s]?mail|email[_\s-]?address)$/i },
   { field: "phone", patterns: /^(phone|phone[_\s-]?number|mobile|tel)$/i },
-  { field: "username", patterns: /^(user[_\s-]?name|handle|c360[_\s-]?username|ch360[_\s-]?username)$/i },
+  { field: "username", patterns: /^(user[_\s-]?name|handle|c360[_\s-]?username|ch360[_\s-]?username|creatorhub360[_\s-]?username)$/i },
   { field: "profileImageUrl", patterns: /^(profile[_\s-]?image[_\s-]?url|photo[_\s-]?url|avatar[_\s-]?url|image[_\s-]?url|profile[_\s-]?photo)$/i },
   { field: "instagramFollowers", patterns: /instagram.*(follow)|ig.*follow/i },
   { field: "instagramUrl", patterns: /instagram.*url|ig.*url/i },
@@ -256,7 +256,7 @@ export function CreatorImportWizard() {
                 <Button asChild variant="outline" size="sm">
                   <a href="/api/creator-library/template" download>
                     <Download className="size-3.5" />
-                    Download CH360 template
+                    Download CreatorHub360 template
                   </a>
                 </Button>
                 <Button asChild variant="ghost" size="sm">

@@ -8,6 +8,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { formatCompactNumber } from "@/lib/utils/format";
 import { getLibraryStats } from "@/features/creator-library/services/creator-library.service";
+import { getLibrarySettings } from "@/features/creator-library/lib/library-settings";
 import {
   getAdminLibrarySummary,
   listAdminCreators,
@@ -37,10 +38,11 @@ export default async function AdminCreatorLibraryPage({
   const filter = VALID_FILTERS.find((entry) => entry === params.filter) ?? "all";
   const search = params.q?.trim() ?? "";
 
-  const [stats, summary, rows] = await Promise.all([
+  const [stats, summary, rows, settings] = await Promise.all([
     getLibraryStats(actor.organizationId),
     getAdminLibrarySummary(actor.organizationId),
     listAdminCreators(actor.organizationId, { search, filter }),
+    getLibrarySettings(actor.organizationId),
   ]);
 
   return (
@@ -48,7 +50,7 @@ export default async function AdminCreatorLibraryPage({
       <AdminLibrarySubNav />
       <PageHeader
         title="Creator Library"
-        description="Manage, organize, and showcase the CH360 Creator Network."
+        description="Manage, organize, and showcase the CreatorHub360 Creator Network."
         actions={
           <div className="flex gap-2">
             <AdminAddCreatorDialog />
@@ -84,7 +86,7 @@ export default async function AdminCreatorLibraryPage({
         <StatCard label="Cities" value={stats.cities > 0 ? String(stats.cities) : "—"} icon={MapPin} accent="warning" />
       </div>
 
-      <AdminLibraryTable rows={rows} filter={filter} search={search} />
+      <AdminLibraryTable rows={rows} filter={filter} search={search} placeholderIconUrl={settings.placeholderIconUrl} />
     </div>
   );
 }

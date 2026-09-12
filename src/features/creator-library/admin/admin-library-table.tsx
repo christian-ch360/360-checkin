@@ -40,10 +40,12 @@ export function AdminLibraryTable({
   rows,
   filter,
   search,
+  placeholderIconUrl,
 }: {
   rows: AdminCreatorRow[];
   filter: AdminCreatorFilter;
   search: string;
+  placeholderIconUrl?: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -245,7 +247,12 @@ export function AdminLibraryTable({
       {visibleRows.length === 0 ? (
         <EmptyState icon={UserRound} title="No creators match" description="Try a different search or filter." />
       ) : adminView === "grid" ? (
-        <AdminCreatorGrid rows={visibleRows} selected={selected} onToggleSelect={toggleSelect} />
+        <AdminCreatorGrid
+          rows={visibleRows}
+          selected={selected}
+          onToggleSelect={toggleSelect}
+          placeholderIconUrl={placeholderIconUrl}
+        />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[820px] text-sm">

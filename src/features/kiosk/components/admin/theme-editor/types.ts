@@ -58,6 +58,7 @@ export type FormState = {
   checkInMessage: string;
   themedActionButtons: boolean;
   backgroundOverlay: boolean;
+  backgroundContain: boolean;
 };
 
 /** Passed down to every section panel — identical shape to the setter kiosk-theme-editor.tsx has always used. */
@@ -116,6 +117,7 @@ export type EditableThemeVersion = {
   checkInMessage: string | null;
   themedActionButtons: boolean;
   backgroundOverlay: boolean;
+  backgroundContain: boolean;
   publishedAt: Date | null;
   /** Used only for the "Last saved" indicator in the top bar — presentational only. */
   updatedAt: Date;

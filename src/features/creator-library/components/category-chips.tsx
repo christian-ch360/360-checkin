@@ -28,12 +28,12 @@ export function CategoryChips({
       {shown.map((category) => {
         const label = CONTENT_CATEGORY_LABELS[category];
         const chipClass =
-          "rounded-full border border-border px-2.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-muted-foreground";
+          "rounded-full border border-[#EAE1CB] bg-[#F5F1E8] px-2.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-[#6B6B6B]";
         return linked ? (
           <Link
             key={category}
             href={`/creator-library?category=${category}`}
-            className={cn(chipClass, "transition-colors hover:border-foreground/30 hover:text-foreground")}
+            className={cn(chipClass, "transition-colors hover:border-[#D4AF6A] hover:text-[#161616]")}
           >
             {label}
           </Link>
@@ -47,12 +47,12 @@ export function CategoryChips({
         (moreHref ? (
           <Link
             href={moreHref}
-            className="text-[0.7rem] font-medium text-[var(--community)] hover:underline"
+            className="text-[0.7rem] font-medium text-[#B8935A] hover:underline"
           >
             See all →
           </Link>
         ) : (
-          <span className="text-[0.7rem] font-medium text-muted-foreground">+{hidden} more</span>
+          <span className="text-[0.7rem] font-medium text-[#6B6B6B]">+{hidden} more</span>
         ))}
     </div>
   );

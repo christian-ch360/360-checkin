@@ -66,6 +66,7 @@ export type ResolvedKioskTheme = {
   checkInMessage: string | null;
   themedActionButtons: boolean;
   backgroundOverlay: boolean;
+  backgroundContain: boolean;
 };
 
 type KioskThemeRow = Awaited<ReturnType<typeof fetchPublishedThemes>>[number];
@@ -171,6 +172,7 @@ function resolveScheduleAndContent(
     checkInMessage: row.checkInMessage,
     themedActionButtons: row.themedActionButtons,
     backgroundOverlay: row.backgroundOverlay,
+    backgroundContain: row.backgroundContain,
   };
 
   return { schedule, content };

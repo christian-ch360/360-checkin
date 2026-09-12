@@ -20,7 +20,7 @@ export default async function CreatorImportPage() {
       <AdminLibrarySubNav />
       <PageHeader
         title="Import Creators"
-        description="Upload and organize creators into the CH360 Creator Network."
+        description="Upload and organize creators into the CreatorHub360 Creator Network."
       />
       <CreatorImportWizard />
     </div>

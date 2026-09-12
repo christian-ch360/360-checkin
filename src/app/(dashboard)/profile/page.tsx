@@ -87,7 +87,13 @@ export default async function ProfilePage({
     <div className="space-y-8">
       <PageHeader title="Profile" description="Your identity, membership, and standing at CreatorHub360." />
 
-      <Tabs defaultValue={tab === "integrations" ? "integrations" : "profile"}>
+      <Tabs
+        defaultValue={
+          tab && ["integrations", "membership", "activity", "projects", "events", "collaborations"].includes(tab)
+            ? tab
+            : "profile"
+        }
+      >
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>

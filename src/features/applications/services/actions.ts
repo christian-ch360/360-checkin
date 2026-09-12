@@ -70,12 +70,9 @@ export async function submitApplicationAction(
     mediaReleaseAccepted:
       formData.get("mediaReleaseAccepted") === "on" || formData.get("mediaReleaseAccepted") === "true",
   };
-  console.log("[submitApplicationAction] FORM VALUES", rawValues);
-
   const parsed = applicationSchema.safeParse(rawValues);
 
   if (!parsed.success) {
-    console.log("[submitApplicationAction] VALIDATION FAILED", parsed.error.issues);
     const fieldErrors: FieldErrors = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
@@ -85,14 +82,11 @@ export async function submitApplicationAction(
     }
     return { error: parsed.error.issues[0]?.message, fieldErrors };
   }
-  console.log("[submitApplicationAction] VALIDATION OK", parsed.data);
 
   try {
-    console.log("[submitApplicationAction] SERVER PAYLOAD", parsed.data);
     await submitApplication(parsed.data);
   } catch (err) {
     if (err instanceof AgencyDuplicateError) {
-      console.log("[submitApplicationAction] AGENCY DUPLICATE", err.message);
       return { error: err.message, existingAgencyId: err.existingAgencyId, existingAgencyName: err.existingAgencyName };
     }
 

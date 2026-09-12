@@ -157,6 +157,7 @@ export function NewConversationDialog() {
             <Input
               autoFocus
               placeholder="Search members or creators…"
+              aria-label="Search members or creators"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="rounded-full pl-9"

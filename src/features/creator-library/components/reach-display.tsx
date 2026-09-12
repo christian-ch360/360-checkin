@@ -16,13 +16,14 @@ const ORDER: SocialPlatform[] = ["INSTAGRAM", "TIKTOK", "YOUTUBE"];
 
 /**
  * The per-platform reach breakdown + a TOTAL REACH row — the lower half of a
- * creator card in the CH360 concept. Numbers come from the already-computed
- * AudienceBreakdown; nothing is invented (empty platforms are simply omitted,
- * and a creator with no data shows "Reach data unavailable").
+ * creator card. Numbers come from the already-computed AudienceBreakdown;
+ * nothing is invented (empty platforms are simply omitted, and a creator
+ * with no data shows "Reach data unavailable"). A thin gold rule sets the
+ * Total Reach row apart as the headline number.
  */
 export function ReachDisplay({ audience, className }: { audience: AudienceBreakdown; className?: string }) {
   if (audience.isEmpty) {
-    return <p className={cn("text-xs text-muted-foreground", className)}>Reach data unavailable</p>;
+    return <p className={cn("text-xs text-[#6B6B6B]", className)}>Reach data unavailable</p>;
   }
 
   const byPlatform = new Map(audience.platforms.map((entry) => [entry.platform, entry.count]));
@@ -33,19 +34,19 @@ export function ReachDisplay({ audience, className }: { audience: AudienceBreakd
         const Icon = PLATFORM_ICON[platform];
         return (
           <div key={platform} className="flex items-center justify-between gap-3 text-sm">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-[#6B6B6B]">
               <Icon className="size-3.5" />
               {PLATFORM_LABELS[platform]}
             </span>
-            <span className="font-medium tabular-nums">{formatAudience(byPlatform.get(platform) as number)}</span>
+            <span className="font-medium tabular-nums text-[#161616]">{formatAudience(byPlatform.get(platform) as number)}</span>
           </div>
         );
       })}
-      <div className="flex items-center justify-between gap-3 border-t border-border pt-2">
-        <span className="text-[0.65rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+      <div className="flex items-center justify-between gap-3 border-t-2 border-[#E8D5A3] pt-2">
+        <span className="text-[0.65rem] font-semibold tracking-[0.16em] text-[#6B6B6B] uppercase">
           Total Reach
         </span>
-        <span className="text-base font-semibold tabular-nums">{formatAudience(audience.total)}</span>
+        <span className="text-base font-semibold tabular-nums text-[#161616]">{formatAudience(audience.total)}</span>
       </div>
     </div>
   );

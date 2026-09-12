@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getPlanFeatureValues, renderEntitlementLabel } from "@/features/membership-plans/services/membership-features.service";
 import { getRemainingUsage } from "@/features/membership-plans/services/membership-usage.service";
@@ -99,5 +100,35 @@ export async function getMemberMembership(memberId: string) {
     // card is even shown.
     isStripeBacked: subscription.externalSubscriptionId != null,
     paymentMethod,
+  };
+}
+
+export type MemberMembershipSummary = {
+  status: SubscriptionStatus;
+  planName: string;
+  trialEndsAt: Date | null;
+  renewalDate: Date | null;
+} | null;
+
+/**
+ * The Home dashboard's lightweight membership card needs only a status
+ * badge and one date — deliberately NOT getMemberMembership above, which
+ * also computes benefitsRemaining (a query per usage-tracked feature) and
+ * makes a live Stripe call for the payment method. Home renders on every
+ * visit; paying that cost there for data the card never displays would be
+ * pure waste. Same underlying MemberSubscription row, just a narrower select.
+ */
+export async function getMemberMembershipSummary(memberId: string): Promise<MemberMembershipSummary> {
+  const subscription = await prisma.memberSubscription.findUnique({
+    where: { memberId },
+    select: { status: true, trialEndsAt: true, currentPeriodEnd: true, plan: { select: { name: true } } },
+  });
+  if (!subscription) return null;
+
+  return {
+    status: subscription.status,
+    planName: subscription.plan.name,
+    trialEndsAt: subscription.trialEndsAt,
+    renewalDate: subscription.currentPeriodEnd,
   };
 }

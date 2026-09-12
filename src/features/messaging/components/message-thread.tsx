@@ -215,6 +215,7 @@ export function MessageThread({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search messages…"
+              aria-label="Search messages in this conversation"
               className="h-8"
             />
             <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => setSearchOpen(false)}>

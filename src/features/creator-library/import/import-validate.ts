@@ -77,7 +77,7 @@ export function validateRow(row: MappedRow): RowValidation {
 
   const primaryCat = normalizeCategory(cell(row, "primaryCategory"));
   if (cell(row, "primaryCategory") && !primaryCat) {
-    warnings.push(`Primary category "${cell(row, "primaryCategory")}" isn't a recognized CH360 category`);
+    warnings.push(`Primary category "${cell(row, "primaryCategory")}" isn't a recognized CreatorHub360 category`);
   }
   const { categories: additional, unresolved } = splitCategories(cell(row, "additionalCategories"));
   if (unresolved.length > 0) {

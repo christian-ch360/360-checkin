@@ -62,6 +62,7 @@ export type KioskThemeInput = {
   checkInMessage?: string | null;
   themedActionButtons?: boolean;
   backgroundOverlay?: boolean;
+  backgroundContain?: boolean;
 };
 
 /**
@@ -300,6 +301,7 @@ export async function duplicateTheme(organizationId: string, sourceThemeKey: str
       checkInMessage: source.checkInMessage,
       themedActionButtons: source.themedActionButtons,
       backgroundOverlay: source.backgroundOverlay,
+      backgroundContain: source.backgroundContain,
     },
   });
   return { success: true, themeKey };
@@ -378,6 +380,7 @@ export async function rollbackTheme(
       checkInMessage: target.checkInMessage,
       themedActionButtons: target.themedActionButtons,
       backgroundOverlay: target.backgroundOverlay,
+      backgroundContain: target.backgroundContain,
     },
   });
   return { success: true, themeKey };
@@ -478,5 +481,6 @@ function toWriteData(input: KioskThemeInput) {
     checkInMessage: input.checkInMessage ?? null,
     themedActionButtons: input.themedActionButtons ?? false,
     backgroundOverlay: input.backgroundOverlay ?? true,
+    backgroundContain: input.backgroundContain ?? false,
   };
 }

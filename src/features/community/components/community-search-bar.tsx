@@ -58,6 +58,7 @@ export function CommunitySearchBar() {
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => query && setOpen(true)}
         placeholder="Search posts, people, hashtags…"
+        aria-label="Search posts, people, and hashtags"
         className="h-9 pl-8"
       />
       {query && (

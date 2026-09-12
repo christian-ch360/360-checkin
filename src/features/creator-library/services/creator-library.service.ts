@@ -9,6 +9,7 @@ import {
   type SyncedFollowerCounts,
 } from "@/features/creator-library/lib/audience";
 import { formatLocationLabel } from "@/features/creator-library/lib/location";
+import { resolveCoordinates, type LatLng } from "@/features/creator-library/lib/geocode";
 import { resolveReachTier, type ReachTier, REACH_TIERS } from "@/features/creator-library/lib/reach";
 import {
   DEFAULT_LIBRARY_SORT,
@@ -450,6 +451,100 @@ export async function listLibraryLocations(organizationId: string): Promise<Libr
       return { country, count: stateList.reduce((s, st) => s + st.count, 0), states: stateList };
     })
     .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country));
+}
+
+export type LibraryLocationSummary = {
+  country: string;
+  state: string | null;
+  city: string | null;
+  /** Display name for this bucket — the finest real detail available. */
+  label: string;
+  count: number;
+  coords: LatLng | null;
+  creators: { id: string; name: string; imageUrl: string | null }[];
+};
+
+export type LibraryLocationOverview = {
+  totalCreators: number;
+  countries: number;
+  states: number;
+  cities: number;
+  summaries: LibraryLocationSummary[];
+  tree: LibraryLocationTree;
+};
+
+/**
+ * The Locations map/explorer's data — one summary per real city (or per
+ * state/country when creators haven't specified finer detail), each with a
+ * geocoded marker position and a real creator sample for its avatar stack.
+ * Built entirely from `listLibraryLocations` + `listLibraryCreators` — no
+ * duplicated row-loading logic.
+ */
+export async function getLibraryLocationOverview(organizationId: string): Promise<LibraryLocationOverview> {
+  const tree = await listLibraryLocations(organizationId);
+
+  const buckets: { country: string; state: string | null; city: string | null; count: number }[] = [];
+  let stateCount = 0;
+
+  for (const country of tree) {
+    if (country.states.length === 0) {
+      buckets.push({ country: country.country, state: null, city: null, count: country.count });
+      continue;
+    }
+    for (const state of country.states) {
+      const hasState = state.state !== "—";
+      if (hasState) stateCount++;
+      const realCities = state.cities.filter((entry) => entry.city !== "—");
+      if (realCities.length === 0) {
+        buckets.push({
+          country: country.country,
+          state: hasState ? state.state : null,
+          city: null,
+          count: state.count,
+        });
+        continue;
+      }
+      for (const entry of realCities) {
+        buckets.push({
+          country: country.country,
+          state: hasState ? state.state : null,
+          city: entry.city,
+          count: entry.count,
+        });
+      }
+    }
+  }
+
+  const summaries = await Promise.all(
+    buckets.map(async (bucket): Promise<LibraryLocationSummary> => {
+      const result = await listLibraryCreators(organizationId, {
+        country: bucket.country,
+        state: bucket.state ?? undefined,
+        city: bucket.city ?? undefined,
+        sort: "followers_desc",
+      });
+      return {
+        country: bucket.country,
+        state: bucket.state,
+        city: bucket.city,
+        label: bucket.city ?? bucket.state ?? bucket.country,
+        count: bucket.count,
+        coords: resolveCoordinates(bucket.country, bucket.state, bucket.city),
+        creators: result.items.slice(0, 4).map((c) => ({ id: c.id, name: c.name, imageUrl: c.imageUrl })),
+      };
+    }),
+  );
+
+  summaries.sort((a, b) => b.count - a.count);
+
+  return {
+    totalCreators: tree.reduce((sum, country) => sum + country.count, 0),
+    countries: tree.length,
+    states: stateCount,
+    cities: summaries.filter((summary) => summary.city).length,
+    summaries,
+    tree,
+  };
 }
 
 export type LibraryReachCount = { tier: ReachTier; count: number };

@@ -31,12 +31,19 @@ export function KioskThemeBackground({ theme }: { theme?: ResolvedKioskTheme | n
   return (
     <>
       {hasImageBackground && (
-        <div aria-hidden="true" className="fixed inset-0 -z-10 overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 -z-10 overflow-hidden"
+          // Contain mode's own letterboxing (wherever the image's aspect ratio doesn't exactly
+          // match the viewport) is filled with the theme's primaryColor — chosen to match the
+          // artwork's own background — so it reads as part of the artwork, not as bars.
+          style={theme.backgroundContain && theme.primaryColor ? { backgroundColor: theme.primaryColor } : undefined}
+        >
           {theme.backgroundVideoUrl ? (
             <video
               src={theme.backgroundVideoUrl}
               poster={theme.backgroundImageUrl ?? undefined}
-              className="size-full object-cover"
+              className={theme.backgroundContain ? "size-full object-contain" : "size-full object-cover"}
               autoPlay
               muted
               loop
@@ -44,7 +51,11 @@ export function KioskThemeBackground({ theme }: { theme?: ResolvedKioskTheme | n
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- kiosk background is admin-supplied, arbitrary remote URLs
-            <img src={theme.backgroundImageUrl!} alt="" className="size-full object-cover" />
+            <img
+              src={theme.backgroundImageUrl!}
+              alt=""
+              className={theme.backgroundContain ? "size-full object-contain" : "size-full object-cover"}
+            />
           )}
           {theme.backgroundOverlay && (
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />

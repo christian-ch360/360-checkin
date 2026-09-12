@@ -37,6 +37,16 @@ export default async function EditEmailTemplatePage({ params }: { params: Promis
         <PageHeader
           title={`Edit ${template.name}`}
           description={template.isSystem ? "Editing a system template — saving creates an override; the code default stays untouched." : "Editing a custom template."}
+          actions={
+            template.isSystem ? (
+              <Link
+                href={`/admin/email-templates/${template.templateKey}/preview`}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Preview default template
+              </Link>
+            ) : undefined
+          }
         />
       </div>
 

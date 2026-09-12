@@ -2,7 +2,7 @@ import type { ContentCategory } from "@prisma/client";
 import { CONTENT_CATEGORY_LABELS, contentCategoryValues } from "@/features/members/constants/content-categories";
 
 /**
- * The 18 "official" CH360 primary categories (spec §6). These are a curated
+ * The 18 "official" CreatorHub360 primary categories (spec §6). These are a curated
  * subset of the shared ContentCategory enum — used for the CSV template, the
  * category-view emphasis, and the importer's primary-category concept. Every
  * ContentCategory value is still valid as an "additional" category; these are

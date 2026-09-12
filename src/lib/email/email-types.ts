@@ -144,6 +144,10 @@ import {
   WelcomeNewsletterEmail,
   type WelcomeNewsletterEmailProps,
 } from "@/emails/templates/membership/welcome-newsletter-email";
+import {
+  CreatorHubAcademyKickoffEmail,
+  type CreatorHubAcademyKickoffEmailProps,
+} from "@/emails/templates/misc/creatorhub-academy-kickoff-email";
 
 /**
  * Every template registered here gets a matching EmailService method (see
@@ -211,6 +215,14 @@ export type TemplateProps = {
   // the second, purely informational email in the two-email acceptance
   // flow. Static artwork, no per-recipient fields.
   welcome_newsletter: WelcomeNewsletterEmailProps;
+  // Ad-hoc campaign invitation (CreatorHUB Academy Kick Off — Matcha &
+  // Coffee — no relationship to the separate Charmzone kiosk project) — a
+  // real recipient list isn't wired up yet; this is registered so the
+  // template is manageable/previewable/test-sendable through the Email
+  // Center like every other template, ahead of a future bulk-send action
+  // that will loop EmailService.sendCreatorHubAcademyKickoffEmail per
+  // recipient.
+  creatorhub_academy_kickoff: CreatorHubAcademyKickoffEmailProps;
 };
 
 export type TemplateName = keyof TemplateProps;
@@ -338,6 +350,10 @@ export const TEMPLATES: { [K in TemplateName]: TemplateDef<K> } = {
   welcome_newsletter: {
     component: WelcomeNewsletterEmail,
     subject: () => "Welcome to Creator Hub 360 — You're In!",
+  },
+  creatorhub_academy_kickoff: {
+    component: CreatorHubAcademyKickoffEmail,
+    subject: () => "You're Invited: CreatorHUB Academy Kick Off — Matcha & Coffee ☕️",
   },
 };
 

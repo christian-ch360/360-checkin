@@ -62,6 +62,7 @@ export const TEMPLATE_CATEGORY: Record<TemplateName, EmailCategory> = {
   agency_access_rejected: "MEMBERSHIP",
   agency_team_activity: "ADMIN",
   welcome_newsletter: "MEMBERSHIP",
+  creatorhub_academy_kickoff: "MARKETING",
 } satisfies Record<TemplateName, EmailCategory>;
 
 /** One-liners for the Email Templates catalog page. */
@@ -118,6 +119,8 @@ export const TEMPLATE_DESCRIPTIONS: Record<TemplateName, string> = {
   agency_access_rejected: "Sent to a user when the existing agency they requested to join declines their access.",
   agency_team_activity: "Generic Team Management notification — invitations, role changes, ownership transfers, and removals.",
   welcome_newsletter: "Sent separately from the account/access email when a membership application is approved — the CreatorHub360 welcome newsletter artwork, informational only (no login details).",
+  creatorhub_academy_kickoff:
+    "CreatorHUB Academy Kick Off — Matcha & Coffee invitation — ad-hoc campaign, sent manually to a chosen recipient list (no automatic trigger).",
 };
 
 export const EMAIL_CATEGORY_LABELS: Record<EmailCategory, string> = {

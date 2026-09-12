@@ -1,5 +1,5 @@
 /**
- * The downloadable "CH360 Creator Template" (spec §4). Header order is fixed;
+ * The downloadable "CreatorHub360 Creator Template" (spec §4). Header order is fixed;
  * two example rows show the accepted formats. Served as text/csv by
  * /admin/creator-library/import/template.
  */

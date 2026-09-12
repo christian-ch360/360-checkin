@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 
 /**
- * "CH360 / CREATOR NETWORK" lockup. Deliberately typographic, not a logo
- * image — it reads as an editorial masthead rather than an app header.
+ * "CreatorHub360 / CREATOR NETWORK" lockup. Deliberately typographic, not a
+ * logo image — it reads as an editorial masthead rather than an app header.
  */
 export function LibraryWordmark({
   className,
@@ -11,9 +11,10 @@ export function LibraryWordmark({
   stacked = false,
 }: {
   className?: string;
-  tone?: "default" | "invert";
+  /** "invert" = white on dark; "fixed" = literal charcoal, independent of app light/dark theme; "default" = theme tokens. */
+  tone?: "default" | "invert" | "fixed";
   size?: "sm" | "md" | "lg";
-  /** Stack "CREATOR NETWORK" beneath "CH360" (masthead style) instead of inline. */
+  /** Stack "CREATOR NETWORK" beneath "CreatorHub360" (masthead style) instead of inline. */
   stacked?: boolean;
 }) {
   return (
@@ -30,10 +31,10 @@ export function LibraryWordmark({
           size === "sm" && "text-base",
           size === "md" && "text-lg",
           size === "lg" && "text-2xl",
-          tone === "invert" ? "text-white" : "text-foreground",
+          tone === "invert" ? "text-white" : tone === "fixed" ? "text-[#161616]" : "text-foreground",
         )}
       >
-        CH360
+        CreatorHub360
       </span>
       <span
         className={cn(
@@ -42,7 +43,7 @@ export function LibraryWordmark({
           size === "md" && "text-[0.65rem] tracking-[0.24em]",
           size === "lg" && "text-xs tracking-[0.28em]",
           stacked && "mt-0.5",
-          tone === "invert" ? "text-white/55" : "text-muted-foreground",
+          tone === "invert" ? "text-white/55" : tone === "fixed" ? "text-[#6B6B6B]" : "text-muted-foreground",
         )}
       >
         Creator Network

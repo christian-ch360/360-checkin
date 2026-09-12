@@ -12,6 +12,11 @@ const PUBLIC_PATHS = [
   "/kiosk",
   "/project-invite",
   "/legal",
+  // Public, password-gated Creator Library — has its own shared-password
+  // session (see src/features/creator-library/auth), independent of the
+  // Supabase member session. middleware.ts runs guardCreatorLibrary() for
+  // this tree before updateSession() is ever reached.
+  "/creator-library",
 ];
 // /reset-password must stay public even though it's session-driven: Supabase's
 // default recovery email delivers the session via a URL hash fragment, which

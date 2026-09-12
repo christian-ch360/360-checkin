@@ -254,6 +254,7 @@ export function SpacesDashboard({
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name, category, or equipment..."
+              aria-label="Search spaces by name, category, or equipment"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"

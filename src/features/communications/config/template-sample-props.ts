@@ -296,4 +296,8 @@ export const TEMPLATE_SAMPLE_PROPS: { [K in TemplateName]: TemplateProps[K] } = 
     ctaLabel: "View Team",
   },
   welcome_newsletter: {},
+  // "Christian" per the campaign's own realistic-sample-recipient spec — demonstrates "Hey Christian!".
+  creatorhub_academy_kickoff: {
+    fullName: "Christian",
+  },
 };
