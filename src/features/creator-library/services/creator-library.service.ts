@@ -14,6 +14,7 @@ import { resolveReachTier, type ReachTier, REACH_TIERS } from "@/features/creato
 import {
   DEFAULT_LIBRARY_SORT,
   LIBRARY_PAGE_SIZE,
+  PLATFORM_LABELS,
   resolveFollowerBucket,
   type LibrarySortKey,
 } from "@/features/creator-library/config/library-config";
@@ -248,7 +249,7 @@ function toCard(row: LibraryRow, audience: AudienceBreakdown): LibraryCreatorCar
   };
 }
 
-function matchesSearch(row: LibraryRow, query: string): boolean {
+function matchesSearch(row: LibraryRow, query: string, audience: AudienceBreakdown): boolean {
   const parts = locationParts(row);
   const haystack = [
     displayName(row),
@@ -264,6 +265,7 @@ function matchesSearch(row: LibraryRow, query: string): boolean {
     row.tiktokUrl ?? row.member?.tiktokUrl,
     row.youtubeUrl ?? row.member?.youtubeUrl,
     ...effectiveCategories(row).map((category) => CONTENT_CATEGORY_LABELS[category]),
+    ...activePlatforms(row, audience).map((platform) => PLATFORM_LABELS[platform]),
   ]
     .filter(Boolean)
     .join(" ")
@@ -342,7 +344,7 @@ export async function listLibraryCreators(
   if (filters.reach) {
     cards = cards.filter(({ audience }) => resolveReachTier(audience.total)?.key === filters.reach);
   }
-  if (search) cards = cards.filter(({ row }) => matchesSearch(row, search));
+  if (search) cards = cards.filter(({ row, audience }) => matchesSearch(row, search, audience));
 
   const mapped = cards.map(({ row, audience }) => toCard(row, audience));
   mapped.sort((a, b) => sortCards(a, b, sort));

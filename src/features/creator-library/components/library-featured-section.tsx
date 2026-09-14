@@ -34,14 +34,16 @@ export function LibraryFeaturedSection({
           </Link>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Mobile: a horizontal swipe carousel — one card dominant with the
+            next peeking in, scroll-snapped, no JS required. The row bleeds
+            to the screen edge (negative margin cancels the section's own
+            padding) so the peek reads intentionally rather than clipped.
+            sm and up: back to the normal multi-column grid, unchanged. */}
+        <div className="mt-8 -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
           {creators.slice(0, 4).map((creator, index) => (
-            <CreatorCard
-              key={creator.id}
-              creator={creator}
-              priority={index < 2}
-              placeholderIconUrl={placeholderIconUrl}
-            />
+            <div key={creator.id} className="w-[78%] shrink-0 snap-center sm:w-auto sm:shrink sm:snap-none">
+              <CreatorCard creator={creator} priority={index < 2} placeholderIconUrl={placeholderIconUrl} />
+            </div>
           ))}
         </div>
       </div>

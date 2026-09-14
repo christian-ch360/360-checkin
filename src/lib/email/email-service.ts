@@ -169,6 +169,8 @@ export const EmailService = {
     sendTemplatedEmail("new_membership_application_admin", args),
   sendNewCreatorJoinedAdminEmail: (args: SendArgs<"new_creator_joined_admin">) =>
     sendTemplatedEmail("new_creator_joined_admin", args),
+  sendCampaignRequestInternalEmail: (args: SendArgs<"campaign_request_admin">) =>
+    sendTemplatedEmail("campaign_request_admin", args),
   sendAdminSummary: (args: SendArgs<"daily_admin_summary">) => sendTemplatedEmail("daily_admin_summary", args),
   sendCriticalSystemAlertEmail: (args: SendArgs<"critical_system_alert">) =>
     sendTemplatedEmail("critical_system_alert", args),

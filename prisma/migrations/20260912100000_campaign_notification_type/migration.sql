@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "NotificationType" ADD VALUE 'CAMPAIGN_REQUEST_RECEIVED';

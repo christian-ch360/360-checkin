@@ -101,6 +101,10 @@ import {
   type NewCreatorJoinedAdminEmailProps,
 } from "@/emails/templates/admin/new-creator-joined-admin-email";
 import {
+  CampaignRequestAdminEmail,
+  type CampaignRequestAdminEmailProps,
+} from "@/emails/templates/admin/campaign-request-admin-email";
+import {
   DailyAdminSummaryEmail,
   type DailyAdminSummaryEmailProps,
 } from "@/emails/templates/admin/daily-admin-summary-email";
@@ -201,6 +205,7 @@ export type TemplateProps = {
   event_cancelled: EventCancelledEmailProps;
   new_membership_application_admin: NewMembershipApplicationAdminEmailProps;
   new_creator_joined_admin: NewCreatorJoinedAdminEmailProps;
+  campaign_request_admin: CampaignRequestAdminEmailProps;
   daily_admin_summary: DailyAdminSummaryEmailProps;
   critical_system_alert: CriticalSystemAlertEmailProps;
   legal_document_updated: LegalDocumentUpdatedEmailProps;
@@ -309,6 +314,10 @@ export const TEMPLATES: { [K in TemplateName]: TemplateDef<K> } = {
   new_creator_joined_admin: {
     component: NewCreatorJoinedAdminEmail,
     subject: (p) => `${p.creatorName} just joined`,
+  },
+  campaign_request_admin: {
+    component: CampaignRequestAdminEmail,
+    subject: () => "New CreatorHub360 Campaign Request",
   },
   daily_admin_summary: {
     component: DailyAdminSummaryEmail,

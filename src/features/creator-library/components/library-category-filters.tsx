@@ -26,11 +26,17 @@ export function LibraryCategoryFilters({
   if (categories.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl bg-[#FAF9F6] px-4 py-6 sm:px-8">
-      <p className="text-[0.7rem] font-medium tracking-[0.24em] text-[#B8935A] uppercase">Explore</p>
-      <h2 className="mt-1 text-lg font-semibold tracking-tight text-[#161616]">Categories</h2>
+    <section className="mx-auto max-w-7xl bg-[#FAF9F6] py-5 sm:px-8 sm:py-6">
+      <div className="px-4 sm:px-0">
+        <p className="text-[0.7rem] font-medium tracking-[0.24em] text-[#B8935A] uppercase">Explore</p>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight text-[#161616]">Categories</h2>
+      </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      {/* Mobile: one intentional horizontally-scrolling row, edge-to-edge
+          (negative margin cancels the section's own padding so the row can
+          bleed to the screen edge), scrollbar hidden. Desktop/tablet: wraps
+          into a normal multi-row chip cluster, unchanged. */}
+      <div className="mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
         <CategoryChip href={buildCategoryHref(baseParams, null)} label="All Creators" active={activeCategory === null} />
         {categories.map((entry) => {
           const active = activeCategory === entry.category;
@@ -69,7 +75,7 @@ function CategoryChip({
       scroll={false}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors duration-200",
         active
           ? "border-[#161616] bg-[#161616] text-white"
           : "border-[#E8D5A3] bg-white text-[#161616] hover:border-[#D4AF6A] hover:bg-[#F5F1E8]",

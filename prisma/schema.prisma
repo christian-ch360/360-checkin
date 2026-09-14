@@ -207,6 +207,7 @@ enum NotificationType {
   MEMBERSHIP_CANCELED
   MEMBERSHIP_RENEWED
   NEW_CREATOR_JOINED
+  CAMPAIGN_REQUEST_RECEIVED
 }
 
 enum FeedbackCategory {
@@ -330,6 +331,8 @@ model Organization {
   brandInvitations          BrandInvitation[]
   creatorLibraryProfiles    CreatorLibraryProfile[]
   creatorImportBatches      CreatorImportBatch[]
+  campaignRequests          CampaignRequest[]
+  campaignShowcases         CampaignShowcase[]
 
   @@map("organizations")
 }
@@ -3721,6 +3724,8 @@ model CreatorLibraryProfile {
   addedBy      Member?             @relation("CreatorLibraryProfileAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   importBatch  CreatorImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
+  campaignCandidacies CampaignCandidate[]
+
   @@index([organizationId, visible])
   @@index([organizationId, featured, visible])
   @@index([organizationId, country, state, city])
@@ -3777,4 +3782,249 @@ model CreatorImportBatch {
 
   @@index([organizationId, createdAt])
   @@map("creator_import_batches")
+}
+
+// =============================================================================
+// CREATOR LIBRARY — Campaign Requests. A brand browsing the password-gated
+// /creator-library surface can request a campaign; this is intentionally a
+// SEPARATE bounded context from the Agency CRM's `Campaign`/`CampaignCreator`
+// models above (an internal agency's brand-deal + deliverable/approval
+// workflow) — a CampaignRequest is an unauthenticated intake form that feeds
+// the Modash/OpenAI creator-matching pipeline, not a signed engagement.
+// `brandName`/`brandWebsite` are plain free-text fields (not a relation to
+// `Brand`) since the submitter has no CreatorHub360 account.
+// =============================================================================
+
+enum CampaignRequestStatus {
+  DRAFT
+  SUBMITTED
+  ANALYZING
+  MATCHED
+  COMPLETED
+  FAILED
+}
+
+enum CampaignRequestType {
+  PRODUCT_LAUNCH
+  BRAND_AWARENESS
+  UGC_CAMPAIGN
+  SOCIAL_MEDIA_CAMPAIGN
+  INFLUENCER_PARTNERSHIP
+  EVENT_PROMOTION
+  AFFILIATE_CAMPAIGN
+  AMBASSADOR_PROGRAM
+  OTHER
+}
+
+enum CampaignGoal {
+  BRAND_AWARENESS
+  REACH
+  ENGAGEMENT
+  CONTENT_CREATION
+  WEBSITE_TRAFFIC
+  PRODUCT_SALES
+  APP_DOWNLOADS
+  EVENT_ATTENDANCE
+}
+
+/// Desired creator size for a campaign request — a distinct vocabulary from
+/// the existing `ReachTier` (Emerging/Rising/.../Elite, in reach.ts), which
+/// describes a creator's *actual* measured reach. This is the *industry-
+/// standard* Nano/Micro/Mid-Tier/Macro/Mega language brands request in.
+enum DesiredReachTier {
+  NANO
+  MICRO
+  MID_TIER
+  MACRO
+  MEGA
+}
+
+enum CampaignLocationScope {
+  WORLDWIDE
+  COUNTRY
+  STATE
+  CITY
+}
+
+enum CampaignDeliverableType {
+  INSTAGRAM_FEED_POST
+  INSTAGRAM_REEL
+  INSTAGRAM_STORY
+  TIKTOK_VIDEO
+  TIKTOK_STORY
+  YOUTUBE_SHORT
+  YOUTUBE_DEDICATED_VIDEO
+  YOUTUBE_INTEGRATION
+}
+
+enum CampaignBudgetFlexibility {
+  FIXED
+  SOME_FLEXIBILITY
+  FLEXIBLE
+}
+
+model CampaignRequest {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+
+  // Step 1 — Basics
+  brandName    String?
+  brandWebsite String?
+  campaignName String
+  campaignType CampaignRequestType
+  description  String?
+
+  // Contact — how CreatorHub360 reaches the brand back; there is no
+  // brand-facing status/dashboard (see internalStatus below), so this is
+  // the only way the team can follow up.
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  timeline     String?
+
+  // Step 2 — Goals
+  goals     CampaignGoal[] @default([])
+  objective String?
+
+  // Step 3 — Creator requirements
+  categories       ContentCategory[]  @default([])
+  platforms        SocialPlatform[]   @default([])
+  reachTiers       DesiredReachTier[] @default([])
+  minimumFollowers Int?
+  maximumFollowers Int?
+
+  locationScope CampaignLocationScope @default(WORLDWIDE)
+  country       String?
+  state         String?
+  city          String?
+
+  // Step 4 — Deliverables
+  deliverables CampaignDeliverableType[] @default([])
+  creatorCount Int?
+
+  // Step 5 — Budget
+  totalBudget               Decimal?                   @db.Decimal(12, 2)
+  preferredBudgetPerCreator Decimal?                   @db.Decimal(12, 2)
+  budgetFlexibility         CampaignBudgetFlexibility?
+
+  // Lifecycle — `status` is the technical pipeline stage (only meaningful
+  // once Modash/OpenAI are configured; never shown to the brand).
+  // `internalStatus` is the CreatorHub360 team's own review workflow
+  // (spec: NEW/IN_REVIEW/CONTACTED/APPROVED/REJECTED/COMPLETED) — separate
+  // on purpose, since a brand never sees either one.
+  status                CampaignRequestStatus       @default(DRAFT)
+  internalStatus        CampaignRequestReviewStatus @default(NEW)
+  submittedAt           DateTime?
+  intelligenceCheckedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  candidates   CampaignCandidate[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, internalStatus])
+  @@index([organizationId, createdAt])
+  @@map("campaign_requests")
+}
+
+enum CampaignRequestReviewStatus {
+  NEW
+  IN_REVIEW
+  CONTACTED
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum CampaignCandidateStatus {
+  RECOMMENDED
+  SHORTLISTED
+  APPROVED
+  REJECTED
+  CONTACTED
+  BOOKED
+}
+
+/// One candidate creator surfaced for a CampaignRequest by the (eventual)
+/// Modash discovery + OpenAI analysis pipeline. Rows are only ever created
+/// by campaign-intelligence.service.ts once real Modash/OpenAI credentials
+/// are configured — see that file for the full pipeline.
+model CampaignCandidate {
+  id         String @id @default(uuid()) @db.Uuid
+  campaignId String @db.Uuid
+  creatorId  String @db.Uuid
+
+  // OpenAI structured analysis — see CampaignCandidateAnalysis in
+  // src/lib/integrations/openai/campaign-intelligence.types.ts
+  matchScore     Int?
+  matchReasoning String?
+  strengths      String[] @default([])
+  concerns       String[] @default([])
+
+  recommendedPayout      Decimal? @db.Decimal(12, 2)
+  minimumSuggestedPayout Decimal? @db.Decimal(12, 2)
+  maximumSuggestedPayout Decimal? @db.Decimal(12, 2)
+  budgetReasoning        String?
+
+  // Sub-scores (0-100) feeding into matchScore.
+  audienceFit Int?
+  contentFit  Int?
+  platformFit Int?
+  budgetFit   Int?
+
+  status CampaignCandidateStatus @default(RECOMMENDED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaignRequest CampaignRequest       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator         CreatorLibraryProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, creatorId])
+  @@index([campaignId, status])
+  @@index([creatorId])
+  @@map("campaign_candidates")
+}
+
+// =============================================================================
+// CampaignShowcase — publicly-viewable "Our Work" case studies shown on the
+// Creator Library's Campaigns page. Deliberately a SEPARATE model from
+// CampaignRequest above: a CampaignRequest is a private brand intake form
+// (admin-only, never shown to any brand), while a CampaignShowcase is
+// editorial content CreatorHub360 staff curate to show OFF past work.
+// Nothing here is ever derived from a CampaignRequest row.
+// =============================================================================
+
+model CampaignShowcase {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+
+  title         String
+  brandName     String
+  description   String?
+  coverImage    String
+  galleryImages String[] @default([])
+
+  // Real, curated figures only — nullable because a showcase should render
+  // fine (simply omitting the stat) rather than ever fabricate a number.
+  creatorCount Int?
+  totalReach   Int?
+  locations    String[]          @default([])
+  categories   ContentCategory[] @default([])
+  platforms    SocialPlatform[]  @default([])
+  objective    String?
+
+  featured  Boolean @default(false)
+  sortOrder Int     @default(0)
+  published Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, published, sortOrder])
+  @@map("campaign_showcases")
 }

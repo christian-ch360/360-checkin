@@ -85,22 +85,27 @@ export function CreatorLocationMap({
 
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-[#EAE1CB] bg-[#FAF9F6] shadow-sm">
-      {/* Segmented level tabs */}
+      {/* Segmented level tabs — capped to leave room for the zoom controls
+          (reserved via the max-w below) and horizontally scrollable with a
+          hidden scrollbar so a long "World / United States / California"
+          row never collides with or overflows past them on a narrow phone. */}
       {tabs.length > 1 ? (
-        <div className="absolute left-4 top-4 z-20 flex gap-1 rounded-full border border-[#EAE1CB] bg-white/95 p-1 shadow-sm backdrop-blur">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => selectTab(tab.key)}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
-                focus === tab.key ? "bg-[#B8935A] text-white" : "text-[#161616] hover:bg-[#F5F1E8]",
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="absolute left-4 top-4 z-20 max-w-[calc(100%-5rem)] overflow-x-auto rounded-full border border-[#EAE1CB] bg-white/95 p-1 shadow-sm backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => selectTab(tab.key)}
+                className={cn(
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
+                  focus === tab.key ? "bg-[#B8935A] text-white" : "text-[#161616] hover:bg-[#F5F1E8]",
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 

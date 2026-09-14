@@ -101,6 +101,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, { icon: LucideIcon
   COMMUNITY_ANNOUNCEMENT_POSTED: { icon: Megaphone },
   COMMUNITY_POST_REPORTED: { icon: Flag },
   CAMPAIGN_APPROVAL_NEEDED: { icon: Megaphone },
+  CAMPAIGN_REQUEST_RECEIVED: { icon: Megaphone },
   CONTRACT_SIGNED: { icon: FileSignature },
   CONTRACT_EXPIRING: { icon: FileSignature },
   TASK_ASSIGNED: { icon: ListChecks },
