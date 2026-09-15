@@ -19,7 +19,7 @@ import { getLibrarySettings } from "@/features/creator-library/lib/library-setti
 import { LibraryPasswordGate } from "@/features/creator-library/components/library-password-gate";
 import { LibraryTopBar } from "@/features/creator-library/components/library-top-bar";
 import { LibraryHero } from "@/features/creator-library/components/library-hero";
-import { LibraryCategoryFilters } from "@/features/creator-library/components/library-category-filters";
+import { LibraryCategoryControl } from "@/features/creator-library/components/library-category-control";
 import { LibraryFeaturedSection } from "@/features/creator-library/components/library-featured-section";
 import {
   CreatorGrid,
@@ -170,7 +170,7 @@ export default async function CreatorLibraryPage({
         heroOverlayOpacity={settings.heroOverlayOpacity}
         placeholderIconUrl={settings.placeholderIconUrl}
       />
-      <LibraryCategoryFilters
+      <LibraryCategoryControl
         categories={categories}
         activeCategory={filters.category ?? null}
         baseParams={categoryBaseParams}
